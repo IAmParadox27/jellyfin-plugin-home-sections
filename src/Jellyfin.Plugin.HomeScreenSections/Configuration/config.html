@@ -49,6 +49,20 @@
                     <input is="emby-input" type="text" data-id="txtLibreTranslateApiKey" required="required" label="LibreTranslate API Key" />
                     <span>API Key for LibreTranslate instance.</span>
                 </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="defaultMoviesLibrary">Default Movies Library</label>
+                    <select is="emby-select" id="defaultMoviesLibrary" class="emby-select-withcolor emby-select">
+                        <option value="">Default</option>
+                    </select>
+                    <div class="fieldDescription">Select the specific movies library to use for navigation. Lists all underlying library folders (not grouped views). <strong>Requires Jellyfin restart to take effect.</strong></div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="defaultTVShowsLibrary">Default TV Shows Library</label>
+                    <select is="emby-select" id="defaultTVShowsLibrary" class="emby-select-withcolor emby-select">
+                        <option value="">Default</option>
+                    </select>
+                    <div class="fieldDescription">Select the specific TV shows library to use for navigation. Lists all underlying library folders (not grouped views). <strong>Requires Jellyfin restart to take effect.</strong></div>
+                </div>
             </fieldset>
             <fieldset class="verticalSection-extrabottompadding">
                 <legend>Section Settings</legend>
@@ -128,6 +142,50 @@
                 btnSave: document.querySelector('#btnSaveConfig'),
                 init: function () {
                     HomeScreenSections.loadConfig();
+                    HomeScreenSections.loadLibraries();
+                },
+                loadLibraries: function () {
+                    // Use getVirtualFolders instead of getUserViews to get actual library folders
+                    window.ApiClient.getVirtualFolders().then(function (result) {
+                        const moviesSelect = document.querySelector('#defaultMoviesLibrary');
+                        const tvShowsSelect = document.querySelector('#defaultTVShowsLibrary');
+                        
+                        // Clear existing options except the first one
+                        moviesSelect.innerHTML = '<option value="">Default</option>';
+                        tvShowsSelect.innerHTML = '<option value="">Default</option>';
+                        
+                        // Add movie libraries
+                        result.filter(folder => folder.CollectionType === 'movies').forEach(function (folder) {
+                            const option = document.createElement('option');
+                            
+                            // Ensure the ID is in proper GUID format with hyphens
+                            let folderId = folder.ItemId;
+                            if (folderId && !folderId.includes('-')) {
+                                // Format as GUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            option.value = folderId;
+                            option.textContent = folder.Name;
+                            moviesSelect.appendChild(option);
+                        });
+                        
+                        // Add TV show libraries
+                        result.filter(folder => folder.CollectionType === 'tvshows').forEach(function (folder) {
+                            const option = document.createElement('option');
+                            
+                            // Ensure the ID is in proper GUID format with hyphens
+                            let folderId = folder.ItemId;
+                            if (folderId && !folderId.includes('-')) {
+                                // Format as GUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            option.value = folderId;
+                            option.textContent = folder.Name;
+                            tvShowsSelect.appendChild(option);
+                        });
+                    }).catch(function (error) {
+                        console.error('Failed to load libraries:', error);
+                    });
                 },
                 saveConfig: function (e) {
                     e.preventDefault();
@@ -137,6 +195,8 @@
                         AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
                         LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                         LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
+                        DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
+                        DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
                         SectionSettings: []
                     };
                     
@@ -172,6 +232,16 @@
                             document.querySelector('#globalAllowUserOverride').checked = config.AllowUserOverride;
                             document.querySelector('[data-id=txtLibreTranslateUrl]').value = config.LibreTranslateUrl;
                             document.querySelector('[data-id=txtLibreTranslateApiKey]').value = config.LibreTranslateApiKey;
+                            
+                            // Set library dropdown values after libraries are loaded
+                            setTimeout(function() {
+                                if (config.DefaultMoviesLibraryId) {
+                                    document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
+                                }
+                                if (config.DefaultTVShowsLibraryId) {
+                                    document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
+                                }
+                            }, 500); // Small delay to ensure libraries are loaded
                             
                             // Get plugin defaults for each section it defines
                             // Loop over these sections and add in what the config has overwritten
@@ -211,7 +281,7 @@
                                 LowerLimit: 1,
                                 UpperLimit: sectionTypes[i].Limit,
                                 ViewMode: sectionTypes[i].ViewMode,
-                                OrderIndex: 999 // new sections will always appear last to avoid admins orders being screwed
+                                OrderIndex: 999 // new sections appear last
                             };
                             
                             HomeScreenSections.addSectionSetting(newConfig, sectionTypes[i]);

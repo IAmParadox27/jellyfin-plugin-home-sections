@@ -12,6 +12,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 
         public string? LibreTranslateApiKey { get; set; } = "";
         
+        public string? DefaultMoviesLibraryId { get; set; } = "";
+        
+        public string? DefaultTVShowsLibraryId { get; set; } = "";
+        
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
     }
 
