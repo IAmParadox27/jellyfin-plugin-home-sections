@@ -367,9 +367,11 @@
                     
                     template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
                     
-                    const el = HomeScreenSections.sectionWrapper.appendChild(template);
+                    HomeScreenSections.sectionWrapper.appendChild(template);
                     
                     // Now add user override settings after the element is in the DOM
+                    const allSections = HomeScreenSections.sectionWrapper.querySelectorAll('[data-id=section-config]');
+                    const el = allSections[allSections.length - 1];
                     const userOverrideContainer = el.querySelector('[data-id=userOverrideContainer]');
                     HomeScreenSections.populateUserOverrideSettings(userOverrideContainer, sectionConfig, el, sectionInfo);
                 },
