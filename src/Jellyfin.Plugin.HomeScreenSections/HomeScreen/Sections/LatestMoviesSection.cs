@@ -66,9 +66,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             List<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { BaseItemKind.Movie },
+                IncludeItemTypes = new[]
+                {
+                    BaseItemKind.Movie
+                },
                 Limit = 16,
-                OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) }
+                OrderBy = new[]
+                {
+                    (ItemSortBy.PremiereDate, SortOrder.Descending)
+                }
             });
 
             return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
