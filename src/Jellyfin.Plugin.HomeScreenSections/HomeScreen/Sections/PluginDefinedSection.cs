@@ -19,15 +19,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public object? OriginalPayload => null;
         
+        public bool SupportsShowPlayedItems { get; set; } = false;
+        
+        public bool SupportsPreventDuplicates { get; set; } = false;
+        
         public required GetResultsDelegate OnGetResults { get; set; }
         
-        public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null)
+        public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null, bool supportsShowPlayedItems = false, bool supportsPreventDuplicates = false)
         {
             Section = sectionUuid;
             DisplayText = displayText;
             Limit = 1;
             Route = route;
             AdditionalData = additionalData;
+            SupportsShowPlayedItems = supportsShowPlayedItems;
+            SupportsPreventDuplicates = supportsPreventDuplicates;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -50,7 +56,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Landscape
+                ViewMode = SectionViewMode.Landscape,
+                SupportsShowPlayedItems = SupportsShowPlayedItems,
+                SupportsPreventDuplicates = SupportsPreventDuplicates
             };
         }
     }

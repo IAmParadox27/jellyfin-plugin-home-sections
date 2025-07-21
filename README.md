@@ -99,7 +99,9 @@ Send an HTTP POST request to `http(s)://{YOUR_JELLYFIN_URL}/HomeScreen/RegisterS
 	"displayText":"", // What text should be displayed for your section
 	"limit": 1, // This can only be 1 at the moment, I am working hard to support more than 1 section via HTTP request 
 	"additionalData": "", // Any accompanying data you want sent to your endpoint
-	"resultsEndpoint":"" // The endpoint that will be requested when the section is requested. Expected to return `QueryResult<BaseItemDto>`
+	"resultsEndpoint":"", // The endpoint that will be requested when the section is requested. Expected to return `QueryResult<BaseItemDto>`
+	"supportsShowPlayedItems": false, // (Optional) Whether this section supports the "Show played items" setting
+	"supportsPreventDuplicates": false // (Optional) Whether this section supports the "Prevent duplicates" setting
 }
 ```
 

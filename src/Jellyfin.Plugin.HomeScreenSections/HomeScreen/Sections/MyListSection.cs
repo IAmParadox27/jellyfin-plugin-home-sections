@@ -1,4 +1,5 @@
-﻿using Jellyfin.Data.Entities;
+﻿using System;
+using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -21,11 +22,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public int? Limit => 1;
 
-		public string? Route => null;
+		public string? Route { get; set; } = null;
 
 		public string? AdditionalData { get; set; }
 
-		public object? OriginalPayload => null;
+		public object? OriginalPayload { get; set; } = null;
 		
 		private IUserManager UserManager { get; set; }
 
@@ -42,11 +43,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
 		{
-			return this;
+			var (displayName, playlistId) = GetUserPlaylistInfo(userId);
+			return new MyListSection(UserManager, DtoService, PlaylistManager)
+			{
+				DisplayText = displayName,
+				Route = !string.IsNullOrEmpty(playlistId) ? "details" : null,
+				OriginalPayload = !string.IsNullOrEmpty(playlistId) 
+					? new { Id = playlistId, Type = "Playlist" }
+					: null
+			};
 		}
-
-		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+		
+	private (string displayName, string? playlistId) GetUserPlaylistInfo(Guid? userId)
+	{
+		if (userId == null) return ("My List", null);
+		
+		var myListPlaylist = PlaylistManager.GetPlaylists(userId.Value)
+			.FirstOrDefault(x => x.Name == "My List");
+		
+		if (myListPlaylist != null && myListPlaylist.Id != Guid.Empty)
 		{
+			return (myListPlaylist.Name, myListPlaylist.Id.ToString());
+		}
+		
+		return ("My List", null);
+	}		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+		{
+			bool showPlayedItems = payload.GetEffectiveShowPlayedItems(Section ?? string.Empty);
+			
 			DtoOptions? dtoOptions = new DtoOptions
 			{
 				Fields = new List<ItemFields>
@@ -77,6 +101,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				}));
 			}
 
+			// Filter out played items if the setting is disabled
+			if (!showPlayedItems)
+			{
+				results = results.Where(item => !item.IsPlayed(user)).ToList();
+			}
+
 			QueryResult<BaseItemDto>? result = new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(results, dtoOptions, user));
 
 			return result;
@@ -92,7 +122,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Route = Route,
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape
+				ViewMode = SectionViewMode.Landscape,
+				SupportsShowPlayedItems = true
 			};
 		}
 	}

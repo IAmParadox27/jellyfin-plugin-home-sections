@@ -163,7 +163,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
             if (settings != null)
             {
-                IEnumerable<SectionSettings> forcedSectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => !x.AllowUserOverride);
+                IEnumerable<SectionSettings> forcedSectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => 
+                    x.UserOverrideSettings?.FirstOrDefault(u => u.Item == UserOverrideItem.EnableDisableSection)?.AllowUserOverride == false);
 
                 foreach (SectionSettings sectionSettings in forcedSectionSettings)
                 {
@@ -177,6 +178,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                     }
                 }
             }
+
+            // Sync SectionSettings from EnabledSections
+            settings?.SyncSectionSettings();
             
             return settings;
         }
