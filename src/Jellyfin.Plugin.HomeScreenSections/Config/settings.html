@@ -14,8 +14,10 @@
         }
         
 
-        input[disabled], input:disabled {
-            opacity: 0.5 !important;
+        input[disabled] ~ span .checkboxIcon,
+        input:disabled ~ span .checkboxIcon {
+            background-color: rgba(0,0,0,.5) !important;
+            color: rgba(255,255,255,.4) !important;
         }
     </style>
     
