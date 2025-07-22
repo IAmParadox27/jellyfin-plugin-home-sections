@@ -106,20 +106,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             // Check if there's a configured default library, otherwise use first available
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var selectedLibrary = !string.IsNullOrEmpty(config?.DefaultTVShowsLibraryId)
+            var folder = !string.IsNullOrEmpty(config?.DefaultTVShowsLibraryId)
                 ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTVShowsLibraryId)
                 : null;
             
             // Fall back to first TV shows library if no configured library found
-            selectedLibrary ??= tvShowFolders.FirstOrDefault();
+            folder ??= tvShowFolders.FirstOrDefault();
             
-            if (selectedLibrary != null)
+            if (folder != null)
             {
                 DtoOptions dtoOptions = new DtoOptions();
                 dtoOptions.Fields =
                     [..dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
                 
-                originalPayload = Array.ConvertAll(new[] { selectedLibrary }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
+                originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
             return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService)

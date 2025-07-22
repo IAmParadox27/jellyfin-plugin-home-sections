@@ -281,7 +281,7 @@
                                 LowerLimit: 1,
                                 UpperLimit: sectionTypes[i].Limit,
                                 ViewMode: sectionTypes[i].ViewMode,
-                                OrderIndex: 999 // new sections appear last
+                                OrderIndex: 999 // new sections will always appear last to avoid admins orders being screwed
                             };
                             
                             HomeScreenSections.addSectionSetting(newConfig, sectionTypes[i]);

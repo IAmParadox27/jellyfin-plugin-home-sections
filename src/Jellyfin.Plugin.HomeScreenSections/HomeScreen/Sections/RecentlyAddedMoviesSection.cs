@@ -114,20 +114,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             // Check if there's a configured default library, otherwise use first available
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var selectedLibrary = !string.IsNullOrEmpty(config?.DefaultMoviesLibraryId)
+            var folder = !string.IsNullOrEmpty(config?.DefaultMoviesLibraryId)
                 ? movieFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultMoviesLibraryId)
                 : null;
             
             // Fall back to first movies library if no configured library found
-            selectedLibrary ??= movieFolders.FirstOrDefault();
+            folder ??= movieFolders.FirstOrDefault();
             
-            if (selectedLibrary != null)
+            if (folder != null)
             {
                 DtoOptions dtoOptions = new DtoOptions();
                 dtoOptions.Fields =
                     [..dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
-                
-                originalPayload = Array.ConvertAll(new[] { selectedLibrary }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
+
+                originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
             return new RecentlyAddedMoviesSection(m_userViewManager, m_userManager, m_libraryManager, m_dtoService)
