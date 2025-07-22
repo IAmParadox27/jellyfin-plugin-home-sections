@@ -95,6 +95,47 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Get user override permissions for sections.
+        /// </summary>
+        /// <returns>Dictionary of section IDs and their user override permissions.</returns>
+        [HttpGet("UserOverridePermissions")]
+        public ActionResult<Dictionary<string, Dictionary<string, bool>>> GetUserOverridePermissions()
+        {
+            var permissions = new Dictionary<string, Dictionary<string, bool>>();
+            
+            foreach (var sectionSettings in HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings)
+            {
+                var sectionPermissions = new Dictionary<string, bool>();
+                
+                // Determine if user can see this section:
+                // Section is enabled by default, OR global "Allow User Override" is true
+                bool globalAllowUserOverride = HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride;
+                
+                bool sectionVisible = sectionSettings.Enabled || globalAllowUserOverride;
+                sectionPermissions["SectionVisible"] = sectionVisible;
+                sectionPermissions["SectionEnabled"] = sectionSettings.Enabled;
+                
+                // Check each user override setting
+                if (sectionSettings.UserOverrideSettings != null)
+                {
+                    foreach (var overrideSetting in sectionSettings.UserOverrideSettings)
+                    {
+                        sectionPermissions[overrideSetting.Item.ToString()] = overrideSetting.AllowUserOverride;
+                    }
+                }
+                else
+                {
+                    // Default permissions if not set
+                    sectionPermissions["CustomDisplayName"] = true;
+                    sectionPermissions["ShowPlayedItems"] = true;
+                    sectionPermissions["EnableDisableSection"] = true;
+                }
+                permissions[sectionSettings.SectionId] = sectionPermissions;
+            }
+            return permissions;
+        }
+
         private ActionResult ServeView(string viewName)
         {
             if (HomeScreenSectionsPlugin.Instance == null)

@@ -86,6 +86,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         {
             return HomeScreenSectionsPlugin.Instance.Configuration;
         }
+
+        // Lighter weight endpoint for section coordination
+        [HttpGet("Status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public ActionResult<object> GetHomeScreenStatus()
+        {
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
+            return new
+            {
+                Enabled = config.Enabled,
+                AllowUserOverride = config.AllowUserOverride
+            };
+        }
         
         [HttpGet("Sections")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -195,7 +208,38 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             {
                 HomeScreenSectionInfo info = x.AsInfo();
 
-                info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x => x.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+                SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(s => s.SectionId == info.Section);
+                info.ViewMode = sectionSettings?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+                // Apply custom display name
+                string? displayNameToUse = null;
+                
+                if (sectionSettings != null)
+                {
+                    // Check if user is allowed to override
+                    var customDisplayNameOverride = sectionSettings.UserOverrideSettings?.FirstOrDefault(s => s.Item == UserOverrideItem.CustomDisplayName);
+                    bool userCanOverride = customDisplayNameOverride?.AllowUserOverride ?? true;
+                    
+                    if (userCanOverride && settings != null)
+                    {
+                        // Use user's custom display name
+                        var userSectionSettings = settings.GetSectionSettings(info.Section ?? string.Empty);
+                        if (!string.IsNullOrWhiteSpace(userSectionSettings.CustomDisplayName))
+                        {
+                            displayNameToUse = userSectionSettings.CustomDisplayName;
+                        }
+                    }
+                    
+                    // Fall back to admin's custom display name
+                    if (string.IsNullOrWhiteSpace(displayNameToUse) && !string.IsNullOrWhiteSpace(sectionSettings.CustomDisplayName))
+                    {
+                        displayNameToUse = sectionSettings.CustomDisplayName;
+                    }
+                }
+                
+                if (!string.IsNullOrWhiteSpace(displayNameToUse))
+                {
+                    info.DisplayText = displayNameToUse;
+                }
                 
                 if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
                     info.DisplayText != null)
@@ -225,7 +269,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             HomeScreenSectionPayload payload = new HomeScreenSectionPayload
             {
                 UserId = userId,
-                AdditionalData = additionalData
+                AdditionalData = additionalData,
+                UserSettings = m_homeScreenManager.GetUserSettings(userId)
             };
 
             return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
@@ -234,7 +279,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [HttpPost("RegisterSection")]
         public ActionResult RegisterSection([FromBody] SectionRegisterPayload payload)
         {
-            m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
+            m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData, payload.SupportsShowPlayedItems, payload.SupportsPreventDuplicates)
             {
                 OnGetResults = sectionPayload =>
                 {

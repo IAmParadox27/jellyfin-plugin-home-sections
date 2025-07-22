@@ -66,9 +66,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         
         public bool ShowDetailsMenu { get; set; } = true;
 
+        public bool SupportsShowPlayedItems { get; set; } = false;
+
+        public bool SupportsPreventDuplicates { get; set; } = false;
+
         public object? OriginalPayload { get; set; }
         
         public bool AllowViewModeChange { get; set; } = true;
+    }
+
+    public class UserSectionSettings
+    {
+        public string SectionId { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
+        public bool ShowPlayedItems { get; set; } = true;
+        public bool PreventDuplicates { get; set; } = true;
+        public string? CustomDisplayName { get; set; }
     }
 
     public class ModularHomeUserSettings
@@ -76,6 +89,42 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public Guid UserId { get; set; }
 
         public List<string> EnabledSections { get; set; } = new List<string>();
+        
+        public List<UserSectionSettings> SectionSettings { get; set; } = new List<UserSectionSettings>();
+
+        // Helper method to get section settings or create default
+        public UserSectionSettings GetSectionSettings(string sectionId)
+        {
+            var settings = SectionSettings.FirstOrDefault(s => s.SectionId == sectionId);
+            if (settings == null)
+            {
+                settings = new UserSectionSettings 
+                { 
+                    SectionId = sectionId, 
+                    Enabled = EnabledSections.Contains(sectionId),
+                    ShowPlayedItems = true,
+                    PreventDuplicates = true
+                };
+                SectionSettings.Add(settings);
+            }
+            return settings;
+        }
+
+        // Helper method to sync SectionSettings from EnabledSections (primary source)
+        public void SyncSectionSettings()
+        {
+            // Ensure all enabled sections have corresponding SectionSettings
+            foreach (string sectionId in EnabledSections)
+            {
+                GetSectionSettings(sectionId); // This will create if missing
+            }
+            
+            // Update existing SectionSettings based on EnabledSections
+            foreach (var sectionSetting in SectionSettings)
+            {
+                sectionSetting.Enabled = EnabledSections.Contains(sectionSetting.SectionId);
+            }
+        }
     }
 
     public static class HomeScreenSectionExtensions

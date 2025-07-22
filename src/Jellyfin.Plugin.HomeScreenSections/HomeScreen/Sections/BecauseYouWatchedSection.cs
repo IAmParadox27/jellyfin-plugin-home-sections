@@ -116,6 +116,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
 		{
+			bool showPlayedItems = payload.GetEffectiveShowPlayedItems(Section ?? string.Empty);
 			User user = UserManager.GetUserById(payload.UserId)!;
 			
 			DtoOptions? dtoOptions = new DtoOptions
@@ -146,10 +147,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				IsMovie = true,
 				SimilarTo = item,
 				User = user,
-				IsPlayed = false, // Maybe make this configuable but this is the preferred default behaviour.
+				IsPlayed = showPlayedItems,
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
 			});
+
+			bool preventDuplicates = payload.GetEffectivePreventDuplicates(Section ?? string.Empty);
+			
+			if (preventDuplicates && payload.AlreadyRecommendedIds != null)
+			{
+				similar = similar.Where(x => !payload.AlreadyRecommendedIds.Contains(x.Id)).ToList();
+			}
 
 			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar, dtoOptions, user));
 		}
@@ -164,7 +172,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Route = Route,
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape
+				ViewMode = SectionViewMode.Landscape,
+				SupportsShowPlayedItems = true,
+				SupportsPreventDuplicates = true
 			};
 		}
 	}

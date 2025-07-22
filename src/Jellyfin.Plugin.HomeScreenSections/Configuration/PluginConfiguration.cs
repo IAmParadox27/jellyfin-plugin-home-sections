@@ -21,14 +21,26 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         Landscape,
         Square
     }
+
+    public enum UserOverrideItem
+    {
+        CustomDisplayName,
+        ShowPlayedItems,
+        EnableDisableSection,
+        PreventDuplicates
+    }
+    
+    public class UserOverrideSetting
+    {
+        public UserOverrideItem Item { get; set; }
+        public bool AllowUserOverride { get; set; } = true;
+    }
     
     public class SectionSettings
     {
         public string SectionId { get; set; } = string.Empty;
         
         public bool Enabled { get; set; }
-        
-        public bool AllowUserOverride { get; set; }
         
         public int LowerLimit { get; set; }
         
@@ -37,5 +49,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public int OrderIndex { get; set; }
         
         public SectionViewMode ViewMode { get; set; } = SectionViewMode.Landscape;
+        
+        public string? CustomDisplayName { get; set; }
+        
+        public bool ShowPlayedItems { get; set; } = true;
+
+        public bool PreventDuplicates { get; set; } = true;
+
+        public UserOverrideSetting[] UserOverrideSettings { get; set; } = new UserOverrideSetting[]
+        {
+            new UserOverrideSetting { Item = UserOverrideItem.CustomDisplayName, AllowUserOverride = true },
+            new UserOverrideSetting { Item = UserOverrideItem.ShowPlayedItems, AllowUserOverride = true },
+            new UserOverrideSetting { Item = UserOverrideItem.PreventDuplicates, AllowUserOverride = true },
+            new UserOverrideSetting { Item = UserOverrideItem.EnableDisableSection, AllowUserOverride = true }
+        };
     }
 }

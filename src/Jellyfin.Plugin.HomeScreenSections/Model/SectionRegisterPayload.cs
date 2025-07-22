@@ -21,5 +21,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
         
         [JsonPropertyName("resultsEndpoint")]
         public string? ResultsEndpoint { get; set; }
+        
+        [JsonPropertyName("supportsShowPlayedItems")]
+        public bool SupportsShowPlayedItems { get; set; } = false;
+        
+        [JsonPropertyName("supportsPreventDuplicates")]
+        public bool SupportsPreventDuplicates { get; set; } = false;
     }
 }

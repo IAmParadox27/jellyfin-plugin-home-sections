@@ -2,6 +2,42 @@
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <title>Home Screen Sections</title>
+    <style>
+        /* 
+         * Styles for user override functionality
+         */
+        .user-override-disabled {
+            opacity: 0.5 !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s ease !important;
+        }
+        
+        .user-override-disabled input[type="checkbox"] {
+            opacity: 0.4 !important;
+            cursor: not-allowed !important;
+        }
+        
+        .user-override-disabled .checkboxLabel {
+            color: #666 !important;
+            cursor: not-allowed !important;
+        }
+        
+        .user-override-disabled td {
+            color: #888 !important;
+        }
+        
+        .user-override-content {
+            padding: 1em;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 0.3em;
+            background-color: rgba(0,0,0,0.1);
+            margin-top: 1em;
+        }
+        
+        .user-override-content.hide {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
 <div data-role="page" id="homeScreenSectionsConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent">
@@ -72,27 +108,69 @@
                 <input id="templateOrderIndex" data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input">
                 <div class="fieldDescription">Defines an order location for this section, the smaller the number the higher it will appear on the home page. <i>Note: When sections share a number they will be randomized among themselves.</i></div>
             </div>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-                <label class="emby-checkbox-label">
-                    <input id="templateSectionEnabled" data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel">Enabled</span>
-                    <span class="checkboxOutline">
-                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
-                    </span>
-                </label>
-                <div class="fieldDescription">Is this section enabled by default?</div>
+            
+            <div class="verticalSection-extrabottompadding">
+                <h4>Default Settings</h4>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="templateSectionEnabled" data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Enabled</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">Is this section enabled by default?</div>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="templateShowPlayedItems" data-id="chkShowPlayedItems" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Show Played Items</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">Should played items be shown in this section by default?</div>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="templatePreventDuplicates" data-id="chkPreventDuplicates" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Prevent Duplicates</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">Prevent multiple instances of this section from suggesting the same items.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="templateCustomDisplayName">Custom Display Name</label>
+                    <input id="templateCustomDisplayName" data-id="txtCustomDisplayName" type="text" is="emby-input" class="emby-input">
+                    <div class="fieldDescription">Override the default display name for this section. Leave blank to use the default name.</div>
+                </div>
             </div>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-                <label class="emby-checkbox-label">
-                    <input id="templateSectionAllowUserOverride" data-id="chkSectionUserOverrideAllowed" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel">Allow User Override</span>
-                    <span class="checkboxOutline">
-                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
-                    </span>
-                </label>
-                <div class="fieldDescription">Is the user allowed to enable/disable this section?</div>
+            
+            <div class="verticalSection-extrabottompadding">
+                <h4>User Override Settings</h4>
+                
+                <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 15px;">
+                    <label class="emby-checkbox-label">
+                        <input id="allowUserOverrideToggle" data-id="chkAllowUserOverride" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Allow User Override</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked" aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">Enable this to allow users to customize this section's settings.</div>
+                </div>
+                
+                <div class="user-override-content hide" data-id="userOverrideContent">
+                    <div id="userOverrideContainer" data-id="userOverrideContainer">
+                        <!-- User override settings -->
+                    </div>
+                </div>
             </div>
             <div class="inputContainer">
                 <span>View Mode: </span>
@@ -142,14 +220,31 @@
                     
                     const configs = document.querySelectorAll('[data-id=section-config]');
                     for (let i = 0; i < configs.length; i++) {
+                        // Check if user override is enabled for this section
+                        const allowUserOverrideToggle = configs[i].querySelector('[data-id="chkAllowUserOverride"]');
+                        const userOverrideEnabled = allowUserOverrideToggle ? allowUserOverrideToggle.checked : false;
+                        
+                        // Collect user override settings
+                        const userOverrideSettings = [];
+                        const overrideCheckboxes = configs[i].querySelectorAll('[data-override-item]');
+                        overrideCheckboxes.forEach(function(checkbox) {
+                            userOverrideSettings.push({
+                                Item: checkbox.getAttribute('data-override-item'),
+                                AllowUserOverride: userOverrideEnabled && checkbox.checked
+                            });
+                        });
+                        
                         const sectionConfig = {
                             SectionId: configs[i].querySelector('[data-id=hiddenSectionId]').value,
                             Enabled: configs[i].querySelector('[data-id=chkSectionEnabled]').checked,
-                            AllowUserOverride: configs[i].querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
                             LowerLimit: configs[i].querySelector('[data-id=txtSectionMinLimit]').value,
                             UpperLimit: configs[i].querySelector('[data-id=txtSectionMaxLimit]').value,
                             OrderIndex: configs[i].querySelector('[data-id=txtOrderIndex]').value,
                             ViewMode: configs[i].querySelector('[data-id=viewModeSelect]').value,
+                            CustomDisplayName: configs[i].querySelector('[data-id=txtCustomDisplayName]').value,
+                            ShowPlayedItems: configs[i].querySelector('[data-id=chkShowPlayedItems]').checked,
+                            PreventDuplicates: configs[i].querySelector('[data-id=chkPreventDuplicates]').checked,
+                            UserOverrideSettings: userOverrideSettings
                         };
                         
                         config.SectionSettings.push(sectionConfig);
@@ -194,24 +289,45 @@
                 },
                 loadConfigResponse: function(pluginConfig, sectionTypes) {
                     // clear the "sections"
+                    HomeScreenSections.sectionWrapper.innerHTML = '';
+                    
                     for (let i = 0; i < sectionTypes.length; ++i) {
                         let found = false;
                         for (let j = 0; j < pluginConfig.SectionSettings.length; ++j) {
                             if (pluginConfig.SectionSettings[j].SectionId == sectionTypes[i].Section) {
                                 HomeScreenSections.addSectionSetting(pluginConfig.SectionSettings[j], sectionTypes[i]);
                                 found = true;
+                                break;
                             }
                         }
                         
                         if (!found) {
+                            const defaultUserOverrideSettings = [
+                                { Item: 'EnableDisableSection', AllowUserOverride: true },
+                                { Item: 'CustomDisplayName', AllowUserOverride: true }
+                            ];
+                            
+                            // Only add ShowPlayedItems setting if section supports it
+                            if (sectionTypes[i].SupportsShowPlayedItems) {
+                                defaultUserOverrideSettings.splice(1, 0, { Item: 'ShowPlayedItems', AllowUserOverride: true });
+                            }
+                            
+                            // Only add PreventDuplicates setting if section supports it
+                            if (sectionTypes[i].SupportsPreventDuplicates) {
+                                defaultUserOverrideSettings.push({ Item: 'PreventDuplicates', AllowUserOverride: true });
+                            }
+                            
                             let newConfig = {
                                 SectionId: sectionTypes[i].Section,
                                 Enabled: true,
-                                AllowUserOverride: true,
                                 LowerLimit: 1,
                                 UpperLimit: sectionTypes[i].Limit,
                                 ViewMode: sectionTypes[i].ViewMode,
-                                OrderIndex: 999 // new sections will always appear last to avoid admins orders being screwed
+                                OrderIndex: 999, // new sections will always appear last to avoid admins orders being screwed
+                                CustomDisplayName: '',
+                                ShowPlayedItems: true,
+                                PreventDuplicates: true,
+                                UserOverrideSettings: defaultUserOverrideSettings
                             };
                             
                             HomeScreenSections.addSectionSetting(newConfig, sectionTypes[i]);
@@ -223,11 +339,27 @@
                     const template = HomeScreenSections.sectionTemplate.cloneNode(true).content;
                     template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
                     template.querySelector('[data-id=chkSectionEnabled]').checked = sectionConfig.Enabled;
-                    template.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = sectionConfig.AllowUserOverride;
                     template.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit;
                     template.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit;
                     template.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex;
                     template.querySelector('[data-id=viewModeSelect]').value = sectionConfig.ViewMode;
+                    template.querySelector('[data-id=txtCustomDisplayName]').value = sectionConfig.CustomDisplayName || '';
+                    template.querySelector('[data-id=chkShowPlayedItems]').checked = sectionConfig.ShowPlayedItems !== undefined ? sectionConfig.ShowPlayedItems : true;
+                    template.querySelector('[data-id=chkPreventDuplicates]').checked = sectionConfig.PreventDuplicates !== undefined ? sectionConfig.PreventDuplicates : true;
+                    
+                    // Hide options if not supported
+                    const featureSupport = [
+                        { supported: sectionInfo.SupportsShowPlayedItems, selector: '[data-id=chkShowPlayedItems]' },
+                        { supported: sectionInfo.SupportsPreventDuplicates, selector: '[data-id=chkPreventDuplicates]' }
+                    ];
+                    
+                    featureSupport.forEach(feature => {
+                        if (!feature.supported) {
+                            const container = template.querySelector(feature.selector)?.closest('.checkboxContainer');
+                            if (container) container.style.display = 'none';
+                        }
+                    });
+                    
                     if (!sectionInfo.AllowViewModeChange) {
                         template.querySelector('[data-id=viewModeSelect]').value = sectionInfo.ViewMode;
                         template.querySelector('[data-id=viewModeSelect]').setAttribute('disabled', true)
@@ -235,7 +367,138 @@
                     
                     template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
                     
-                    const el = HomeScreenSections.sectionWrapper.appendChild(template);
+                    HomeScreenSections.sectionWrapper.appendChild(template);
+                    
+                    // Now add user override settings after the element is in the DOM
+                    const allSections = HomeScreenSections.sectionWrapper.querySelectorAll('[data-id=section-config]');
+                    const el = allSections[allSections.length - 1];
+                    const userOverrideContainer = el.querySelector('[data-id=userOverrideContainer]');
+                    HomeScreenSections.populateUserOverrideSettings(userOverrideContainer, sectionConfig, el, sectionInfo);
+                },
+                populateUserOverrideSettings: function(container, sectionConfig, sectionElement, sectionInfo) {
+                    // Check if container exists
+                    if (!container) {
+                        console.error('User override container not found');
+                        return;
+                    }
+                    
+                    // Ensure UserOverrideSettings exists and has default values
+                    if (!sectionConfig.UserOverrideSettings) {
+                        const defaultSettings = [
+                            { Item: 'EnableDisableSection', AllowUserOverride: true },
+                            { Item: 'CustomDisplayName', AllowUserOverride: true }
+                        ];
+                        
+                        // Only add ShowPlayedItems setting if section supports it
+                        if (sectionInfo.SupportsShowPlayedItems) {
+                            defaultSettings.splice(1, 0, { Item: 'ShowPlayedItems', AllowUserOverride: true });
+                        }
+                        
+                        // Only add PreventDuplicates setting if section supports it
+                        if (sectionInfo.SupportsPreventDuplicates) {
+                            defaultSettings.push({ Item: 'PreventDuplicates', AllowUserOverride: true });
+                        }
+                        
+                        sectionConfig.UserOverrideSettings = defaultSettings;
+                    }
+                    
+                    // Create table for user override settings (reverted from checkboxList)
+                    let html = '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<thead><tr>';
+                    html += '<th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Allow User Override</th>';
+                    html += '<th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Item</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    // Available override items (in order: Enabled, Show Played Items, Custom Display Name, Prevent Duplicates)
+                    let availableItems = [
+                        { key: 'EnableDisableSection', label: 'Enable/Disable this section' },
+                        { key: 'ShowPlayedItems', label: 'Show Played Items' },
+                        { key: 'CustomDisplayName', label: 'Custom Display Name' },
+                        { key: 'PreventDuplicates', label: 'Prevent Duplicates' }
+                    ];
+                    
+                    // Filter out "Show Played Items" if section doesn't support it
+                    if (!sectionInfo.SupportsShowPlayedItems) {
+                        availableItems = availableItems.filter(item => item.key !== 'ShowPlayedItems');
+                    }
+                    
+                    // Filter out "Prevent Duplicates" if section doesn't support it
+                    if (!sectionInfo.SupportsPreventDuplicates) {
+                        availableItems = availableItems.filter(item => item.key !== 'PreventDuplicates');
+                    }
+                    
+                    availableItems.forEach(function(item) {
+                        const existingSetting = sectionConfig.UserOverrideSettings.find(s => s.Item === item.key);
+                        const isAllowed = existingSetting ? existingSetting.AllowUserOverride : true;
+                        
+                        html += '<tr>';
+                        html += '<td style="padding: 8px; border-bottom: 1px solid #333;">';
+                        html += '<label class="emby-checkbox-label">';
+                        html += '<input type="checkbox" is="emby-checkbox" data-override-item="' + item.key + '" ' + (isAllowed ? 'checked' : '') + ' data-embycheckbox="true" class="emby-checkbox">';
+                        html += '<span class="checkboxLabel"></span>';
+                        html += '<span class="checkboxOutline">';
+                        html += '<span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>';
+                        html += '<span class="material-icons checkboxIcon checkboxIcon-unchecked" aria-hidden="true"></span>';
+                        html += '</span>';
+                        html += '</label>';
+                        html += '</td>';
+                        html += '<td style="padding: 8px; border-bottom: 1px solid #333;">' + item.label + '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                    
+                    // Set up the Allow User Override toggle
+                    const allowUserOverrideToggle = sectionElement.querySelector('[data-id="chkAllowUserOverride"]');
+                    const userOverrideTable = container.querySelector('table');
+                    
+                    if (!allowUserOverrideToggle || !userOverrideTable) {
+                        return; // Exit if elements not found
+                    }
+                    
+                    // Determine if any user overrides are currently enabled
+                    const hasAnyOverrideEnabled = sectionConfig.UserOverrideSettings.some(s => s.AllowUserOverride);
+                    allowUserOverrideToggle.checked = hasAnyOverrideEnabled;
+                    
+                    // Set initial state
+                    toggleUserOverrideSettings(userOverrideTable, hasAnyOverrideEnabled);
+                    
+                    // Set initial visibility of the override content
+                    const userOverrideContent = sectionElement.querySelector('[data-id="userOverrideContent"]');
+                    if (userOverrideContent) {
+                        if (hasAnyOverrideEnabled) {
+                            userOverrideContent.classList.remove('hide');
+                        } else {
+                            userOverrideContent.classList.add('hide');
+                        }
+                    }
+                    
+                    // Add event listener for the toggle
+                    allowUserOverrideToggle.addEventListener('change', function() {
+                        const isEnabled = this.checked;
+                        toggleUserOverrideSettings(userOverrideTable, isEnabled);
+                        
+                        // Show/hide the override content based on checkbox state
+                        if (userOverrideContent) {
+                            if (isEnabled) {
+                                userOverrideContent.classList.remove('hide');
+                            } else {
+                                userOverrideContent.classList.add('hide');
+                            }
+                        }
+                        
+                        // Don't modify checkbox states, just enable/disable them visually
+                        // The checkboxes retain their values but are grayed out when disabled
+                    });
+                    
+                    function toggleUserOverrideSettings(tableElement, isEnabled) {
+                        if (isEnabled) {
+                            tableElement.classList.remove('user-override-disabled');
+                        } else {
+                            tableElement.classList.add('user-override-disabled');
+                        }
+                    }
                 }
             }
 
