@@ -17,6 +17,7 @@
             </div>
         </div>
         <hr class="solid">
+        <form class="artworkConfigurationForm">
             <fieldset class="verticalSection-extrabottompadding">
                 <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.5em;">Global Settings</legend>
                 <div class="checkboxContainer checkboxContainer-withDescription">
@@ -80,13 +81,13 @@
                 <table class="tblConnections" style="width: 100%;">
                     <thead>
                         <tr>
-                            <th>Section</th>
-                            <th>Order</th>
-                            <th>Enabled</th>
-                            <th>User Override</th>
-                            <th>View Mode</th>
-                            <th>Min</th>
-                            <th>Max</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
                         </tr>
                     </thead>
                     <tbody id="sectionWrapper">
@@ -102,15 +103,15 @@
 
     <template id="sectionConfigTemplate">
         <tr data-id="section-config">
-            <td>
+            <td style="text-align: left; vertical-align: middle; padding: 8px 12px;">
                 <input type="hidden" data-id="hiddenSectionId" />
                 <strong data-id="lblSectionName"></strong>
             </td>
-            <td>
-                <input data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px;">
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <input data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
             </td>
-            <td style="text-align: center;">
-                <label class="emby-checkbox-label">
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <label style="width: 0;" class="emby-checkbox-label">
                     <input data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
                     <span class="checkboxLabel"></span>
                     <span class="checkboxOutline">
@@ -119,8 +120,8 @@
                     </span>
                 </label>
             </td>
-            <td style="text-align: center;">
-                <label class="emby-checkbox-label">
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <label style="width: 0;" class="emby-checkbox-label">
                     <input data-id="chkSectionUserOverrideAllowed" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
                     <span class="checkboxLabel"></span>
                     <span class="checkboxOutline">
@@ -129,18 +130,18 @@
                     </span>
                 </label>
             </td>
-            <td>
-                <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect" style="width: 100%;">
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect" style="width: 100%; text-align: center;">
                     <option value="Portrait">Portrait</option>
                     <option value="Landscape">Landscape</option>
                     <option value="Square">Square</option>
                 </select>
             </td>
-            <td>
-                <input data-id="txtSectionMinLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px;">
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <input data-id="txtSectionMinLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
             </td>
-            <td>
-                <input data-id="txtSectionMaxLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px;">
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <input data-id="txtSectionMaxLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
             </td>
         </tr>
     </template>
