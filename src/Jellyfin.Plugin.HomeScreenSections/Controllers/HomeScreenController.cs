@@ -17,6 +17,7 @@ using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -84,11 +85,54 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<PluginConfiguration> GetHomeScreenConfiguration()
         {
-            return HomeScreenSectionsPlugin.Instance.Configuration;
+            try 
+            {
+                var config = HomeScreenSectionsPlugin.Instance.Configuration;
+                return config;
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error loading configuration: {ex.Message}");
+            }
+        }
+
+        [HttpPost("Configuration")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public ActionResult UpdateHomeScreenConfiguration([FromBody] PluginConfiguration configuration)
+        {
+            try
+            {
+                if (configuration == null)
+                {
+                    return BadRequest("Configuration cannot be null");
+                }
+                
+                HomeScreenSectionsPlugin.Instance.UpdateConfiguration(configuration);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error updating configuration: {ex.Message}");
+            }
+        }
+
+        [HttpGet("Status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize]
+        public ActionResult<object> GetHomeScreenStatus()
+        {
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
+            return new
+            {
+                Enabled = config.Enabled,
+                AllowUserOverride = config.AllowUserOverride
+            };
         }
         
         [HttpGet("Sections")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize]
         public ActionResult<QueryResult<HomeScreenSectionInfo>> GetHomeScreenSections(
             [FromQuery] Guid? userId,
             [FromQuery] string? language)
@@ -103,54 +147,57 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
             List<IHomeScreenSection> sectionInstances = new List<IHomeScreenSection>();
 
-            List<string> homeSectionOrderTypes = new List<string>();
-            foreach (HomeSection section in displayPreferences.HomeSections.OrderBy(x => x.Order))
+            if (HomeScreenSectionsPlugin.Instance.Configuration.RespectUserHomepage)
             {
-                switch (section.Type)
+                List<string> homeSectionOrderTypes = new List<string>();
+                foreach (HomeSection section in displayPreferences.HomeSections.OrderBy(x => x.Order))
                 {
-                    case HomeSectionType.SmallLibraryTiles:
-                        homeSectionOrderTypes.Add("MyMedia");
-                        break;
-                    case HomeSectionType.Resume:
-                        homeSectionOrderTypes.Add("ContinueWatching");
-                        break;
-                    case HomeSectionType.LatestMedia:
-                        homeSectionOrderTypes.Add("LatestMovies");
-                        homeSectionOrderTypes.Add("LatestShows");
-                        break;
-                    case HomeSectionType.NextUp:
-                        homeSectionOrderTypes.Add("NextUp");
-                        break;
-                }
-            }
-
-            foreach (string type in homeSectionOrderTypes)
-            {
-                IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
-
-                if (sectionType != null)
-                {
-                    if (sectionType.Limit > 1)
+                    switch (section.Type)
                     {
-                        SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
-                            x.SectionId == sectionType.Section);
+                        case HomeSectionType.SmallLibraryTiles:
+                            homeSectionOrderTypes.Add("MyMedia");
+                            break;
+                        case HomeSectionType.Resume:
+                            homeSectionOrderTypes.Add("ContinueWatching");
+                            break;
+                        case HomeSectionType.LatestMedia:
+                            homeSectionOrderTypes.Add("LatestMovies");
+                            homeSectionOrderTypes.Add("LatestShows");
+                            break;
+                        case HomeSectionType.NextUp:
+                            homeSectionOrderTypes.Add("NextUp");
+                            break;
+                    }
+                }
 
-                        Random rnd = new Random();
-                        int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
+                foreach (string type in homeSectionOrderTypes)
+                {
+                    IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
 
-                        for (int i = 0; i < instanceCount; ++i)
+                    if (sectionType != null)
+                    {
+                        if (sectionType.Limit > 1)
                         {
-                            sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
+                            SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
+                                x.SectionId == sectionType.Section);
+
+                            Random rnd = new Random();
+                            int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
+
+                            for (int i = 0; i < instanceCount; ++i)
+                            {
+                                sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
+                            }
+                        }
+                        else if (sectionType.Limit == 1)
+                        {
+                            sectionInstances.Add(sectionType.CreateInstance(userId));
                         }
                     }
-                    else if (sectionType.Limit == 1)
-                    {
-                        sectionInstances.Add(sectionType.CreateInstance(userId));
-                    }
                 }
-            }
 
-            sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
+                sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
+            }
 
             IEnumerable<IGrouping<int, SectionSettings>> groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
                 .OrderBy(x => x.OrderIndex)
@@ -195,7 +242,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             {
                 HomeScreenSectionInfo info = x.AsInfo();
 
-                info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x => x.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+                SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(s => s.SectionId == info.Section);
+                info.ViewMode = sectionSettings?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+                string? displayNameToUse = null;
+                
+                if (sectionSettings != null)
+                {
+                    var customDisplayNameOverride = sectionSettings.UserOverrideSettings?.FirstOrDefault(s => s.Item == UserOverrideItem.CustomDisplayName);
+                    bool userCanOverride = customDisplayNameOverride?.AllowUserOverride ?? true;
+                    
+                    if (userCanOverride && settings != null)
+                    {
+                        var userSectionSettings = settings.GetSectionSettings(info.Section ?? string.Empty);
+                        if (!string.IsNullOrWhiteSpace(userSectionSettings.CustomDisplayName))
+                        {
+                            displayNameToUse = userSectionSettings.CustomDisplayName;
+                        }
+                    }
+                    
+                    if (string.IsNullOrWhiteSpace(displayNameToUse) && !string.IsNullOrWhiteSpace(sectionSettings.CustomDisplayName))
+                    {
+                        displayNameToUse = sectionSettings.CustomDisplayName;
+                    }
+                }
+                
+                if (!string.IsNullOrWhiteSpace(displayNameToUse))
+                {
+                    info.DisplayText = displayNameToUse;
+                }
                 
                 if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
                     info.DisplayText != null)
@@ -214,8 +288,27 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 sections.Count,
                 sections);
         }
+        
+        [HttpGet("Section/{sectionType}/ConfigurationOptions")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public ActionResult<IEnumerable<PluginConfigurationOption>> GetSectionConfigurationOptions(string sectionType)
+        {
+            var allSections = m_homeScreenManager.GetSectionTypes().ToList();
+            
+            var section = allSections.FirstOrDefault(s => s.Section == sectionType);
+            if (section == null)
+            {
+                return NotFound($"Section type '{sectionType}' not found");
+            }
+            
+            var configOptions = section.GetConfigurationOptions();
+            var configOptionsList = configOptions?.ToList() ?? new List<PluginConfigurationOption>();
+            
+            return Ok(configOptionsList);
+        }
 
         [HttpGet("Section/{sectionType}")]
+        [Authorize]
         public QueryResult<BaseItemDto> GetSectionContent(
             [FromRoute] string sectionType,
             [FromQuery, Required] Guid userId,
@@ -225,16 +318,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             HomeScreenSectionPayload payload = new HomeScreenSectionPayload
             {
                 UserId = userId,
-                AdditionalData = additionalData
+                AdditionalData = additionalData,
+                UserSettings = m_homeScreenManager.GetUserSettings(userId)
             };
 
             return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
         }
 
         [HttpPost("RegisterSection")]
+        [Authorize(Policy = "RequiresElevation")]
         public ActionResult RegisterSection([FromBody] SectionRegisterPayload payload)
         {
-            m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
+            m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData, payload.ConfigurationOptions)
             {
                 OnGetResults = sectionPayload =>
                 {

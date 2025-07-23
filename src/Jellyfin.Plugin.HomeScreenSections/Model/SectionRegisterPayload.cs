@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Model
 {
@@ -21,5 +22,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
         
         [JsonPropertyName("resultsEndpoint")]
         public string? ResultsEndpoint { get; set; }
+        
+        [JsonPropertyName("configurationOptions")]
+        public List<PluginConfigurationOption>? ConfigurationOptions { get; set; }
     }
 }

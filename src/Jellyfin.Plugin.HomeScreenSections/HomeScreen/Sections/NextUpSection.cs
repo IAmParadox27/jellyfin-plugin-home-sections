@@ -146,5 +146,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ViewMode = SectionViewMode.Landscape
             };
         }
+
+		public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Model.Dto;
@@ -21,13 +22,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public required GetResultsDelegate OnGetResults { get; set; }
         
-        public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null)
+        private readonly List<PluginConfigurationOption>? _configurationOptions;
+        
+        public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null, List<PluginConfigurationOption>? configurationOptions = null)
         {
             Section = sectionUuid;
             DisplayText = displayText;
             Limit = 1;
             Route = route;
             AdditionalData = additionalData;
+            _configurationOptions = configurationOptions;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -52,6 +56,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Landscape
             };
+        }
+
+        /// <summary>
+        /// Get configuration options for this section
+        /// </summary>
+        /// <returns>Collection of configuration options</returns>
+        public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions()
+        {
+            // Return custom configuration options if provided, otherwise return empty collection
+            return _configurationOptions ?? Enumerable.Empty<PluginConfigurationOption>();
         }
     }
 }

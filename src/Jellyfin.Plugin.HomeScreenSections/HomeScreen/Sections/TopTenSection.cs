@@ -123,4 +123,6 @@ public class TopTenSection : IHomeScreenSection
             AllowViewModeChange = false
         };
     }
+
+		public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
 }

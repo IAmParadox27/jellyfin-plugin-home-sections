@@ -99,9 +99,87 @@ Send an HTTP POST request to `http(s)://{YOUR_JELLYFIN_URL}/HomeScreen/RegisterS
 	"displayText":"", // What text should be displayed for your section
 	"limit": 1, // This can only be 1 at the moment, I am working hard to support more than 1 section via HTTP request 
 	"additionalData": "", // Any accompanying data you want sent to your endpoint
-	"resultsEndpoint":"" // The endpoint that will be requested when the section is requested. Expected to return `QueryResult<BaseItemDto>`
+	"resultsEndpoint":"", // The endpoint that will be requested when the section is requested. Expected to return `QueryResult<BaseItemDto>`
+	"configurationOptions": [ // (Optional) Plugin-specific configuration options
+		{
+			"Key": "ShowEmpty", // Unique key for this configuration option
+			"Name": "Show When Empty", // Display name for admins/users
+			"Description": "Display this section even when no items are available", // Help text
+			"Type": "Checkbox", // Boolean configuration
+			"AllowUserOverride": true, // Whether users can override this setting
+			"DefaultValue": false, // Default value for this option
+			"IsAdvanced": false // Whether this appears in advanced options only
+		},
+		{
+			"Key": "SortOrder",
+			"Name": "Sort Order",
+			"Description": "How items should be sorted in this section",
+			"Type": "Dropdown", // Selection from predefined options
+			"AllowUserOverride": true,
+			"DefaultValue": "DateCreated",
+			"DropdownOptions": ["DateCreated", "PremiereDate", "SortName", "Random"],
+			"DropdownLabels": ["Date Added", "Release Date", "Alphabetical", "Random"],
+			"IsAdvanced": false
+		},
+		{
+			"Key": "ApiKey",
+			"Name": "API Key", 
+			"Description": "Your secret API key for external service integration",
+			"Type": "TextBox", // Text input with validation
+			"AllowUserOverride": false,
+			"DefaultValue": "",
+			"Placeholder": "Enter your API key...",
+			"MinLength": 16,
+			"MaxLength": 64,
+			"Pattern": "^[A-Za-z0-9_-]+$",
+			"IsAdvanced": true
+		},
+		{
+			"Key": "ItemLimit",
+			"Name": "Item Limit",
+			"Description": "Maximum number of items to display",
+			"Type": "NumberBox", // Numeric input with validation
+			"AllowUserOverride": true,
+			"DefaultValue": 16,
+			"MinValue": 1,
+			"MaxValue": 50,
+			"Step": 1,
+			"IsAdvanced": false
+		}
+	]
 }
 ```
+
+<details>
+<summary><strong>Configuration Option Properties</strong></summary>
+
+Each configuration option supports the following properties:
+
+**Core Properties:**
+- `Key` (string): Unique identifier
+- `Name` (string): Display name
+- `Description` (string): Help text
+- `Type` (string): "Checkbox", "Dropdown", "TextBox", or "NumberBox"
+- `DefaultValue` (varies): Default value
+- `AllowUserOverride` (boolean): Whether users can override this setting
+- `IsAdvanced` (boolean): Whether this option appears only in advanced
+
+**Text Input Properties (TextBox type):**
+- `Placeholder` (string): Placeholder text for the input field
+- `MinLength` (integer): Minimum required text length
+- `MaxLength` (integer): Maximum allowed text length  
+- `Pattern` (string): Regex pattern for validation
+
+**Numeric Input Properties (NumberBox type):**
+- `MinValue` (number): Minimum value
+- `MaxValue` (number): Maximum value
+- `Step` (number): Increment step size
+
+**Dropdown Properties (Dropdown type):**
+- `DropdownOptions` (array): Array of option values
+- `DropdownLabels` (array): Array of display labels
+
+</details>
 
 ### Pull Requests
 I'm open to any and all pull requests that expand the functionality of this plugin, while keeping within the scope of what its outlined to do, however if the PR includes new sections which **are not** vanilla implementations it will be rejected as the above approach is preferred.

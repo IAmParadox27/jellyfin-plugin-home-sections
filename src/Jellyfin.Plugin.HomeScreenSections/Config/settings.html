@@ -1,4 +1,38 @@
 <form id="config-page" class="configForm" style="margin: 0 auto;">
+    <style>
+        .admin-managed-note {
+            color: var(--theme-text-color-secondary);
+            font-style: italic;
+            font-size: 0.9em;
+            margin-top: 0.25em;
+        }
+        
+        .fieldDescription {
+            color: var(--theme-text-color-secondary);
+            font-size: 0.85em;
+            margin-top: 0.25em;
+        }
+        
+
+        input[disabled] ~ span .checkboxIcon,
+        input:disabled ~ span .checkboxIcon {
+            background-color: rgba(0,0,0,.5) !important;
+            color: rgba(255,255,255,.4) !important;
+        }
+        
+        .advanced-options {
+            display: none;
+        }
+        
+        .advanced-options.show {
+            display: block;
+        }
+        
+        .advanced-toggle {
+            margin: 1em 0;
+        }
+    </style>
+    
     <div class="verticalSection verticalSection-extrabottompadding">
         <h2 class="sectionTitle">Modular Home  - Settings:</h2>
 
@@ -10,8 +44,8 @@
         </div>
 
         <div class="verticalSection verticalSection-extrabottompadding">
-            <h3>Enabled Sections</h3>
-            <div id="enabledSections">
+            <h3>Section Settings</h3>
+            <div id="sectionSettings">
             </div>
         </div>
 
@@ -24,11 +58,68 @@
 
     const config = {
         setup: function () {
-            ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
-                document.querySelector('#modularHomeEnabled').checked = userSettings.CustomPrefs['useModularHome'] === 'true';
+            if (typeof ApiClient === 'undefined') {
+                Dashboard.alert('Plugin settings are not available in this context. Please access them through the admin dashboard.');
+                return;
+            }
+            
+            if (typeof Dashboard !== 'undefined' && Dashboard.showLoadingMsg) {
+                Dashboard.showLoadingMsg();
+            }
+            
+            // Check plugin configuration to determine checkbox state and behavior
+            ApiClient.fetch({
+                url: ApiClient.getUrl('HomeScreen/Configuration'),
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    accept: 'application/json'
+                }
+            }).then(function (pluginConfig) {
+                if (pluginConfig.AllowUserOverride === true) {
+                    // User override allowed - show user's personal preference
+                    ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
+                        document.querySelector('#modularHomeEnabled').checked = userSettings.CustomPrefs['useModularHome'] === 'true';
+                        document.querySelector('#modularHomeEnabled').disabled = false;
+                        addAdvancedToggleAfterNote();
+                    }).catch(function(error) {
+                        document.querySelector('#modularHomeEnabled').checked = false;
+                        document.querySelector('#modularHomeEnabled').disabled = false;
+                        addAdvancedToggleAfterNote();
+                    });
+                } else {
+                    document.querySelector('#modularHomeEnabled').checked = pluginConfig.Enabled === true;
+                    document.querySelector('#modularHomeEnabled').disabled = true;
+                    
+                    const existingNote = document.querySelector('#modularHomeEnabled').closest('.verticalSection').querySelector('.admin-managed-note');
+                    if (!existingNote) {
+                        const noteElement = document.createElement('div');
+                        noteElement.className = 'admin-managed-note';
+                        noteElement.textContent = 'This setting is managed by the administrator.';
+                        document.querySelector('#modularHomeEnabled').closest('.verticalSection').appendChild(noteElement);
+                    }
+                    addAdvancedToggleAfterNote();
+                }
+            }).catch(function(error) {
+                const errorMessage = error && error.message ? error.message : 'Unable to load plugin configuration.';
+                
+                document.querySelector('#modularHomeEnabled').checked = false;
+                document.querySelector('#modularHomeEnabled').disabled = true;
+                
+                const existingNote = document.querySelector('#modularHomeEnabled').closest('.verticalSection').querySelector('.admin-managed-note');
+                if (!existingNote) {
+                    const noteElement = document.createElement('div');
+                    noteElement.className = 'admin-managed-note';
+                    noteElement.textContent = errorMessage;
+                    document.querySelector('#modularHomeEnabled').closest('.verticalSection').appendChild(noteElement);
+                }
+                
+                addAdvancedToggleAfterNote();
+                
+                if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                    Dashboard.hideLoadingMsg();
+                }
             });
-
-            let urlStart = window.location.protocol + '//' + window.location.host;
 
             ApiClient.fetch({
                 url: ApiClient.getUrl('ModularHomeViews/UserSettings?userId=' + ApiClient.getCurrentUserId()),
@@ -38,57 +129,344 @@
                     accept: 'application/json'
                 }
             }).then(function (settings) {
+                // Get user override permissions instead of full plugin configuration
                 ApiClient.fetch({
-                    url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                    url: ApiClient.getUrl('ModularHomeViews/UserOverridePermissions'),
                     type: 'GET',
                     dataType: 'json',
                     headers: {
                         accept: 'application/json'
                     }
-                }).then(function (response) {
-                    if (response.TotalRecordCount > 0) {
+                }).then(function (userOverridePermissions) {
+                    ApiClient.fetch({
+                        url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                        type: 'GET',
+                        dataType: 'json',
+                        headers: {
+                            accept: 'application/json'
+                        }
+                    }).then(function (response) {
+                        if (response.TotalRecordCount > 0) {
 
-                        let html = '';
-                        for (let i = 0; i < response.TotalRecordCount; ++i) {
-                            let section = response.Items[i];
+                            let html = '';
+                            for (let i = 0; i < response.TotalRecordCount; ++i) {
+                                let section = response.Items[i];
 
-                            let checked = false;
-                            if (settings.EnabledSections.includes(section.Section)) {
-                                checked = true;
+                                // Find existing settings for this section or create defaults
+                                let sectionSettings = settings.SectionSettings.find(s => s.SectionId === section.Section);
+                                if (!sectionSettings) {
+                                    sectionSettings = {
+                                        SectionId: section.Section,
+                                        Enabled: settings.EnabledSections.includes(section.Section),
+                                        ShowPlayedItems: true,
+                                        PreventDuplicates: true,
+                                        CustomDisplayName: null
+                                    };
+                                    settings.SectionSettings.push(sectionSettings);
+                                }
+
+                                // Get user override permissions for this section
+                                let sectionPermissions = userOverridePermissions[section.Section] || {};
+                                let sectionVisible = sectionPermissions['SectionVisible'] !== false;
+                                let allowUserOverride = sectionPermissions['EnableDisableSection'] !== false;
+                                let customDisplayNameAllowed = sectionPermissions['CustomDisplayName'] !== false;
+
+                                // Skip sections that are not visible to users
+                                if (!sectionVisible) {
+                                    continue;
+                                }
+
+                                html += '<h3 class="checkboxListLabel">' + section.DisplayText + '</h3>';
+                                html += '<div class="checkboxList paperList checkboxList-paperList">';
+                                
+                                // Enabled checkbox - show for all visible sections, but disable if user override not allowed
+                                html += '<label class="listItemCheckboxContainer">';
+                                html += '<input is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox user-section-enabled-checkbox" data-section="' + section.Section + '" ' + (sectionSettings.Enabled ? 'checked' : '') + ' ' + (!allowUserOverride ? 'disabled' : '') + ' />';
+                                html += '<span>Enable this section</span>';
+                                html += '</label>';
+                                if (!allowUserOverride) {
+                                    html += '<div class="admin-managed-note">This section is managed by the administrator.</div>';
+                                }
+                                
+                                // Custom display name input (only if allowed by admin) - moved to be right after enable/disable
+                                if (customDisplayNameAllowed) {
+                                    html += '<div class="inputContainer advanced-options">';
+                                    html += '<label class="inputLabel inputLabelUnfocused">Custom Display Name</label>';
+                                    html += '<input type="text" is="emby-input" class="sectionCustomDisplayName" data-section="' + section.Section + '" value="' + (sectionSettings.CustomDisplayName || '') + '" placeholder="Leave blank for default" ' + (!allowUserOverride ? 'disabled' : '') + '>';
+                                    html += '<div class="fieldDescription">Override the display name for this section.</div>';
+                                    html += '</div>';
+                                }
+                                
+                                // Dynamic configuration options placeholder
+                                html += '<div class="dynamic-config-container" data-section="' + section.Section + '"></div>';
+
+                                html += '</div>'; // Close checkboxList
                             }
 
-                            html += '<label class="checkboxContainer">';
-                            html += '<input is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
-                            html += '<span>' + section.DisplayText + '</span>';
-                            html += '</label>';
+                            let elem = document.querySelector('#sectionSettings');
+                            elem.innerHTML = html;
+                            
+                            // Populate dynamic configuration options for each section
+                            response.Items.forEach(function(section) {
+                                // Get section-specific permissions for this section
+                                const sectionPermissions = userOverridePermissions[section.Section] || {};
+                                const sectionAllowUserOverride = sectionPermissions['EnableDisableSection'] !== false;
+                                populateDynamicConfigOptions(section, settings, userOverridePermissions, sectionAllowUserOverride);
+                            });
+                            
+                            if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                                Dashboard.hideLoadingMsg();
+                            }
+                        } else {
+                            if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                                Dashboard.hideLoadingMsg();
+                            }
                         }
-
-                        let elem = document.querySelector('#enabledSections');
-                        elem.innerHTML = html;
+                    }).catch(function(error) {
+                        if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                            Dashboard.hideLoadingMsg();
+                        }
+                    });
+                }).catch(function(error) {
+                    if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                        Dashboard.hideLoadingMsg();
                     }
                 });
+            }).catch(function(error) {
+                if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                    Dashboard.hideLoadingMsg();
+                }
             });
+
+            function addAdvancedToggleAfterNote() {
+                const modularHomeSection = document.querySelector('#modularHomeEnabled').closest('.verticalSection');
+                const existingToggle = modularHomeSection.querySelector('.advanced-toggle');
+                
+                if (!existingToggle) {
+                    const toggleDiv = document.createElement('div');
+                    toggleDiv.className = 'advanced-toggle';
+                    toggleDiv.innerHTML = '<label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" id="showAdvancedOptions" /><span>Show Advanced Options</span></label>';
+                    modularHomeSection.appendChild(toggleDiv);
+                    setupAdvancedToggle();
+                }
+            }
+
+            function setupAdvancedToggle() {
+                const advancedToggle = document.getElementById('showAdvancedOptions');
+                if (advancedToggle) {
+                    const savedState = localStorage.getItem('homeScreenSections.userSettings.showAdvanced');
+                    if (savedState === 'true') {
+                        advancedToggle.checked = true;
+                        const advancedOptions = document.querySelectorAll('.advanced-options');
+                        advancedOptions.forEach(function(element) {
+                            element.style.display = 'block';
+                        });
+                    }
+                    
+                    advancedToggle.addEventListener('change', function() {
+                        const advancedOptions = document.querySelectorAll('.advanced-options');
+                        if (this.checked) {
+                            advancedOptions.forEach(function(element) {
+                                element.style.display = 'block';
+                            });
+                            localStorage.setItem('homeScreenSections.userSettings.showAdvanced', 'true');
+                        } else {
+                            advancedOptions.forEach(function(element) {
+                                element.style.display = 'none';
+                            });
+                            localStorage.setItem('homeScreenSections.userSettings.showAdvanced', 'false');
+                        }
+                    });
+                }
+            }
+
+            async function populateDynamicConfigOptions(section, settings, userOverridePermissions, allowUserOverride) {
+                try {
+                    const url = ApiClient.getUrl(`HomeScreen/Section/${section.Section}/ConfigurationOptions`);
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        const container = document.querySelector(`.dynamic-config-container[data-section="${section.Section}"]`);
+                        if (container) {
+                            container.innerHTML = '<div class="admin-managed-note">Unable to load configuration options for this section.</div>';
+                        }
+                        return;
+                    }
+                    
+                    const responseText = await response.text();
+                    let configOptions;
+                    try {
+                        configOptions = JSON.parse(responseText);
+                    } catch (e) {
+                        return;
+                    }
+                    const container = document.querySelector(`.dynamic-config-container[data-section="${section.Section}"]`);
+                    
+                    if (!container || configOptions.length === 0) {
+                        return;
+                    }
+                    
+                    let sectionSettings = settings.SectionSettings.find(s => s.SectionId === section.Section);
+                    if (!sectionSettings) {
+                        sectionSettings = { SectionId: section.Section, PluginConfigurations: {} };
+                    }
+                    if (!sectionSettings.PluginConfigurations) {
+                        sectionSettings.PluginConfigurations = {};
+                    }
+                    
+                    let html = '';
+                    configOptions.forEach(option => {
+                        const canOverride = option.AllowUserOverride !== false;
+                        const currentValue = sectionSettings.PluginConfigurations[option.Key] ?? option.DefaultValue;
+                        const isDisabled = !allowUserOverride || !canOverride;
+                        const isAdvanced = option.IsAdvanced === true;
+                        const advancedClass = isAdvanced ? ' advanced-options' : '';
+                        
+                        let stringValue = '';
+                        if (currentValue !== null && currentValue !== undefined) {
+                            if (typeof currentValue === 'string') {
+                                stringValue = currentValue;
+                            } else if (typeof currentValue === 'number' || typeof currentValue === 'boolean') {
+                                stringValue = String(currentValue);
+                            } else {
+                                stringValue = '';
+                            }
+                        }
+                        
+                        switch (option.Type) {
+                            case 'Checkbox':
+                                html += '<label class="listItemCheckboxContainer' + advancedClass + '">';
+                                html += '<input is="emby-checkbox" type="checkbox" class="pluginConfigCheckbox" data-section="' + section.Section + '" data-config-key="' + option.Key + '" ' + (currentValue ? 'checked' : '') + ' ' + (isDisabled ? 'disabled' : '') + ' />';
+                                html += '<span>' + option.Name + '</span>';
+                                html += '</label>';
+                                if (option.Description) {
+                                    html += '<div class="fieldDescription' + advancedClass + '">' + option.Description + '</div>';
+                                }
+                                break;
+                                
+                            case 'Dropdown':
+                                html += '<div class="selectContainer' + advancedClass + '">';
+                                html += '<label class="inputLabel inputLabelUnfocused">' + option.Name + '</label>';
+                                html += '<select is="emby-select" class="pluginConfigDropdown emby-select-withcolor emby-select" data-section="' + section.Section + '" data-config-key="' + option.Key + '" ' + (isDisabled ? 'disabled' : '') + '>';
+                                if (option.DropdownOptions && option.DropdownLabels) {
+                                    for (let i = 0; i < option.DropdownOptions.length; i++) {
+                                        const selected = option.DropdownOptions[i] === currentValue ? 'selected' : '';
+                                        const label = option.DropdownLabels[i] || option.DropdownOptions[i];
+                                        html += '<option value="' + option.DropdownOptions[i] + '" ' + selected + '>' + label + '</option>';
+                                    }
+                                }
+                                html += '</select>';
+                                if (option.Description) {
+                                    html += '<div class="fieldDescription">' + option.Description + '</div>';
+                                }
+                                html += '</div>';
+                                break;
+                                
+                            case 'TextBox':
+                                html += '<div class="inputContainer' + advancedClass + '">';
+                                html += '<label class="inputLabel inputLabelUnfocused">' + option.Name + '</label>';
+                                html += '<input type="text" is="emby-input" class="pluginConfigTextbox emby-input" data-section="' + section.Section + '" data-config-key="' + option.Key + '" value="' + stringValue + '" ' + (option.ValidationPattern ? ('pattern="' + option.ValidationPattern + '"') : '') + ' ' + (isDisabled ? 'disabled' : '') + '>';
+                                if (option.Description) {
+                                    html += '<div class="fieldDescription">' + option.Description + '</div>';
+                                }
+                                html += '</div>';
+                                break;
+                                
+                            case 'NumberBox':
+                                html += '<div class="inputContainer' + advancedClass + '">';
+                                html += '<label class="inputLabel inputLabelUnfocused">' + option.Name + '</label>';
+                                html += '<input type="number" is="emby-input" class="pluginConfigNumber emby-input" data-section="' + section.Section + '" data-config-key="' + option.Key + '" value="' + (currentValue || option.DefaultValue || '') + '" ' + (option.MinValue !== undefined ? ('min="' + option.MinValue + '"') : '') + ' ' + (option.MaxValue !== undefined ? ('max="' + option.MaxValue + '"') : '') + ' ' + (isDisabled ? 'disabled' : '') + '>';
+                                if (option.Description) {
+                                    html += '<div class="fieldDescription">' + option.Description + '</div>';
+                                }
+                                html += '</div>';
+                                break;
+                        }
+                    });
+                    
+                    container.innerHTML = html;
+                    
+                } catch (error) {
+                    // Silent error handling
+                }
+            }
 
             document.querySelector('.configForm')
                 .addEventListener('submit', function (e) {
+                    if (typeof ApiClient === 'undefined') {
+                        Dashboard.alert('Settings cannot be saved - ApiClient not available.');
+                        e.preventDefault();
+                        return false;
+                    }
+                    
+                    if (typeof Dashboard !== 'undefined' && Dashboard.showLoadingMsg) {
+                        Dashboard.showLoadingMsg();
+                    }
+                    
                     ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
-                        userSettings.CustomPrefs['useModularHome'] = document.querySelector('#modularHomeEnabled').checked ? 'true' : 'false';
+                        const modularHomeCheckbox = document.querySelector('#modularHomeEnabled');
+                        if (modularHomeCheckbox && !modularHomeCheckbox.disabled) {
+                            userSettings.CustomPrefs['useModularHome'] = modularHomeCheckbox.checked ? 'true' : 'false';
+                        }
 
                         ApiClient.updateDisplayPreferences('usersettings', userSettings, ApiClient.getCurrentUserId(), 'emby');
+                    }).catch(function(error) {
+                        // Silent error handling
                     });
 
                     let data = {
                         UserId: ApiClient.getCurrentUserId(),
-                        EnabledSections: []
+                        EnabledSections: [],
+                        SectionSettings: []
                     };
 
                     let checkboxes = document.querySelectorAll('.sectionEnabledCheckbox');
 
                     checkboxes.forEach(function (checkbox) {
                         let sectionId = checkbox.getAttribute('data-section');
+                        
+                        if (!checkbox.disabled) {
+                            let customDisplayNameInput = document.querySelector('.sectionCustomDisplayName[data-section="' + sectionId + '"]');
+                            
+                            let pluginConfigurations = {};
+                            
+                            document.querySelectorAll(`.pluginConfigCheckbox[data-section="${sectionId}"]`).forEach(function(element) {
+                                if (!element.disabled) {
+                                    pluginConfigurations[element.getAttribute('data-config-key')] = element.checked;
+                                }
+                            });
+                            
+                            document.querySelectorAll(`.pluginConfigDropdown[data-section="${sectionId}"]`).forEach(function(element) {
+                                if (!element.disabled) {
+                                    pluginConfigurations[element.getAttribute('data-config-key')] = element.value;
+                                }
+                            });
+                            
+                            document.querySelectorAll(`.pluginConfigTextbox[data-section="${sectionId}"]`).forEach(function(element) {
+                                if (!element.disabled) {
+                                    pluginConfigurations[element.getAttribute('data-config-key')] = element.value || '';
+                                }
+                            });
+                            
+                            document.querySelectorAll(`.pluginConfigNumber[data-section="${sectionId}"]`).forEach(function(element) {
+                                if (!element.disabled) {
+                                    const value = element.value ? parseFloat(element.value) : null;
+                                    pluginConfigurations[element.getAttribute('data-config-key')] = value;
+                                }
+                            });
+                            
+                            let sectionSettings = {
+                                SectionId: sectionId,
+                                Enabled: checkbox.checked,
+                                CustomDisplayName: customDisplayNameInput && !customDisplayNameInput.disabled ? (customDisplayNameInput.value || null) : null,
+                                PluginConfigurations: pluginConfigurations
+                            };
+                            
+                            data.SectionSettings.push(sectionSettings);
 
-                        if (checkbox.checked) {
-                            data.EnabledSections.push(sectionId);
+                            if (checkbox.checked) {
+                                data.EnabledSections.push(sectionId);
+                            }
                         }
                     });
 
@@ -98,12 +476,25 @@
                         data: JSON.stringify(data),
                         contentType: 'application/json'
                     }).then(function () {
+                        if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                            Dashboard.hideLoadingMsg();
+                        }
                         Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
 
                         setTimeout(function () {
                             location.reload(true);
                         }, 2000);
-                    })
+                    }).catch(function(error) {
+                        if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
+                            Dashboard.hideLoadingMsg();
+                        }
+                        
+                        if (typeof Dashboard !== 'undefined' && Dashboard.processErrorResponse) {
+                            Dashboard.processErrorResponse(error);
+                        } else {
+                            Dashboard.alert('Error saving settings: ' + (error.message || 'Unknown error occurred'));
+                        }
+                    });
 
                     e.preventDefault();
                     return false;

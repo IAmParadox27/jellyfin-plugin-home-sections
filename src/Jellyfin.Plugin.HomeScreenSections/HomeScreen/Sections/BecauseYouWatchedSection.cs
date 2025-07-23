@@ -1,6 +1,7 @@
 ﻿using Jellyfin.Data.Entities;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Collections;
@@ -116,6 +117,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
 		{
+			bool showPlayedItems = payload.GetEffectivePluginConfiguration<bool>(Section ?? string.Empty, "supportsShowPlayedItems", false);
 			User user = UserManager.GetUserById(payload.UserId)!;
 			
 			DtoOptions? dtoOptions = new DtoOptions
@@ -146,7 +148,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				IsMovie = true,
 				SimilarTo = item,
 				User = user,
-				IsPlayed = false, // Maybe make this configuable but this is the preferred default behaviour.
+				IsPlayed = showPlayedItems,
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
 			});
@@ -165,6 +167,27 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
 				ViewMode = SectionViewMode.Landscape
+			};
+		}
+
+		/// <summary>
+		/// Get configuration options for this section
+		/// </summary>
+		/// <returns>Collection of configuration options</returns>
+		public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions()
+		{
+			return new[]
+			{
+				new PluginConfigurationOption
+				{
+					Key = "supportsShowPlayedItems",
+                    Name = "Enable Rewatching",
+                    Description = "Enable showing already watched episodes",
+					Type = PluginConfigurationType.Checkbox,
+					AllowUserOverride = true,
+					IsAdvanced = false,
+					DefaultValue = false
+				}
 			};
 		}
 	}

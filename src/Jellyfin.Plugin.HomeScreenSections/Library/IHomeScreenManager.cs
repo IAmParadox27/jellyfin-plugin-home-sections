@@ -44,6 +44,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null);
 
         public HomeScreenSectionInfo GetInfo();
+        
+        public IEnumerable<PluginConfigurationOption> GetConfigurationOptions();
     }
 
     public class HomeScreenSectionInfo
@@ -71,11 +73,56 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public bool AllowViewModeChange { get; set; } = true;
     }
 
+    public class UserSectionSettings
+    {
+        public string SectionId { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
+        public string? CustomDisplayName { get; set; }
+        
+        // User's overrides for plugin-defined configuration options
+        public Dictionary<string, object?> PluginConfigurations { get; set; } = new Dictionary<string, object?>();
+    }
+
     public class ModularHomeUserSettings
     {
         public Guid UserId { get; set; }
 
         public List<string> EnabledSections { get; set; } = new List<string>();
+        
+        public List<UserSectionSettings> SectionSettings { get; set; } = new List<UserSectionSettings>();
+
+        // Helper method to get section settings or create default
+        public UserSectionSettings GetSectionSettings(string sectionId)
+        {
+            var settings = SectionSettings.FirstOrDefault(s => s.SectionId == sectionId);
+            if (settings == null)
+            {
+                settings = new UserSectionSettings 
+                { 
+                    SectionId = sectionId, 
+                    Enabled = EnabledSections.Contains(sectionId),
+                    PluginConfigurations = new Dictionary<string, object?>()
+                };
+                SectionSettings.Add(settings);
+            }
+            return settings;
+        }
+
+        // Helper method to sync SectionSettings from EnabledSections (primary source)
+        public void SyncSectionSettings()
+        {
+            // Ensure all enabled sections have corresponding SectionSettings
+            foreach (string sectionId in EnabledSections)
+            {
+                GetSectionSettings(sectionId); // This will create if missing
+            }
+            
+            // Update existing SectionSettings based on EnabledSections
+            foreach (var sectionSetting in SectionSettings)
+            {
+                sectionSetting.Enabled = EnabledSections.Contains(sectionSetting.SectionId);
+            }
+        }
     }
 
     public static class HomeScreenSectionExtensions

@@ -3,6 +3,7 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Model;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Querying;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="viewName">The view identifier.</param>
         /// <returns>View.</returns>
         [HttpGet("{viewName}")]
+        [Authorize]
         public ActionResult GetView([FromRoute] string viewName)
         {
             return ServeView(viewName);
@@ -45,6 +47,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// </summary>
         /// <returns>Array of <see cref="HomeScreenSectionInfo"/>.</returns>
         [HttpGet("Sections")]
+        [Authorize]
         public QueryResult<HomeScreenSectionInfo> GetSectionTypes()
         {
             // Todo add reading whether the section is enabled or disabled by the user.
@@ -70,6 +73,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="userId">The user ID.</param>
         /// <returns><see cref="ModularHomeUserSettings"/>.</returns>
         [HttpGet("UserSettings")]
+        [Authorize]
         public ActionResult<ModularHomeUserSettings> GetUserSettings([FromQuery] Guid userId)
         {
             IEnumerable<SectionSettings> defaultEnabledSections =
@@ -88,11 +92,54 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="obj">Instance of <see cref="ModularHomeUserSettings" />.</param>
         /// <returns>Status.</returns>
         [HttpPost("UserSettings")]
+        [Authorize]
         public ActionResult UpdateSettings([FromBody] ModularHomeUserSettings obj)
         {
             m_homeScreenManager.UpdateUserSettings(obj.UserId, obj);
 
             return Ok();
+        }
+
+        /// <summary>
+        /// Get user override permissions for sections.
+        /// </summary>
+        /// <returns>Dictionary of section IDs and their user override permissions.</returns>
+        [HttpGet("UserOverridePermissions")]
+        [Authorize]
+        public ActionResult<Dictionary<string, Dictionary<string, bool>>> GetUserOverridePermissions()
+        {
+            var permissions = new Dictionary<string, Dictionary<string, bool>>();
+            
+            foreach (var sectionSettings in HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings)
+            {
+                var sectionPermissions = new Dictionary<string, bool>();
+                
+                // Determine if user can see this section:
+                // Section is enabled by default, OR global "Allow User Override" is true
+                bool globalAllowUserOverride = HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride;
+                
+                bool sectionVisible = sectionSettings.Enabled || globalAllowUserOverride;
+                sectionPermissions["SectionVisible"] = sectionVisible;
+                sectionPermissions["SectionEnabled"] = sectionSettings.Enabled;
+                
+                // Check each user override setting
+                if (sectionSettings.UserOverrideSettings != null)
+                {
+                    foreach (var overrideSetting in sectionSettings.UserOverrideSettings)
+                    {
+                        sectionPermissions[overrideSetting.Item.ToString()] = overrideSetting.AllowUserOverride;
+                    }
+                }
+                else
+                {
+                    // Default permissions if not set
+                    sectionPermissions["CustomDisplayName"] = true;
+                    sectionPermissions["ShowPlayedItems"] = true;
+                    sectionPermissions["EnableDisableSection"] = true;
+                }
+                permissions[sectionSettings.SectionId] = sectionPermissions;
+            }
+            return permissions;
         }
 
         private ActionResult ServeView(string viewName)

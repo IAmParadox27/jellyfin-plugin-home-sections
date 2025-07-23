@@ -2,6 +2,54 @@
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <title>Home Screen Sections</title>
+    <style>
+        .user-override-disabled {
+            opacity: 0.5 !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s ease !important;
+        }
+        
+        .user-override-disabled input[type="checkbox"] {
+            opacity: 0.4 !important;
+            cursor: not-allowed !important;
+        }
+        
+        .user-override-disabled .checkboxLabel {
+            color: #666 !important;
+            cursor: not-allowed !important;
+        }
+        
+        .user-override-disabled td {
+            color: #888 !important;
+        }
+        
+        .user-override-content {
+            padding: 1em;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 0.3em;
+            background-color: rgba(0,0,0,0.1);
+            margin-top: 1em;
+        }
+        
+        .user-override-content.hide {
+            display: none !important;
+        }
+        
+        .advanced-options {
+            display: none;
+        }
+        
+        .advanced-options.show {
+            display: block;
+        }
+        
+        .advanced-toggle {
+            margin: 1em 0;
+            padding: 0.5em;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 0.3em;
+        }
+    </style>
 </head>
 <body>
 <div data-role="page" id="homeScreenSectionsConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent">
@@ -41,6 +89,17 @@
                     </label>
                     <div class="fieldDescription">Is the user allowed to enable/disable this plugin for their view?</div>
                 </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="globalRespectUserHomepage" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Respect User Homepage</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">When enabled, the plugin will respect existing user homepage preferences and only apply to users who haven't set a custom homepage. When disabled, the plugin will override all user homepage settings.</div>
+                </div>
                 <div class="inputContainer">
                     <input is="emby-input" type="text" data-id="txtLibreTranslateUrl" label="LibreTranslate URL" />
                     <span>URL for LibreTranslate instance to use for translations.</span>
@@ -48,6 +107,30 @@
                 <div class="inputContainer">
                     <input is="emby-input" type="text" data-id="txtLibreTranslateApiKey" required="required" label="LibreTranslate API Key" />
                     <span>API Key for LibreTranslate instance.</span>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="defaultMoviesLibrary">Default Movies Library</label>
+                    <select is="emby-select" id="defaultMoviesLibrary" class="emby-select-withcolor emby-select">
+                        <option value="">Default</option>
+                    </select>
+                    <div class="fieldDescription">Select the specific movies library to use for navigation. Lists all underlying library folders (not grouped views). <strong>Requires Jellyfin restart to take effect.</strong></div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="defaultTVShowsLibrary">Default TV Shows Library</label>
+                    <select is="emby-select" id="defaultTVShowsLibrary" class="emby-select-withcolor emby-select">
+                        <option value="">Default</option>
+                    </select>
+                    <div class="fieldDescription">Select the specific TV shows library to use for navigation. Lists all underlying library folders (not grouped views). <strong>Requires Jellyfin restart to take effect.</strong></div>
+                </div>
+                <div class="advanced-toggle">
+                    <label class="emby-checkbox-label">
+                        <input id="showAdvancedOptions" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Show Advanced Options</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked" aria-hidden="true"></span>
+                        </span>
+                    </label>
                 </div>
             </fieldset>
             <fieldset class="verticalSection-extrabottompadding">
@@ -72,27 +155,51 @@
                 <input id="templateOrderIndex" data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input">
                 <div class="fieldDescription">Defines an order location for this section, the smaller the number the higher it will appear on the home page. <i>Note: When sections share a number they will be randomized among themselves.</i></div>
             </div>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-                <label class="emby-checkbox-label">
-                    <input id="templateSectionEnabled" data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel">Enabled</span>
-                    <span class="checkboxOutline">
-                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
-                    </span>
-                </label>
-                <div class="fieldDescription">Is this section enabled by default?</div>
+            
+            <div class="verticalSection-extrabottompadding">
+                <h4>Default Settings</h4>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="templateSectionEnabled" data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Enabled</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">Is this section enabled by default?</div>
+                </div>
+                
+                <div class="inputContainer advanced-options">
+                    <label class="inputLabel inputLabelUnfocused" for="templateCustomDisplayName">Custom Display Name</label>
+                    <input id="templateCustomDisplayName" data-id="txtCustomDisplayName" type="text" is="emby-input" class="emby-input">
+                    <div class="fieldDescription">Override the default display name for this section. Leave blank to use the default name.</div>
+                </div>
+                
+                <!-- Dynamic Configuration Options Placeholder -->
+                <div data-id="dynamicConfigContainer"></div>
             </div>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-                <label class="emby-checkbox-label">
-                    <input id="templateSectionAllowUserOverride" data-id="chkSectionUserOverrideAllowed" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel">Allow User Override</span>
-                    <span class="checkboxOutline">
-                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
-                    </span>
-                </label>
-                <div class="fieldDescription">Is the user allowed to enable/disable this section?</div>
+            
+            <div class="verticalSection-extrabottompadding">
+                <h4>User Override Settings</h4>
+                
+                <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 15px;">
+                    <label class="emby-checkbox-label">
+                        <input id="allowUserOverrideToggle" data-id="chkAllowUserOverride" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel">Allow User Override</span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked" aria-hidden="true"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription">Enable this to allow users to customize this section's settings.</div>
+                </div>
+                
+                <div class="user-override-content hide advanced-options" data-id="userOverrideContent">
+                    <div id="userOverrideContainer" data-id="userOverrideContainer">
+                        <!-- User override settings -->
+                    </div>
+                </div>
             </div>
             <div class="inputContainer">
                 <span>View Mode: </span>
@@ -128,6 +235,39 @@
                 btnSave: document.querySelector('#btnSaveConfig'),
                 init: function () {
                     HomeScreenSections.loadConfig();
+                    HomeScreenSections.loadLibraries();
+                    HomeScreenSections.setupAdvancedToggle();
+                },
+                loadLibraries: function () {
+                    window.ApiClient.getVirtualFolders().then(function (result) {
+                        const moviesSelect = document.querySelector('#defaultMoviesLibrary');
+                        const tvShowsSelect = document.querySelector('#defaultTVShowsLibrary');
+                        
+                        moviesSelect.innerHTML = '<option value="">Default</option>';
+                        tvShowsSelect.innerHTML = '<option value="">Default</option>';
+                        
+                        result.filter(folder => folder.CollectionType === 'movies').forEach(function (folder) {
+                            const option = document.createElement('option');
+                            let folderId = folder.ItemId;
+                            if (folderId && !folderId.includes('-')) {
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            option.value = folderId;
+                            option.textContent = folder.Name;
+                            moviesSelect.appendChild(option);
+                        });
+                        
+                        result.filter(folder => folder.CollectionType === 'tvshows').forEach(function (folder) {
+                            const option = document.createElement('option');
+                            let folderId = folder.ItemId;
+                            if (folderId && !folderId.includes('-')) {
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            option.value = folderId;
+                            option.textContent = folder.Name;
+                            tvShowsSelect.appendChild(option);
+                        });
+                    }).catch(function (error) {});
                 },
                 saveConfig: function (e) {
                     e.preventDefault();
@@ -135,46 +275,147 @@
                     const config = {
                         Enabled: document.querySelector('#globalEnabledDefault').checked,
                         AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
+                        RespectUserHomepage: document.querySelector('#globalRespectUserHomepage').checked,
                         LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                         LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
+                        DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
+                        DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
                         SectionSettings: []
                     };
                     
                     const configs = document.querySelectorAll('[data-id=section-config]');
                     for (let i = 0; i < configs.length; i++) {
+                        const allowUserOverrideToggle = configs[i].querySelector('[data-id="chkAllowUserOverride"]');
+                        const userOverrideEnabled = allowUserOverrideToggle ? allowUserOverrideToggle.checked : false;
+                        
+                        const userOverrideSettings = [];
+                        const overrideCheckboxes = configs[i].querySelectorAll('[data-override-item]');
+                        overrideCheckboxes.forEach(function(checkbox) {
+                            if (!checkbox.hasAttribute('data-plugin-config')) {
+                                userOverrideSettings.push({
+                                    Item: checkbox.getAttribute('data-override-item'),
+                                    AllowUserOverride: userOverrideEnabled && checkbox.checked
+                                });
+                            }
+                        });
+                        
+                        const pluginConfigurations = [];
+                        const pluginConfigElements = configs[i].querySelectorAll('[data-id^="pluginConfig_"]');
+                        pluginConfigElements.forEach(function(element) {
+                            const key = element.getAttribute('data-id').replace('pluginConfig_', '');
+                            let value;
+                            let type = 'string';
+                            
+                            if (element.type === 'checkbox') {
+                                value = element.checked;
+                                type = 'bool';
+                            } else if (element.type === 'number') {
+                                value = element.value ? parseFloat(element.value) : null;
+                                type = 'double';
+                            } else {
+                                value = element.value;
+                                type = 'string';
+                            }
+                            
+                            if (value !== null && value !== '') {
+                                pluginConfigurations.push({
+                                    Key: key,
+                                    Value: value?.toString(),
+                                    Type: type
+                                });
+                            }
+                        });
+
                         const sectionConfig = {
                             SectionId: configs[i].querySelector('[data-id=hiddenSectionId]').value,
                             Enabled: configs[i].querySelector('[data-id=chkSectionEnabled]').checked,
-                            AllowUserOverride: configs[i].querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
-                            LowerLimit: configs[i].querySelector('[data-id=txtSectionMinLimit]').value,
-                            UpperLimit: configs[i].querySelector('[data-id=txtSectionMaxLimit]').value,
-                            OrderIndex: configs[i].querySelector('[data-id=txtOrderIndex]').value,
+                            LowerLimit: parseInt(configs[i].querySelector('[data-id=txtSectionMinLimit]').value) || 1,
+                            UpperLimit: parseInt(configs[i].querySelector('[data-id=txtSectionMaxLimit]').value) || 1,
+                            OrderIndex: parseInt(configs[i].querySelector('[data-id=txtOrderIndex]').value) || 999,
                             ViewMode: configs[i].querySelector('[data-id=viewModeSelect]').value,
+                            CustomDisplayName: configs[i].querySelector('[data-id=txtCustomDisplayName]').value,
+                            PluginConfigurations: pluginConfigurations,
+                            UserOverrideSettings: userOverrideSettings
                         };
                         
                         config.SectionSettings.push(sectionConfig);
                     }
                     
-                    window.ApiClient.updatePluginConfiguration(HomeScreenSections.pluginId, config)
-                        .then(Dashboard.processPluginConfigurationUpdateResult)
-                        .catch(function (error) {
-                            console.log(error);
-                        })
-                        .finally(function () {
-                            Dashboard.hideLoadingMsg();
-                        });
+                    const authScheme = window.ApiClient.authenticationScheme || 'MediaBrowser';
+                    const accessToken = window.ApiClient.accessToken();
+                    const authHeader = authScheme + ' ' + accessToken;
+                    
+                    fetch(window.location.protocol + '//' + window.location.host + '/HomeScreen/Configuration', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': authHeader
+                        },
+                        body: JSON.stringify(config)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                return window.ApiClient.updatePluginConfiguration(HomeScreenSections.pluginId, config);
+                            });
+                        }
+                        return response;
+                    })
+                    .then(() => {
+                        if (typeof Dashboard !== 'undefined' && Dashboard.processPluginConfigurationUpdateResult) {
+                            Dashboard.processPluginConfigurationUpdateResult();
+                        } else {
+                            Dashboard.alert('Settings have been updated.');
+                        }
+                    })
+                    .catch(function (error) {
+                        if (typeof Dashboard !== 'undefined' && Dashboard.processErrorResponse) {
+                            Dashboard.processErrorResponse(error);
+                        } else {
+                            Dashboard.alert('Error saving configuration: ' + error.message);
+                        }
+                    })
+                    .finally(function () {
+                        Dashboard.hideLoadingMsg();
+                    });
                 },
                 loadConfig: function() {
                     Dashboard.showLoadingMsg();
-                    window.ApiClient.getPluginConfiguration(HomeScreenSections.pluginId)
-                        .then(function (config) {
+                    
+                    const authScheme = window.ApiClient.authenticationScheme || 'MediaBrowser';
+                    const accessToken = window.ApiClient.accessToken();
+                    const authHeader = authScheme + ' ' + accessToken;
+                    
+                    fetch(window.location.protocol + '//' + window.location.host + '/HomeScreen/Configuration', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': authHeader
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                return window.ApiClient.getPluginConfiguration(HomeScreenSections.pluginId);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(function (config) {
                             document.querySelector('#globalEnabledDefault').checked = config.Enabled;
                             document.querySelector('#globalAllowUserOverride').checked = config.AllowUserOverride;
+                            document.querySelector('#globalRespectUserHomepage').checked = config.RespectUserHomepage !== false;
                             document.querySelector('[data-id=txtLibreTranslateUrl]').value = config.LibreTranslateUrl;
                             document.querySelector('[data-id=txtLibreTranslateApiKey]').value = config.LibreTranslateApiKey;
                             
-                            // Get plugin defaults for each section it defines
-                            // Loop over these sections and add in what the config has overwritten
+                            setTimeout(function() {
+                                if (config.DefaultMoviesLibraryId) {
+                                    document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
+                                }
+                                if (config.DefaultTVShowsLibraryId) {
+                                    document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
+                                }
+                            }, 500);
+                            
                             let urlStart = window.location.protocol + '//' + window.location.host;
                             window.ApiClient.ajax({
                                 url: ApiClient.getUrl('ModularHomeViews/Sections'),
@@ -185,21 +426,23 @@
                                 });
                             })
                             .catch(function (error) {
-                                console.error(error);
-                            })
-                            .finally(function () {
                                 Dashboard.hideLoadingMsg();
                             });
+                        })
+                        .catch(function (error) {
+                            Dashboard.hideLoadingMsg();
                         });
                 },
                 loadConfigResponse: function(pluginConfig, sectionTypes) {
-                    // clear the "sections"
+                    HomeScreenSections.sectionWrapper.innerHTML = '';
+                    
                     for (let i = 0; i < sectionTypes.length; ++i) {
                         let found = false;
                         for (let j = 0; j < pluginConfig.SectionSettings.length; ++j) {
                             if (pluginConfig.SectionSettings[j].SectionId == sectionTypes[i].Section) {
                                 HomeScreenSections.addSectionSetting(pluginConfig.SectionSettings[j], sectionTypes[i]);
                                 found = true;
+                                break;
                             }
                         }
                         
@@ -207,27 +450,34 @@
                             let newConfig = {
                                 SectionId: sectionTypes[i].Section,
                                 Enabled: true,
-                                AllowUserOverride: true,
                                 LowerLimit: 1,
                                 UpperLimit: sectionTypes[i].Limit,
                                 ViewMode: sectionTypes[i].ViewMode,
-                                OrderIndex: 999 // new sections will always appear last to avoid admins orders being screwed
+                                OrderIndex: 999,
+                                CustomDisplayName: '',
+                                PluginConfigurations: [],
+                                UserOverrideSettings: [
+                                    { Item: 'EnableDisableSection', AllowUserOverride: true },
+                                    { Item: 'CustomDisplayName', AllowUserOverride: true }
+                                ]
                             };
                             
                             HomeScreenSections.addSectionSetting(newConfig, sectionTypes[i]);
                         }
                     }
                     
+                    Dashboard.hideLoadingMsg();
                 },
                 addSectionSetting: function(sectionConfig, sectionInfo) {
                     const template = HomeScreenSections.sectionTemplate.cloneNode(true).content;
                     template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
                     template.querySelector('[data-id=chkSectionEnabled]').checked = sectionConfig.Enabled;
-                    template.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = sectionConfig.AllowUserOverride;
                     template.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit;
                     template.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit;
                     template.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex;
                     template.querySelector('[data-id=viewModeSelect]').value = sectionConfig.ViewMode;
+                    template.querySelector('[data-id=txtCustomDisplayName]').value = sectionConfig.CustomDisplayName || '';
+                    
                     if (!sectionInfo.AllowViewModeChange) {
                         template.querySelector('[data-id=viewModeSelect]').value = sectionInfo.ViewMode;
                         template.querySelector('[data-id=viewModeSelect]').setAttribute('disabled', true)
@@ -235,7 +485,338 @@
                     
                     template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
                     
-                    const el = HomeScreenSections.sectionWrapper.appendChild(template);
+                    HomeScreenSections.sectionWrapper.appendChild(template);
+                    
+                    const allSections = HomeScreenSections.sectionWrapper.querySelectorAll('[data-id=section-config]');
+                    const el = allSections[allSections.length - 1];
+                    
+                    HomeScreenSections.populateDynamicConfigOptions(el, sectionConfig, sectionInfo);
+                    
+                    const userOverrideContainer = el.querySelector('[data-id=userOverrideContainer]');
+                    HomeScreenSections.populateUserOverrideSettings(userOverrideContainer, sectionConfig, el, sectionInfo);
+                },
+                populateDynamicConfigOptions: async function(sectionElement, sectionConfig, sectionInfo) {
+                    try {
+                        const baseUrl = window.location.protocol + '//' + window.location.host;
+                        const url = baseUrl + '/HomeScreen/Section/' + sectionInfo.Section + '/ConfigurationOptions';
+                        const response = await fetch(url);
+                        
+                        if (!response.ok) {
+                            return;
+                        }
+                        
+                        const responseText = await response.text();
+                        
+                        let configOptions;
+                        try {
+                            configOptions = JSON.parse(responseText);
+                        } catch (e) {
+                            return;
+                        }
+                        const dynamicContainer = sectionElement.querySelector('[data-id=dynamicConfigContainer]');
+                        
+                        if (!dynamicContainer) {
+                            return;
+                        }
+                        
+                        // Clear existing content
+                        dynamicContainer.innerHTML = '';
+                        
+                        // Create controls for each configuration option
+                        configOptions.forEach(option => {
+                            const controlElement = HomeScreenSections.createConfigControl(option, sectionConfig);
+                            if (controlElement) {
+                                dynamicContainer.appendChild(controlElement);
+                            }
+                        });
+                        
+                    } catch (error) {
+                    }
+                },
+                createConfigControl: function(option, sectionConfig) {
+                    // Find current value in the array format
+                    let currentValue = option.DefaultValue;
+                    if (sectionConfig.PluginConfigurations && Array.isArray(sectionConfig.PluginConfigurations)) {
+                        const entry = sectionConfig.PluginConfigurations.find(c => c.Key === option.Key);
+                        if (entry && entry.Value !== null && entry.Value !== undefined) {
+                            // Convert value based on type
+                            if (entry.Type === 'bool' || option.Type === 'Checkbox') {
+                                currentValue = entry.Value === 'true' || entry.Value === true;
+                            } else if (entry.Type === 'double' || entry.Type === 'int' || option.Type === 'NumberBox') {
+                                currentValue = parseFloat(entry.Value);
+                            } else {
+                                currentValue = entry.Value;
+                            }
+                        }
+                    }
+                    
+                    switch (option.Type) {
+                        case 'Checkbox':
+                            return HomeScreenSections.createCheckboxControl(option, currentValue);
+                        case 'Dropdown':
+                            return HomeScreenSections.createDropdownControl(option, currentValue);
+                        case 'TextBox':
+                            return HomeScreenSections.createTextBoxControl(option, currentValue);
+                        case 'NumberBox':
+                            return HomeScreenSections.createNumberBoxControl(option, currentValue);
+                        default:
+                            return null;
+                    }
+                },
+                createCheckboxControl: function(option, currentValue) {
+                    const container = document.createElement('div');
+                    container.className = 'checkboxContainer checkboxContainer-withDescription';
+                    container.innerHTML = `
+                        <label class="emby-checkbox-label">
+                            <input data-id="pluginConfig_` + option.Key + `" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox" ` + (currentValue ? 'checked' : '') + `>
+                            <span class="checkboxLabel">` + option.Name + `</span>
+                            <span class="checkboxOutline">
+                                <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                                <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                            </span>
+                        </label>
+                        <div class="fieldDescription">` + (option.Description || '') + `</div>
+                    `;
+                    return container;
+                },
+                createDropdownControl: function(option, currentValue) {
+                    const container = document.createElement('div');
+                    container.className = 'selectContainer';
+                    
+                    let optionsHtml = '';
+                    if (option.DropdownOptions && option.DropdownLabels) {
+                        for (let i = 0; i < option.DropdownOptions.length; i++) {
+                            const selected = option.DropdownOptions[i] === currentValue ? 'selected' : '';
+                            const label = option.DropdownLabels[i] || option.DropdownOptions[i];
+                            optionsHtml += '<option value="' + option.DropdownOptions[i] + '" ' + selected + '>' + label + '</option>';
+                        }
+                    }
+                    
+                    container.innerHTML = `
+                        <label class="inputLabel inputLabelUnfocused" for="pluginConfig_` + option.Key + `">` + option.Name + `</label>
+                        <select data-id="pluginConfig_` + option.Key + `" is="emby-select" class="emby-select-withcolor emby-select">
+                            ` + optionsHtml + `
+                        </select>
+                        <div class="fieldDescription">` + (option.Description || '') + `</div>
+                    `;
+                    return container;
+                },
+                createTextBoxControl: function(option, currentValue) {
+                    const container = document.createElement('div');
+                    container.className = 'inputContainer';
+                    
+                    const patternAttr = option.Pattern ? ('pattern="' + option.Pattern + '"') : '';
+                    
+                    container.innerHTML = `
+                        <label class="inputLabel inputLabelUnfocused" for="pluginConfig_` + option.Key + `">` + option.Name + `</label>
+                        <input data-id="pluginConfig_` + option.Key + `" type="text" is="emby-input" class="emby-input" value="` + (currentValue || '') + `" ` + patternAttr + `>
+                        <div class="fieldDescription">` + (option.Description || '') + `</div>
+                    `;
+                    return container;
+                },
+                createNumberBoxControl: function(option, currentValue) {
+                    const container = document.createElement('div');
+                    container.className = 'inputContainer';
+                    
+                    const minAttr = option.MinValue !== undefined ? ('min="' + option.MinValue + '"') : '';
+                    const maxAttr = option.MaxValue !== undefined ? ('max="' + option.MaxValue + '"') : '';
+                    
+                    container.innerHTML = `
+                        <label class="inputLabel inputLabelUnfocused" for="pluginConfig_` + option.Key + `">` + option.Name + `</label>
+                        <input data-id="pluginConfig_` + option.Key + `" type="number" is="emby-input" class="emby-input" value="` + (currentValue || option.DefaultValue || '') + `" ` + minAttr + ` ` + maxAttr + `>
+                        <div class="fieldDescription">` + (option.Description || '') + `</div>
+                    `;
+                    return container;
+                },
+                populateUserOverrideSettings: async function(container, sectionConfig, sectionElement, sectionInfo) {
+                    if (!container) {
+                        return;
+                    }
+                    
+                    // Get configuration options for dynamic override items
+                    let configOptions = [];
+                    try {
+                        const baseUrl = window.location.protocol + '//' + window.location.host;
+                        const url = baseUrl + '/HomeScreen/Section/' + sectionInfo.Section + '/ConfigurationOptions';
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            configOptions = await response.json();
+                        } else {
+                        }
+                    } catch (error) {
+                    }
+                    
+                    if (!sectionConfig.UserOverrideSettings) {
+                        sectionConfig.UserOverrideSettings = [
+                            { Item: 'EnableDisableSection', AllowUserOverride: true },
+                            { Item: 'CustomDisplayName', AllowUserOverride: true }
+                        ];
+                    }
+                    
+                    let html = '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<thead><tr>';
+                    html += '<th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Allow User Override</th>';
+                    html += '<th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Item</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    let availableItems = [
+                        { key: 'EnableDisableSection', label: 'Enable/Disable this section' },
+                        { key: 'CustomDisplayName', label: 'Custom Display Name' }
+                    ];
+                    
+                    configOptions.forEach(function(option) {
+                        if (option.AllowUserOverride === true) {
+                            availableItems.push({
+                                key: option.Key,
+                                label: option.Name + (option.Description ? ' (' + option.Description + ')' : ''),
+                                isPluginConfig: true
+                            });
+                        }
+                    });
+                    
+                    availableItems.forEach(function(item) {
+                        let existingSetting;
+                        let isAllowed;
+                        
+                        if (item.isPluginConfig) {
+                            const configOption = configOptions.find(o => o.Key === item.key);
+                            isAllowed = configOption ? configOption.AllowUserOverride : false;
+                        } else {
+                            existingSetting = sectionConfig.UserOverrideSettings.find(s => s.Item === item.key);
+                            isAllowed = existingSetting ? existingSetting.AllowUserOverride : true;
+                        }
+                        
+                        html += '<tr>';
+                        html += '<td style="padding: 8px; border-bottom: 1px solid #333;">';
+                        html += '<label class="emby-checkbox-label">';
+                        html += '<input type="checkbox" is="emby-checkbox" data-override-item="' + item.key + '" ' + (isAllowed ? 'checked' : '') + ' data-embycheckbox="true" class="emby-checkbox"' + (item.isPluginConfig ? ' data-plugin-config="true"' : '') + '>';
+                        html += '<span class="checkboxLabel"></span>';
+                        html += '<span class="checkboxOutline">';
+                        html += '<span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>';
+                        html += '<span class="material-icons checkboxIcon checkboxIcon-unchecked" aria-hidden="true"></span>';
+                        html += '</span>';
+                        html += '</label>';
+                        html += '</td>';
+                        html += '<td style="padding: 8px; border-bottom: 1px solid #333;">' + item.label + '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                    
+                    // Set up the Allow User Override toggle
+                    const allowUserOverrideToggle = sectionElement.querySelector('[data-id="chkAllowUserOverride"]');
+                    const userOverrideTable = container.querySelector('table');
+                    
+                    if (!allowUserOverrideToggle || !userOverrideTable) {
+                        return; // Exit if elements not found
+                    }
+                    
+                    // Determine if any user overrides are currently enabled
+                    const hasAnyOverrideEnabled = sectionConfig.UserOverrideSettings.some(s => s.AllowUserOverride);
+                    allowUserOverrideToggle.checked = hasAnyOverrideEnabled;
+                    
+                    // Set initial state
+                    toggleUserOverrideSettings(userOverrideTable, hasAnyOverrideEnabled);
+                    
+                    // Set initial visibility of the override content
+                    const userOverrideContent = sectionElement.querySelector('[data-id="userOverrideContent"]');
+                    if (userOverrideContent) {
+                        if (hasAnyOverrideEnabled) {
+                            userOverrideContent.classList.remove('hide');
+                            // Check both advanced toggle and saved state
+                            const advancedToggle = document.getElementById('showAdvancedOptions');
+                            const savedAdvancedState = localStorage.getItem('homeScreenSections.adminConfig.showAdvanced');
+                            if (!advancedToggle || (!advancedToggle.checked && savedAdvancedState !== 'true')) {
+                                userOverrideContent.style.display = 'none';
+                            }
+                        } else {
+                            userOverrideContent.classList.add('hide');
+                            userOverrideContent.style.display = 'none';
+                        }
+                    }
+                    
+                    // Add event listener for the toggle
+                    allowUserOverrideToggle.addEventListener('change', function() {
+                        const isEnabled = this.checked;
+                        toggleUserOverrideSettings(userOverrideTable, isEnabled);
+                        
+                        // Show/hide the override content based on checkbox state
+                        if (userOverrideContent) {
+                            if (isEnabled) {
+                                userOverrideContent.classList.remove('hide');
+                                // Also check if advanced toggle is enabled (including saved state)
+                                const advancedToggle = document.getElementById('showAdvancedOptions');
+                                const savedAdvancedState = localStorage.getItem('homeScreenSections.adminConfig.showAdvanced');
+                                if (advancedToggle && (advancedToggle.checked || savedAdvancedState === 'true')) {
+                                    userOverrideContent.style.display = 'block';
+                                }
+                            } else {
+                                userOverrideContent.classList.add('hide');
+                                userOverrideContent.style.display = 'none';
+                            }
+                        }
+                        
+                        // Don't modify checkbox states, just enable/disable them visually
+                        // The checkboxes retain their values but are grayed out when disabled
+                    });
+                    
+                    function toggleUserOverrideSettings(tableElement, isEnabled) {
+                        if (isEnabled) {
+                            tableElement.classList.remove('user-override-disabled');
+                        } else {
+                            tableElement.classList.add('user-override-disabled');
+                        }
+                    }
+                },
+                
+                setupAdvancedToggle: function() {
+                    const advancedToggle = document.getElementById('showAdvancedOptions');
+                    if (advancedToggle) {
+                        // Restore saved state from localStorage
+                        const savedState = localStorage.getItem('homeScreenSections.adminConfig.showAdvanced');
+                        if (savedState === 'true') {
+                            advancedToggle.checked = true;
+                            // Apply the state immediately
+                            const advancedOptions = document.querySelectorAll('.advanced-options');
+                            advancedOptions.forEach(function(element) {
+                                // For user override content, we need to respect both the hide class and advanced toggle
+                                if (element.classList.contains('user-override-content')) {
+                                    // Only show if it's not hidden by the user override toggle
+                                    if (!element.classList.contains('hide')) {
+                                        element.style.display = 'block';
+                                    }
+                                } else {
+                                    element.style.display = 'block';
+                                }
+                            });
+                        }
+                        
+                        advancedToggle.addEventListener('change', function() {
+                            const advancedOptions = document.querySelectorAll('.advanced-options');
+                            if (this.checked) {
+                                advancedOptions.forEach(function(element) {
+                                    // For user override content, we need to respect both the hide class and advanced toggle
+                                    if (element.classList.contains('user-override-content')) {
+                                        // Only show if it's not hidden by the user override toggle
+                                        if (!element.classList.contains('hide')) {
+                                            element.style.display = 'block';
+                                        }
+                                    } else {
+                                        element.style.display = 'block';
+                                    }
+                                });
+                                // Save state to localStorage
+                                localStorage.setItem('homeScreenSections.adminConfig.showAdvanced', 'true');
+                            } else {
+                                advancedOptions.forEach(function(element) {
+                                    element.style.display = 'none';
+                                });
+                                // Save state to localStorage
+                                localStorage.setItem('homeScreenSections.adminConfig.showAdvanced', 'false');
+                            }
+                        });
+                    }
                 }
             }
 

@@ -106,5 +106,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 AllowViewModeChange = false
             };
         }
+
+		public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
     }
 }
