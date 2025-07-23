@@ -80,44 +80,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ImageType.Primary,
             };
 
-            MyMediaSection myMedia = new MyMediaSection(m_userViewManager, m_userManager, m_dtoService);
-            QueryResult<BaseItemDto> media = myMedia.GetResults(payload, queryCollection);
-
-            Guid parentId = media.Items.FirstOrDefault(x => x.Name == payload.AdditionalData)?.Id ?? Guid.Empty;
-
-            List<Tuple<BaseItem, List<BaseItem>>>? list = m_userViewManager.GetLatestItems(
-                new LatestItemsQuery
-                {
-                    GroupItems = false,
-                    Limit = 16,
-                    ParentId = parentId,
-                    User = user,
-                    IncludeItemTypes = new BaseItemKind[]
-                    {
-                        BaseItemKind.Movie
-                    }
-                },
-                dtoOptions);
-
-            IEnumerable<BaseItemDto>? dtos = list.Select(i =>
+            List<BaseItem> recentlyAddedMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                BaseItem? item = i.Item2[0];
-                int childCount = 0;
-
-                if (i.Item1 != null && (i.Item2.Count > 1 || i.Item1 is MusicAlbum))
+                IncludeItemTypes = new[]
                 {
-                    item = i.Item1;
-                    childCount = i.Item2.Count;
-                }
-
-                BaseItemDto? dto = m_dtoService.GetBaseItemDto(item, dtoOptions, user);
-
-                dto.ChildCount = childCount;
-
-                return dto;
+                    BaseItemKind.Movie
+                },
+                Limit = 16,
+                OrderBy = new[]
+                {
+                    (ItemSortBy.DateCreated, SortOrder.Descending)
+                },
+                DtoOptions = dtoOptions
             });
 
-            return new QueryResult<BaseItemDto>(dtos.ToList());
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(recentlyAddedMovies.ToArray(),
+                i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
 
         /// <inheritdoc/>
@@ -125,14 +103,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
 
-            Folder? folder = m_libraryManager.GetUserRootFolder()
+            BaseItemDto? originalPayload = null;
+            
+            // Get only movie collection folders that the user can access
+            var movieFolders = m_libraryManager.GetUserRootFolder()
                 .GetChildren(user, true)
                 .OfType<Folder>()
-                .Select(x => x as ICollectionFolder)
-                .Where(x => x != null)
-                .FirstOrDefault(x => x!.CollectionType == CollectionType.movies) as Folder;
-
-            BaseItemDto? originalPayload = null;
+                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.movies)
+                .ToArray();
+            
+            // Check if there's a configured default library, otherwise use first available
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var folder = !string.IsNullOrEmpty(config?.DefaultMoviesLibraryId)
+                ? movieFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultMoviesLibraryId)
+                : null;
+            
+            // Fall back to first movies library if no configured library found
+            folder ??= movieFolders.FirstOrDefault();
+            
             if (folder != null)
             {
                 DtoOptions dtoOptions = new DtoOptions();

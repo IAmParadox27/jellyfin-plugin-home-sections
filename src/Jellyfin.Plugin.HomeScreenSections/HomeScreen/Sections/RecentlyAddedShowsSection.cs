@@ -108,14 +108,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
 
-            Folder? folder = m_libraryManager.GetUserRootFolder()
+            BaseItemDto? originalPayload = null;
+            
+            // Get only TV show collection folders that the user can access
+            var tvShowFolders = m_libraryManager.GetUserRootFolder()
                 .GetChildren(user, true)
                 .OfType<Folder>()
-                .Select(x => x as ICollectionFolder)
-                .Where(x => x != null)
-                .FirstOrDefault(x => x!.CollectionType == CollectionType.tvshows) as Folder;
-
-            BaseItemDto? originalPayload = null;
+                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.tvshows)
+                .ToArray();
+            
+            // Check if there's a configured default library, otherwise use first available
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var folder = !string.IsNullOrEmpty(config?.DefaultTVShowsLibraryId)
+                ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTVShowsLibraryId)
+                : null;
+            
+            // Fall back to first TV shows library if no configured library found
+            folder ??= tvShowFolders.FirstOrDefault();
+            
             if (folder != null)
             {
                 DtoOptions dtoOptions = new DtoOptions();
