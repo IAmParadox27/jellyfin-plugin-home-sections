@@ -3,6 +3,13 @@
         return;
     }
 
+    const refreshNeeded = localStorage.getItem('homeScreenSections.refreshNeeded');
+    if (refreshNeeded === 'true') {
+        localStorage.removeItem('homeScreenSections.refreshNeeded');
+        window.location.reload();
+        return;
+    }
+
     function isHomePage() {
         const hasIndexPageId = document.getElementById('indexPage') !== null;
         const hasHomePageClass = document.querySelector('.page.homePage') !== null;

@@ -55,8 +55,11 @@
     </button>
 </form>
 <script defer>
-
-    const config = {
+    // Use a unique namespace to avoid conflicts
+    (function() {
+        'use strict';
+        
+        const homeScreenSectionsConfig = {
         setup: function () {
             if (typeof ApiClient === 'undefined') {
                 Dashboard.alert('Plugin settings are not available in this context. Please access them through the admin dashboard.');
@@ -217,6 +220,11 @@
                             if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
                                 Dashboard.hideLoadingMsg();
                             }
+
+                            const savedAdvancedState = localStorage.getItem('homeScreenSections.userSettings.showAdvanced');
+                            if (savedAdvancedState === 'true') {
+                                showAdvancedOptions();
+                            }
                         } else {
                             if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
                                 Dashboard.hideLoadingMsg();
@@ -257,27 +265,33 @@
                     const savedState = localStorage.getItem('homeScreenSections.userSettings.showAdvanced');
                     if (savedState === 'true') {
                         advancedToggle.checked = true;
-                        const advancedOptions = document.querySelectorAll('.advanced-options');
-                        advancedOptions.forEach(function(element) {
-                            element.style.display = 'block';
-                        });
+                        showAdvancedOptions();
                     }
                     
                     advancedToggle.addEventListener('change', function() {
-                        const advancedOptions = document.querySelectorAll('.advanced-options');
                         if (this.checked) {
-                            advancedOptions.forEach(function(element) {
-                                element.style.display = 'block';
-                            });
+                            showAdvancedOptions();
                             localStorage.setItem('homeScreenSections.userSettings.showAdvanced', 'true');
                         } else {
-                            advancedOptions.forEach(function(element) {
-                                element.style.display = 'none';
-                            });
+                            hideAdvancedOptions();
                             localStorage.setItem('homeScreenSections.userSettings.showAdvanced', 'false');
                         }
                     });
                 }
+            }
+
+            function showAdvancedOptions() {
+                const advancedOptions = document.querySelectorAll('.advanced-options');
+                advancedOptions.forEach(function(element) {
+                    element.style.display = 'block';
+                });
+            }
+
+            function hideAdvancedOptions() {
+                const advancedOptions = document.querySelectorAll('.advanced-options');
+                advancedOptions.forEach(function(element) {
+                    element.style.display = 'none';
+                });
             }
 
             async function populateDynamicConfigOptions(section, settings, userOverridePermissions, allowUserOverride) {
@@ -386,6 +400,11 @@
                     
                     container.innerHTML = html;
                     
+                    const savedAdvancedState = localStorage.getItem('homeScreenSections.userSettings.showAdvanced');
+                    if (savedAdvancedState === 'true') {
+                        showAdvancedOptions();
+                    }
+                    
                 } catch (error) {
                     // Silent error handling
                 }
@@ -479,11 +498,11 @@
                         if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
                             Dashboard.hideLoadingMsg();
                         }
-                        Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
+                        // Set a flag to trigger refresh
+                        localStorage.setItem('homeScreenSections.refreshNeeded', 'true');
 
-                        setTimeout(function () {
-                            location.reload(true);
-                        }, 2000);
+                        // Injected script will handle the refresh
+                        Dashboard.navigate('#!/home.html');
                     }).catch(function(error) {
                         if (typeof Dashboard !== 'undefined' && Dashboard.hideLoadingMsg) {
                             Dashboard.hideLoadingMsg();
@@ -502,6 +521,7 @@
         }
     }
 
-    config.setup();
+    homeScreenSectionsConfig.setup();
+    })();
 
 </script>
