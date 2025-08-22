@@ -1,4 +1,4 @@
-﻿using Jellyfin.Data.Entities;
+﻿using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;

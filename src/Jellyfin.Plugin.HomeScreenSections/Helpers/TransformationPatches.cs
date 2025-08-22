@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             string replacementText = replacementTextReader.ReadToEnd()
                 .Replace("{{this_hook}}", thisVariableName)
                 .Replace("{{layoutmanager_hook}}", "n") // TODO: lookup the first "assigned" variable after `var`
-                .Replace("{{cardbuilder_hook}}", "h"); // TODO: lookup the last "assigned" variable in block that includes "SmallLibraryTiles" 
+                .Replace("{{cardbuilder_hook}}", "u"); // TODO: lookup the last "assigned" variable in block that includes "SmallLibraryTiles" 
 
             string regex = content.Contents.Replace(",loadSections:", $",loadSections:{replacementText},originalLoadSections:");
 

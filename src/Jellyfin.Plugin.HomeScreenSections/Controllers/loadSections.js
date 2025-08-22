@@ -2,10 +2,10 @@
     function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
         return function() {
             var __userSettings = _userSettings;
-
-            var _apiClient = serverConnections.getApiClient(serverId);
+            
+            //var _apiClient = serverConnections.getApiClient(serverId);
             var queryParams = {
-                UserId: _apiClient.getCurrentUserId(),
+                UserId: apiClient.getCurrentUserId(),
                 AdditionalData: sectionInfo.AdditionalData,
                 Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
             };
@@ -18,8 +18,8 @@
                 queryParams.EnableRewatching = _userSettings.enableRewatchingInNextUp();
             }
             
-            var getUrl = _apiClient.getUrl("HomeScreen/Section/" + sectionInfo.Section, queryParams);
-            return _apiClient.getJSON(getUrl);
+            var getUrl = apiClient.getUrl("HomeScreen/Section/" + sectionInfo.Section, queryParams);
+            return apiClient.getJSON(getUrl);
         }
     }
     

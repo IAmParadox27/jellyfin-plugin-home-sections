@@ -1,4 +1,4 @@
-using Jellyfin.Data.Entities;
+using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;

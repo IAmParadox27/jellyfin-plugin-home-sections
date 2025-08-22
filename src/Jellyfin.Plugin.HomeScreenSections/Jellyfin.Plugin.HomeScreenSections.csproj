@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -12,8 +12,8 @@
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-      <PackageReference Include="Jellyfin.Model" Version="10.10.7" />
-      <PackageReference Include="Jellyfin.Controller" Version="10.10.7" />
+      <PackageReference Include="Jellyfin.Model" Version="10.11.0-rc5" />
+      <PackageReference Include="Jellyfin.Controller" Version="10.11.0-rc5" />
     </ItemGroup>
 
     <PropertyGroup>
