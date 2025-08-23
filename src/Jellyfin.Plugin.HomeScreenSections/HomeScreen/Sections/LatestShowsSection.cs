@@ -1,4 +1,6 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using Jellyfin.Data.Entities;
+using Jellyfin.Data.Enums;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -72,7 +74,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 IncludeItemTypes = new[] { BaseItemKind.Episode },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
-                    { Fields = new[] { ItemFields.ParentId }, EnableImages = false }
+                    { Fields = new[] { ItemFields.SeriesPresentationUniqueKey }, EnableImages = true }
             });
             
             List<BaseItem> series = episodes
@@ -91,7 +93,41 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
         {
-            return this;
+            User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
+
+            BaseItemDto? originalPayload = null;
+            
+            // Get only TV show collection folders that the user can access
+            var tvShowFolders = m_libraryManager.GetUserRootFolder()
+                .GetChildren(user, true)
+                .OfType<Folder>()
+                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.tvshows)
+                .ToArray();
+            
+            // Check if there's a configured default library, otherwise use first available
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var folder = !string.IsNullOrEmpty(config?.DefaultTVShowsLibraryId)
+                ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTVShowsLibraryId)
+                : null;
+            
+            // Fall back to first TV shows library if no configured library found
+            folder ??= tvShowFolders.FirstOrDefault();
+            
+            if (folder != null)
+            {
+                DtoOptions dtoOptions = new DtoOptions();
+                dtoOptions.Fields =
+                    [..dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
+                
+                originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
+            }
+
+            return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService)
+            {
+                DisplayText = DisplayText,
+                AdditionalData = AdditionalData,
+                OriginalPayload = originalPayload
+            };
         }
         
         public HomeScreenSectionInfo GetInfo()

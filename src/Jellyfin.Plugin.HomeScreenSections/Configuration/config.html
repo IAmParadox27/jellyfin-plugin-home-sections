@@ -6,6 +6,7 @@
 <body>
 <div data-role="page" id="homeScreenSectionsConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent">
     <div class="content-primary">
+        <form class="artworkConfigurationForm" style="max-width: 80%;">
         <div class="verticalSection">
             <div class="sectionTitleContainer">
                 <h2 class="sectionTitle">Home Screen Sections</h2>
@@ -18,7 +19,7 @@
         <hr class="solid">
         <form class="artworkConfigurationForm">
             <fieldset class="verticalSection-extrabottompadding">
-                <legend>Global Settings</legend>
+                <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.5em;">Global Settings</legend>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
                         <input id="globalEnabledDefault" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
@@ -49,11 +50,49 @@
                     <input is="emby-input" type="text" data-id="txtLibreTranslateApiKey" required="required" label="LibreTranslate API Key" />
                     <span>API Key for LibreTranslate instance.</span>
                 </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="defaultMoviesLibrary">Default Movies Library</label>
+                    <select is="emby-select" id="defaultMoviesLibrary" class="emby-select-withcolor emby-select">
+                        <option value="">Default</option>
+                    </select>
+                    <div class="fieldDescription">Select the specific movies library to use for navigation. Lists all underlying library folders (not grouped views). <strong>Requires Jellyfin restart to take effect.</strong></div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="defaultTVShowsLibrary">Default TV Shows Library</label>
+                    <select is="emby-select" id="defaultTVShowsLibrary" class="emby-select-withcolor emby-select">
+                        <option value="">Default</option>
+                    </select>
+                    <div class="fieldDescription">Select the specific TV shows library to use for navigation. Lists all underlying library folders (not grouped views). <strong>Requires Jellyfin restart to take effect.</strong></div>
+                </div>
             </fieldset>
             <fieldset class="verticalSection-extrabottompadding">
-                <legend>Section Settings</legend>
-                <div id="sectionWrapper" class="checkboxContainer checkboxContainer-withDescription">
+                <legend style="font-weight: bolder; font-size: 1.5em;">Section Settings</legend>
+                <div style="margin-bottom: 2em;">
+                    <h4>Field Descriptions:</h4>
+                    <ul style="margin: 0; padding-left: 1.5em;">
+                        <li><strong>Order:</strong>  Sets the display order for this section in Jellyfin. Lower numbers appear first. <i>Note: Sections with the same number are shown in random order among themselves</i></li>
+                        <li><strong>Enabled:</strong> Enable this section by default</li>
+                        <li><strong>User Override:</strong> Let the user override this section</li>
+                        <li><strong>View Mode:</strong> Defines the card layout used when displaying results.<i>If disabled, the section only supports the displayed layout.</i></li>
+                        <li><strong>Lower Limit (Min):</strong> The minimum number of times this section should appear</li>
+                        <li><strong>Upper Limit (Max):</strong> The maximum number of times this section can appear</li>
+                    </ul>
                 </div>
+                <table class="tblConnections" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sectionWrapper">
+                    </tbody>
+                </table>
             </fieldset>
             <br>
             <button id="btnSaveConfig" is="emby-button" type="submit" class="raised button-submit block emby-button">
@@ -61,61 +100,50 @@
             </button>
         </form>
     </div>
-    
+
     <template id="sectionConfigTemplate">
-        <fieldset class="verticalSection-extrabottompadding" data-id="section-config">
-            <legend data-id="lblSectionName"></legend>
-            <input type="hidden" data-id="hiddenSectionId" />
-            <div class="inputContainer">
-                <label class="inputLabel inputLabelUnfocused" for="templateOrderIndex">Order Index</label>
-                <label class="inputLabel inputLabelUnfocused" for="templateOrderIndex"></label>
-                <input id="templateOrderIndex" data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input">
-                <div class="fieldDescription">Defines an order location for this section, the smaller the number the higher it will appear on the home page. <i>Note: When sections share a number they will be randomized among themselves.</i></div>
-            </div>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-                <label class="emby-checkbox-label">
-                    <input id="templateSectionEnabled" data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel">Enabled</span>
+        <tr data-id="section-config">
+            <td style="text-align: left; vertical-align: middle; padding: 8px 12px;">
+                <input type="hidden" data-id="hiddenSectionId" />
+                <strong data-id="lblSectionName"></strong>
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <input data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <label style="width: 0;" class="emby-checkbox-label">
+                    <input data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                    <span class="checkboxLabel"></span>
                     <span class="checkboxOutline">
                         <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
                         <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
                     </span>
                 </label>
-                <div class="fieldDescription">Is this section enabled by default?</div>
-            </div>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-                <label class="emby-checkbox-label">
-                    <input id="templateSectionAllowUserOverride" data-id="chkSectionUserOverrideAllowed" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel">Allow User Override</span>
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <label style="width: 0;" class="emby-checkbox-label">
+                    <input data-id="chkSectionUserOverrideAllowed" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                    <span class="checkboxLabel"></span>
                     <span class="checkboxOutline">
                         <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
                         <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
                     </span>
                 </label>
-                <div class="fieldDescription">Is the user allowed to enable/disable this section?</div>
-            </div>
-            <div class="inputContainer">
-                <span>View Mode: </span>
-                <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect">
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect" style="width: 100%; text-align: center;">
                     <option value="Portrait">Portrait</option>
                     <option value="Landscape">Landscape</option>
                     <option value="Square">Square</option>
                 </select>
-                <span>What shape should the cards appear as when results are loaded. <i>When this field is disabled, it means the section only supports the shape displayed.</i></span>
-            </div>
-            <div class="inputContainer">
-                <label class="inputLabel inputLabelUnfocused" for="templateSectionMinLimit">Lower Limit</label>
-                <label class="inputLabel inputLabelUnfocused" for="templateSectionMinLimit"></label>
-                <input id="templateSectionMinLimit" data-id="txtSectionMinLimit" type="number" is="emby-input" min="0" class="emby-input">
-                <div class="fieldDescription">What is the minimum number of this section that should appear?</div>
-            </div>
-            <div class="inputContainer">
-                <label class="inputLabel inputLabelUnfocused" for="templateSectionMaxLimit">Upper Limit</label>
-                <label class="inputLabel inputLabelUnfocused" for="templateSectionMaxLimit"></label>
-                <input id="templateSectionMaxLimit" data-id="txtSectionMaxLimit" type="number" is="emby-input" min="0" class="emby-input">
-                <div class="fieldDescription">What is the maximum number of this section that should appear?</div>
-            </div>
-        </fieldset>
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <input data-id="txtSectionMinLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <input data-id="txtSectionMaxLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
+            </td>
+        </tr>
     </template>
 
     <script type="text/javascript">
@@ -128,6 +156,54 @@
                 btnSave: document.querySelector('#btnSaveConfig'),
                 init: function () {
                     HomeScreenSections.loadConfig();
+                    HomeScreenSections.loadLibraries();
+                    HomeScreenSections.setupHelpToggle();
+                },
+                setupHelpToggle: function() {
+                    // Help is now shown by default, no toggle needed
+                },
+                loadLibraries: function () {
+                    // Use getVirtualFolders instead of getUserViews to get actual library folders
+                    window.ApiClient.getVirtualFolders().then(function (result) {
+                        const moviesSelect = document.querySelector('#defaultMoviesLibrary');
+                        const tvShowsSelect = document.querySelector('#defaultTVShowsLibrary');
+
+                        // Clear existing options except the first one
+                        moviesSelect.innerHTML = '<option value="">Default</option>';
+                        tvShowsSelect.innerHTML = '<option value="">Default</option>';
+
+                        // Add movie libraries
+                        result.filter(folder => folder.CollectionType === 'movies').forEach(function (folder) {
+                            const option = document.createElement('option');
+
+                            // Ensure the ID is in proper GUID format with hyphens
+                            let folderId = folder.ItemId;
+                            if (folderId && !folderId.includes('-')) {
+                                // Format as GUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            option.value = folderId;
+                            option.textContent = folder.Name;
+                            moviesSelect.appendChild(option);
+                        });
+
+                        // Add TV show libraries
+                        result.filter(folder => folder.CollectionType === 'tvshows').forEach(function (folder) {
+                            const option = document.createElement('option');
+
+                            // Ensure the ID is in proper GUID format with hyphens
+                            let folderId = folder.ItemId;
+                            if (folderId && !folderId.includes('-')) {
+                                // Format as GUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            option.value = folderId;
+                            option.textContent = folder.Name;
+                            tvShowsSelect.appendChild(option);
+                        });
+                    }).catch(function (error) {
+                        console.error('Failed to load libraries:', error);
+                    });
                 },
                 saveConfig: function (e) {
                     e.preventDefault();
@@ -137,9 +213,11 @@
                         AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
                         LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                         LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
+                        DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
+                        DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
                         SectionSettings: []
                     };
-                    
+
                     const configs = document.querySelectorAll('[data-id=section-config]');
                     for (let i = 0; i < configs.length; i++) {
                         const sectionConfig = {
@@ -151,10 +229,10 @@
                             OrderIndex: configs[i].querySelector('[data-id=txtOrderIndex]').value,
                             ViewMode: configs[i].querySelector('[data-id=viewModeSelect]').value,
                         };
-                        
+
                         config.SectionSettings.push(sectionConfig);
                     }
-                    
+
                     window.ApiClient.updatePluginConfiguration(HomeScreenSections.pluginId, config)
                         .then(Dashboard.processPluginConfigurationUpdateResult)
                         .catch(function (error) {
@@ -172,7 +250,17 @@
                             document.querySelector('#globalAllowUserOverride').checked = config.AllowUserOverride;
                             document.querySelector('[data-id=txtLibreTranslateUrl]').value = config.LibreTranslateUrl;
                             document.querySelector('[data-id=txtLibreTranslateApiKey]').value = config.LibreTranslateApiKey;
-                            
+
+                            // Set library dropdown values after libraries are loaded
+                            setTimeout(function() {
+                                if (config.DefaultMoviesLibraryId) {
+                                    document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
+                                }
+                                if (config.DefaultTVShowsLibraryId) {
+                                    document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
+                                }
+                            }, 500); // Small delay to ensure libraries are loaded
+
                             // Get plugin defaults for each section it defines
                             // Loop over these sections and add in what the config has overwritten
                             let urlStart = window.location.protocol + '//' + window.location.host;
@@ -202,7 +290,7 @@
                                 found = true;
                             }
                         }
-                        
+
                         if (!found) {
                             let newConfig = {
                                 SectionId: sectionTypes[i].Section,
@@ -211,19 +299,25 @@
                                 LowerLimit: 1,
                                 UpperLimit: sectionTypes[i].Limit,
                                 ViewMode: sectionTypes[i].ViewMode,
-                                OrderIndex: 999 // new sections will always appear last to avoid admins orders being screwed
+                                OrderIndex: 999 // new sections appear last
                             };
-                            
+
                             HomeScreenSections.addSectionSetting(newConfig, sectionTypes[i]);
                         }
                     }
-                    
+
                 },
                 addSectionSetting: function(sectionConfig, sectionInfo) {
                     const template = HomeScreenSections.sectionTemplate.cloneNode(true).content;
                     template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
-                    template.querySelector('[data-id=chkSectionEnabled]').checked = sectionConfig.Enabled;
-                    template.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = sectionConfig.AllowUserOverride;
+
+                    // Set checkbox states
+                    const enabledCheckbox = template.querySelector('[data-id=chkSectionEnabled]');
+                    const userOverrideCheckbox = template.querySelector('[data-id=chkSectionUserOverrideAllowed]');
+
+                    enabledCheckbox.checked = sectionConfig.Enabled;
+                    userOverrideCheckbox.checked = sectionConfig.AllowUserOverride;
+
                     template.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit;
                     template.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit;
                     template.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex;
@@ -232,10 +326,10 @@
                         template.querySelector('[data-id=viewModeSelect]').value = sectionInfo.ViewMode;
                         template.querySelector('[data-id=viewModeSelect]').setAttribute('disabled', true)
                     }
-                    
+
                     template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
-                    
-                    const el = HomeScreenSections.sectionWrapper.appendChild(template);
+
+                    HomeScreenSections.sectionWrapper.appendChild(template);
                 }
             }
 
