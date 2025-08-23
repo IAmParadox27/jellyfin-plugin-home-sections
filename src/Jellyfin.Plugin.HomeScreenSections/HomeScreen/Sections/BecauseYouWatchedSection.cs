@@ -143,12 +143,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					BaseItemKind.Movie
 				},
 				IsMovie = true,
-				//SimilarTo = item,
 				User = user,
 				IsPlayed = false, // Maybe make this configuable but this is the preferred default behaviour.
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
-			});
+			}.ApplySimilarSettings(item));
 
 			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar, dtoOptions, user));
 		}
