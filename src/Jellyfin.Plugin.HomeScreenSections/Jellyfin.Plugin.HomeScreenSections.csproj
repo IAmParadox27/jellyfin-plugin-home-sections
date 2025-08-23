@@ -17,7 +17,21 @@
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
     </ItemGroup>
-
+    
+    <!-- 10.10.7 Specific Code from non 10.10.7 builds -->
+    <ItemGroup Condition="'$(JellyfinVersion)' != '10.10.7'">
+        <None Include="JellyfinVersionSpecific/10.10.7/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/10.10.7/*.cs" />
+    </ItemGroup>
+    
+    <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
+    <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0-rc5'">
+        <None Include="JellyfinVersionSpecific/10.11.0-rc5/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/10.11.0-rc5/*.cs" />
+    </ItemGroup>
+    
+    <!-- Add new section here for any major plugin update -->
+    
     <PropertyGroup>
         <EnableRepack>false</EnableRepack>
     </PropertyGroup>
@@ -37,7 +51,7 @@
         <None Include="..\..\README.md" />
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
-
+    
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections')">
         <Exec Condition="'$(JellyfinVersion)' == '10.11.0-rc5'" Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
         <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />

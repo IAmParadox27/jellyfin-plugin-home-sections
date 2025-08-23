@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Common.Configuration;

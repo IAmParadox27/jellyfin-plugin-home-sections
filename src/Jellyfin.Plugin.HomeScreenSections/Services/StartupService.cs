@@ -6,6 +6,7 @@ using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -88,12 +89,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
-        {
-            yield return new TaskTriggerInfo()
-            {
-                Type = TaskTriggerInfoType.StartupTrigger
-            };
-        }
+        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetDefaultTriggers();
     }
 }
