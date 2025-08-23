@@ -62,7 +62,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            List<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
                 {

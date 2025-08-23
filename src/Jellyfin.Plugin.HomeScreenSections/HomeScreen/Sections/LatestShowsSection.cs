@@ -1,5 +1,4 @@
-﻿using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
+﻿using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -26,8 +25,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Route { get; }
         
         public string? AdditionalData { get; set; }
-        
-        public object? OriginalPayload { get; }
+
+        public object? OriginalPayload { get; set; } = null;
         
         private readonly IUserViewManager m_userViewManager;
         private readonly IUserManager m_userManager;
@@ -74,7 +73,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 IncludeItemTypes = new[] { BaseItemKind.Episode },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
-                    { Fields = new[] { ItemFields.SeriesPresentationUniqueKey }, EnableImages = true }
+                    { Fields = Array.Empty<ItemFields>(), EnableImages = true }
             });
             
             List<BaseItem> series = episodes

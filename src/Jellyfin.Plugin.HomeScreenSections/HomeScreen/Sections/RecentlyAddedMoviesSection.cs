@@ -78,7 +78,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ImageType.Primary,
             };
 
-            List<BaseItem> recentlyAddedMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> recentlyAddedMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
                 {
