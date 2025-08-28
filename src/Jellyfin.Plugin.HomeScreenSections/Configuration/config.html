@@ -350,7 +350,7 @@
                     } catch (e) {
                         return;
                     }
-                    const dynamicContainer = sectionElement.parentNode.querySelector('[data-id=dynamicConfigContainer]');
+                    const dynamicContainer = sectionElement.parentNode.querySelector('[data-section-for=' + sectionInfo.Section + '] [data-id=dynamicConfigContainer]');
 
                     if (!dynamicContainer) {
                         return;
