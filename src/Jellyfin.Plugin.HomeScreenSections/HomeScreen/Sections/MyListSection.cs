@@ -218,28 +218,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					AllowUserOverride = true,
 					IsAdvanced = true,
 					DefaultValue = false
-				},
-				new PluginConfigurationOption
-				{
-					Key = "testTextBox",
-					Name = "Test Text Box",
-					Description = "This is a test text box for advanced configuration",
-					Type = PluginConfigurationType.TextBox,
-					AllowUserOverride = true,
-					IsAdvanced = true,
-					DefaultValue = "Default text value"
-				},
-				new PluginConfigurationOption
-				{
-					Key = "testNumberBox",
-					Name = "Test Number Box",
-					Description = "This is a test number box with min/max values",
-					Type = PluginConfigurationType.NumberBox,
-					AllowUserOverride = true,
-					IsAdvanced = true,
-					DefaultValue = 10,
-					MinValue = 1,
-					MaxValue = 100
 				}
 			};
 		}
