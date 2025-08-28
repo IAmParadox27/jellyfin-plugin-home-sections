@@ -2,65 +2,67 @@
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <title>Home Screen Sections</title>
+    
+</head>
+<body>
+<div data-role="page" id="homeScreenSectionsConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent">
     <style>
         .user-override-disabled {
             opacity: 0.5 !important;
             pointer-events: none !important;
             transition: opacity 0.3s ease !important;
         }
-        
+
         .user-override-disabled input[type="checkbox"] {
             opacity: 0.4 !important;
             cursor: not-allowed !important;
         }
-        
+
         .user-override-disabled .checkboxLabel {
             color: #666 !important;
             cursor: not-allowed !important;
         }
-        
+
         .user-override-disabled td {
             color: #888 !important;
         }
-        
+
         .user-override-content {
             padding: 1em;
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 0.3em;
             background-color: rgba(0,0,0,0.1);
             margin-top: 1em;
+            margin-bottom: 1.8em;
         }
-        
+
         .user-override-content.hide {
             display: none !important;
         }
-        
+
         .advanced-options {
             display: none;
         }
-        
+
         .advanced-options.show {
             display: block;
         }
-        
+
         .advanced-toggle {
             margin: 1em 0;
             padding: 0.5em;
             background-color: rgba(255,255,255,0.05);
             border-radius: 0.3em;
         }
-        
+
         .advanced-settings-container {
             padding: 20px;
             background: var(--jf-palette-background-paper);
             border-radius: 10px;
             margin: 10px;
         }
-        
+
     </style>
-</head>
-<body>
-<div data-role="page" id="homeScreenSectionsConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent">
     <div class="content-primary">
         <div class="verticalSection">
             <div class="sectionTitleContainer">
@@ -263,15 +265,15 @@
                         <input id="templateCustomDisplayName" data-id="txtCustomDisplayName" type="text" is="emby-input" class="emby-input">
                         <div class="fieldDescription">Override the default display name for this section. Leave blank to use the default name.</div>
                     </div>
+
+                    <!-- Dynamic Configuration Options Placeholder -->
+                    <div data-id="dynamicConfigContainer"></div>
     
                     <div class="user-override-content" data-id="userOverrideContent">
                         <div id="userOverrideContainer" data-id="userOverrideContainer">
                             <!-- User override settings -->
                         </div>
                     </div>
-                    
-                    <!-- Dynamic Configuration Options Placeholder -->
-                    <div data-id="dynamicConfigContainer"></div>
                 </div>
             </td>
         </tr>
@@ -516,7 +518,8 @@
                     if (option.AllowUserOverride === true) {
                         availableItems.push({
                             key: option.Key,
-                            label: option.Name + (option.Description ? ' (' + option.Description + ')' : ''),
+                            label: option.Name,
+                            description: option.Description ? option.Description : '',
                             isPluginConfig: true
                         });
                     }
@@ -545,7 +548,13 @@
                     html += '</span>';
                     html += '</label>';
                     html += '</td>';
-                    html += '<td style="padding: 8px; border-bottom: 1px solid #333;">' + item.label + '</td>';
+                    html += '<td style="padding: 8px; border-bottom: 1px solid #333;"><span>' + item.label + '</span>';
+                    
+                    if (item.description !== '' && item.description !== undefined) {
+                        html += '<br /><span style="font-style: italic;font-size: 80%; color: var(--jf-palette-Tooltip-bg) !important;">' + item.description + '</span>';
+                    }
+                    html += '</td>';
+                    
                     html += '</tr>';
                 });
 
