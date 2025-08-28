@@ -333,7 +333,7 @@
 
                 populateDynamicConfigOptions(el, sectionConfig, sectionInfo);
 
-                const userOverrideContainer = el.querySelector('[data-id=userOverrideContainer]');
+                const userOverrideContainer = el.parentNode.querySelector('[data-section-for=' + sectionConfig.SectionId + '] [data-id=userOverrideContainer]');
                 populateUserOverrideSettings(userOverrideContainer, sectionConfig, el, sectionInfo);
 
                 setupAdvancedToggle(sectionConfig.SectionId, el);
@@ -679,12 +679,15 @@
                     SectionSettings: []
                 };
 
-                document.querySelectorAll('#sectionWrapper tr').forEach(row => {
+                document.querySelectorAll('#sectionWrapper tr[data-id=section-config]').forEach(row => {
+                    const sectionId = row.querySelector('[data-id=hiddenSectionId]').value;
+                    const advancedSettingsRow = row.parentNode.querySelector('[data-section-for=' + sectionId + ']');
+                    
                     const allowUserOverrideToggle = row.querySelector('[data-id="chkSectionUserOverrideAllowed"]');
                     const userOverrideEnabled = allowUserOverrideToggle ? allowUserOverrideToggle.checked : false;
 
                     const userOverrideSettings = [];
-                    const overrideCheckboxes = configs[i].querySelectorAll('[data-override-item]');
+                    const overrideCheckboxes = row.querySelectorAll('[data-override-item]');
                     overrideCheckboxes.forEach(function(checkbox) {
                         if (!checkbox.hasAttribute('data-plugin-config')) {
                             userOverrideSettings.push({
@@ -695,7 +698,7 @@
                     });
 
                     const pluginConfigurations = [];
-                    const pluginConfigElements = configs[i].querySelectorAll('[data-id^="pluginConfig_"]');
+                    const pluginConfigElements = advancedSettingsRow.querySelectorAll('[data-id^="pluginConfig_"]');
                     pluginConfigElements.forEach(function(element) {
                         const key = element.getAttribute('data-id').replace('pluginConfig_', '');
                         let value;
@@ -728,7 +731,7 @@
                         UpperLimit: parseInt(row.querySelector('[data-id=txtSectionMaxLimit]').value) || 1,
                         OrderIndex: parseInt(row.querySelector('[data-id=txtOrderIndex]').value) || 999,
                         ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
-                        CustomDisplayName: configs[i].querySelector('[data-id=txtCustomDisplayName]').value,
+                        CustomDisplayName: advancedSettingsRow.querySelector('[data-id=txtCustomDisplayName]').value,
                         PluginConfigurations: pluginConfigurations,
                         UserOverrideSettings: userOverrideSettings
                     };
