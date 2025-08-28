@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.HomeScreenSections.Attributes;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using MediaBrowser.Common.Net;
 
@@ -18,9 +19,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             string thisVariableName = variableFind.Matches(parts[0]).Last().Groups[1].Value;
             string replacementText = replacementTextReader.ReadToEnd()
                 .Replace("{{this_hook}}", thisVariableName)
-                .Replace("{{layoutmanager_hook}}", "n") // TODO: lookup the first "assigned" variable after `var`
-                .Replace("{{cardbuilder_hook}}", "h"); // TODO: lookup the last "assigned" variable in block that includes "SmallLibraryTiles" 
+                .Replace("{{layoutmanager_hook}}", "n"); // TODO: lookup the first "assigned" variable after `var`
 
+            if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.10.7") ?? false)
+            {
+                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "h");
+            }
+            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.11.0") ?? false)
+            {
+                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "u");
+            }
+            
             string regex = content.Contents.Replace(",loadSections:", $",loadSections:{replacementText},originalLoadSections:");
 
             return regex;

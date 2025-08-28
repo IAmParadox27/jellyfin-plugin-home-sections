@@ -23,6 +23,40 @@
     display:none;
 }
 
+.discoverCard-movie:before {
+    position: absolute;
+    content: 'Movie';
+    z-index: 1386;
+    color: white;
+    text-transform: uppercase;
+    background-color: rgb(37 99 235 / 0.9);
+    margin-top: 7px;
+    margin-left: 7px;
+    padding: 4px 12px 4px 15px;
+    font-size: 0.8em;
+    letter-spacing: 2px;
+    border-radius: 999px;
+    border-color: rgb(59 130 246);
+    box-shadow: 0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+}
+
+.discoverCard-tv:before {
+    position: absolute;
+    content: 'Series';
+    z-index: 1386;
+    color: white;
+    text-transform: uppercase;
+    background-color: rgb(147 51 234 / 0.9);
+    margin-top: 7px;
+    margin-left: 7px;
+    padding: 4px 12px 4px 15px;
+    font-size: 0.8em;
+    letter-spacing: 2px;
+    border-radius: 999px;
+    border-color: rgb(168 85 247 / 0.9);
+    box-shadow: 0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+}
+
 @media (min-width:100em) {
     .top-ten .card:before {
         margin-left: 12px;

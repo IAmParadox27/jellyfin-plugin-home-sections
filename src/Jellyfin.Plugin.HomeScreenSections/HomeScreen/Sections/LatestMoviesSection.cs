@@ -1,6 +1,4 @@
-﻿using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -64,7 +62,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            List<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
                 {

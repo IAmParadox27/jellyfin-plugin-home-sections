@@ -16,6 +16,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 
         public string? LibreTranslateApiKey { get; set; } = "";
         
+        public string? JellyseerrUrl { get; set; } = "";
+
+        public string? JellyseerrApiKey { get; set; } = "";
+        
+        public string? JellyseerrPreferredLanguages { get; set; } = "en";
+        
         public string? DefaultMoviesLibraryId { get; set; } = "";
         
         public string? DefaultTVShowsLibraryId { get; set; } = "";

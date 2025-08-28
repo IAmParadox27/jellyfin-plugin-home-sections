@@ -1,5 +1,4 @@
 using System.Reflection;
-using Jellyfin.Data.Entities;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Entities.Movies;
 

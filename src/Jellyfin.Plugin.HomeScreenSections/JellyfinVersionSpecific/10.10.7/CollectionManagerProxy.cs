@@ -3,7 +3,7 @@ using Jellyfin.Data.Entities;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Entities.Movies;
 
-namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
+namespace Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific
 {
     public class CollectionManagerProxy
     {

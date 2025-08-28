@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Collections;
@@ -108,7 +107,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					.Where(x => x.IsPlayed(user))
 					.Select(x =>
 					{
-						List<BaseItem>? children = x.GetChildren(user, true);
+						IReadOnlyList<BaseItem>? children = x.GetChildren(user, true);
 
 						if (children.Any())
 						{

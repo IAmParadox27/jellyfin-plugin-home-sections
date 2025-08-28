@@ -1,5 +1,3 @@
-using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -81,12 +79,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ImageType.Primary,
             };
 
-            List<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { BaseItemKind.Episode },
                 OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
-                    { Fields = new[] { ItemFields.SeriesPresentationUniqueKey }, EnableImages = false }
+                    { Fields = new[] { ItemFields.ParentId }, EnableImages = false }
             });
             
             List<BaseItem> series = episodes

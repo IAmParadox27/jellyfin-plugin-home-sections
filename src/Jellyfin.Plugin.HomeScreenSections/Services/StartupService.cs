@@ -4,7 +4,9 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
+using System.Text.RegularExpressions;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -55,9 +57,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 if (File.ReadAllText(jsChunk).Contains(",loadSections:"))
                 {
+                    string fileName = Path.GetFileName(jsChunk);
+                    Regex r = new Regex(@"([^.]+)\.([^.]+)\.chunk.js");
+                    
                     JObject payload = new JObject();
                     payload.Add("id", "ea4045f3-6604-4ba4-9581-f91f96bbd2ae");
-                    payload.Add("fileNamePattern", Path.GetFileName(jsChunk));
+                    payload.Add("fileNamePattern", r.Match(fileName).Groups[1].Value + "\\.[^.]+\\.chunk\\.js");
                     payload.Add("callbackAssembly", GetType().Assembly.FullName);
                     payload.Add("callbackClass", typeof(TransformationPatches).FullName);
                     payload.Add("callbackMethod", nameof(TransformationPatches.LoadSections));
@@ -84,12 +89,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
-        {
-            yield return new TaskTriggerInfo()
-            {
-                Type = TaskTriggerInfo.TriggerStartup
-            };
-        }
+        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetDefaultTriggers();
     }
 }

@@ -1,4 +1,3 @@
-using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -113,7 +112,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     StartIndex = null,
                     User = user!,
                     EnableTotalRecordCount = false,
-                    DisableFirstEpisode = true,
+                    //DisableFirstEpisode = true,
                     NextUpDateCutoff = nextUpDateCutoff,
                     EnableRewatching = enableRewatching
                 },

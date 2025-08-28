@@ -8,6 +8,7 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -23,6 +24,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
         private readonly IServiceProvider m_serviceProvider;
         private readonly IApplicationPaths m_applicationPaths;
+        private readonly ILogger m_logger;
 
         private const string c_settingsFile = "ModularHomeSettings.json";
 
@@ -31,8 +33,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// </summary>
         /// <param name="serviceProvider">Instance of the <see cref="IServiceProvider"/> interface.</param>
         /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
-        public HomeScreenManager(IServiceProvider serviceProvider, IApplicationPaths applicationPaths)
+        public HomeScreenManager(IServiceProvider serviceProvider, IApplicationPaths applicationPaths, ILogger<HomeScreenManager> logger)
         {
+            m_logger = logger;
             m_serviceProvider = serviceProvider;
             m_applicationPaths = applicationPaths;
 
@@ -53,6 +56,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<LiveTvSection>();
             RegisterResultsDelegate<MyListSection>();
             RegisterResultsDelegate<WatchAgainSection>();
+            
+            RegisterResultsDelegate<DiscoverSection>();
+            RegisterResultsDelegate<DiscoverMoviesSection>();
+            RegisterResultsDelegate<DiscoverTvSection>();
             
             // Removed from public access while its still in dev.
             //RegisterResultsDelegate<TopTenSection>();
@@ -188,17 +195,30 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public bool UpdateUserSettings(Guid userId, ModularHomeUserSettings userSettings)
         {
+            m_logger.LogInformation($"Updating user settings for user {userId}");
+            m_logger.LogInformation($"Json of user settings received from browser: {JsonConvert.SerializeObject(userSettings)}");
+            
             string pluginSettings = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, c_settingsFile);
+            m_logger.LogInformation($"Plugin settings file: {pluginSettings}");
+            
             FileInfo fInfo = new FileInfo(pluginSettings);
+            
+            m_logger.LogInformation($"Creating directory: '{fInfo.Directory?.FullName}' if it doesn't exist.");
             fInfo.Directory?.Create();
 
             JArray settings = new JArray();
             List<ModularHomeUserSettings?> newSettings = new List<ModularHomeUserSettings?>();
 
+            m_logger.LogInformation($"Checking if user settings already exist for user {userId} and reading it if so.");
             if (File.Exists(pluginSettings))
             {
+                m_logger.LogInformation($"User settings file exists.");
                 settings = JArray.Parse(File.ReadAllText(pluginSettings));
+                
+                m_logger.LogInformation($"Parsed user settings: {settings.ToString(Formatting.None)}");
                 newSettings = settings.Select(x => JsonConvert.DeserializeObject<ModularHomeUserSettings>(x.ToString())).ToList()!;
+                
+                m_logger.LogInformation($"Removing all existing user settings for user {userId} and adding the new one.");
                 newSettings.RemoveAll(x => x != null && x.UserId.Equals(userId));
 
                 newSettings.Add(userSettings);
@@ -206,13 +226,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 settings.Clear();
             }
 
+            m_logger.LogInformation($"Adding user settings for user {userId} to the settings array.");
             foreach (ModularHomeUserSettings? userSetting in newSettings)
             {
                 settings.Add(JObject.FromObject(userSetting ?? new ModularHomeUserSettings()));
             }
 
+            m_logger.LogInformation($"Writing user settings to file: {pluginSettings}");
             File.WriteAllText(pluginSettings, settings.ToString(Formatting.Indented));
 
+            m_logger.LogInformation($"Content of written settings json: {File.ReadAllText(pluginSettings)}");
+            
+            m_logger.LogInformation($"User settings updated.");
             return true;
         }
     }

@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
@@ -15,11 +14,13 @@ using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -348,6 +349,38 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             });
             
             return Ok();
+        }
+
+        [HttpPost("DiscoverRequest")]
+        public async Task<ActionResult> MakeDiscoverRequest([FromServices] IUserManager userManager, [FromBody] DiscoverRequestPayload payload)
+        {
+            User? user = userManager.GetUserById(payload.UserId);
+            string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
+
+            if (jellyseerrUrl == null)
+            {
+                return BadRequest();
+            }
+            
+            HttpClient client = new HttpClient();
+            client.BaseAddress = new Uri(jellyseerrUrl);
+            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
+            
+            HttpResponseMessage usersResponse = await client.GetAsync("/api/v1/user");
+            string userResponseRaw = await usersResponse.Content.ReadAsStringAsync();
+            int jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results").OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username).Value<int>("id");
+            
+            client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
+
+            HttpResponseMessage requestResponse = await client.PostAsync("/api/v1/request", JsonContent.Create(new JellyseerrRequestPayload()
+            {
+                MediaType = payload.MediaType,
+                MediaId = payload.MediaId
+            }));
+
+            string responseContent = await requestResponse.Content.ReadAsStringAsync();
+            
+            return Content(responseContent, requestResponse.Content.Headers.ContentType.MediaType);
         }
     }
 }

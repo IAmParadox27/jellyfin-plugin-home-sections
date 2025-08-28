@@ -1,5 +1,4 @@
-﻿using Jellyfin.Data.Entities;
-using Jellyfin.Data.Enums;
+﻿using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -26,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Route => "tvshows";
         
         public string? AdditionalData { get; set; }
-        
+
         public object? OriginalPayload { get; set; } = null;
         
         private readonly IUserViewManager m_userViewManager;
@@ -69,12 +68,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            List<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { BaseItemKind.Episode },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
-                    { Fields = new[] { ItemFields.SeriesPresentationUniqueKey }, EnableImages = true }
+                    { Fields = Array.Empty<ItemFields>(), EnableImages = true }
             });
             
             List<BaseItem> series = episodes

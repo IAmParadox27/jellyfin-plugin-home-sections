@@ -1,4 +1,3 @@
-using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -70,7 +69,7 @@ public class TopTenSection : IHomeScreenSection
 
         TopTenType type = Enum.Parse<TopTenType>(payload.AdditionalData ?? "Movies");
         
-        List<BaseItem> items =  collection?.GetChildren(user, true) ?? new List<BaseItem>();
+        IReadOnlyList<BaseItem> items =  collection?.GetChildren(user, true) ?? new List<BaseItem>();
         items = items.Where(x => (x is Movie && type == TopTenType.Movies) || (x is Series && type == TopTenType.Shows)).ToList();
         
         items = items.Take(Math.Min(items.Count, 10)).ToList();
