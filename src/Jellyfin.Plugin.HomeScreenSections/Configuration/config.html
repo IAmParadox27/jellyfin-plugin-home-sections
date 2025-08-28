@@ -50,6 +50,13 @@
             border-radius: 0.3em;
         }
         
+        .advanced-settings-container {
+            padding: 20px;
+            background: var(--jf-palette-background-paper);
+            border-radius: 10px;
+            margin: 10px;
+        }
+        
     </style>
 </head>
 <body>
@@ -171,7 +178,7 @@
                 <table id="sectionsTable" class="tblConnections" style="width: 100%;">
                     <thead>
                         <tr>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">&nbsp;</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Advanced</th>
                             <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
                             <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
                             <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
@@ -197,7 +204,6 @@
     <template id="sectionConfigTemplate">
         <tr data-id="section-config">
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
-                <!-- TODO: Add expander here -->
                 <label style="width: 0;" class="emby-checkbox-label">
                     <input data-id="toggle-advanced-region" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
                     <span class="checkboxLabel"></span>
