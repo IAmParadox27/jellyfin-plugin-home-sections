@@ -1,6 +1,8 @@
 ﻿using System.Net.Http.Json;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
+using Jellyfin.Plugin.HomeScreenSections.Model;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
@@ -13,7 +15,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
     public class DiscoverSection : IHomeScreenSection
     {
         private readonly IUserManager m_userManager;
-        
+
         public virtual string? Section => "Discover";
 
         public virtual string? DisplayText { get; set; } = "Discover";
@@ -23,16 +25,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public object? OriginalPayload { get; } = null;
 
         protected virtual string JellyseerEndpoint => "/api/v1/discover/trending";
-        
+
         public DiscoverSection(IUserManager userManager)
         {
             m_userManager = userManager;
         }
-        
+
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             List<BaseItemDto> returnItems = new List<BaseItemDto>();
-            
+
             // TODO: Get Jellyseerr Url
             string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
 
@@ -40,22 +42,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             {
                 return new QueryResult<BaseItemDto>();
             }
-            
+
             User? user = m_userManager.GetUserById(payload.UserId);
-            
+
             HttpClient client = new HttpClient();
             client.BaseAddress = new Uri(jellyseerrUrl);
             client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            
+
             HttpResponseMessage usersResponse = client.GetAsync("/api/v1/user").GetAwaiter().GetResult();
             string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             int jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results").OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username).Value<int>("id");
-            
+
             client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
 
             // Make the API call to discover and get the 20 results
             int page = 1;
-            do 
+            do
             {
                 HttpResponseMessage discoverResponse = client.GetAsync($"{JellyseerEndpoint}?page={page}").GetAwaiter().GetResult();
 
@@ -68,13 +70,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     {
                         foreach (JObject item in jsonResponse.Value<JArray>("results")!.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
                         {
-                            if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) && 
+                            if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) &&
                                 !HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages.Split(',')
                                     .Select(x => x.Trim()).Contains(item.Value<string>("originalLanguage")))
                             {
                                 continue;
                             }
-                            
+
                             if (item.Value<JObject>("mediaInfo") == null)
                             {
                                 returnItems.Add(new BaseItemDto()
@@ -116,6 +118,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             {
                 Section = Section,
                 DisplayText = DisplayText,
+				Info = SectionInfoHelper.CreateOfficialSectionInfo(
+					description: "Discover"
+				),
                 AdditionalData = AdditionalData,
                 Route = Route,
                 Limit = Limit ?? 1,
@@ -124,5 +129,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 AllowViewModeChange = false
             };
         }
+
+        public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
     }
 }

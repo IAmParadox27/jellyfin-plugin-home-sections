@@ -7,12 +7,22 @@
                 <input is="emby-checkbox" type="checkbox" id="modularHomeEnabled" />
                 <span>Enable "Modular Home". This will change your home screen into a more dynamic screen with options from other plugins to be able to contribute into what you see and are recommended.</span>
             </label>
+            <div id="adminManagedNote" class="admin-managed-note" style="display:none;">Managed by administrator.</div>
+            <div style="margin-top:.6em;">
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" id="showAdvancedOptions"/>
+                    <span>Show Advanced Options</span>
+                </label>
+            </div>
         </div>
 
         <div class="verticalSection verticalSection-extrabottompadding">
-            <h3>Enabled Sections</h3>
-            <div id="enabledSections">
+            <h3>Sections</h3>
+            <div class="expand-collapse-controls" style="margin: 0.5em 0 1em; display:flex; gap:.75em; flex-wrap:wrap;">
+                <button type="button" is="emby-button" class="raised mini emby-button" id="btnExpandAllSections"><span>Expand All</span></button>
+                <button type="button" is="emby-button" class="raised mini emby-button" id="btnCollapseAllSections"><span>Collapse All</span></button>
             </div>
+            <div id="sectionSettings"></div>
         </div>
 
     </div>
@@ -20,96 +30,449 @@
         <span>Save</span>
     </button>
 </form>
+
+<style>
+/* Advanced options visibility control */
+[data-options-container] .advanced-options {
+    display: none;
+}
+
+[data-options-container].advanced-visible .advanced-options {
+    display: block;
+}
+
+.advanced-options {
+    transition: opacity 0.2s ease-in-out;
+}
+
+[data-options-container].advanced-visible .advanced-options {
+    opacity: 1;
+}
+
+[data-options-container]:not(.advanced-visible) .advanced-options {
+    opacity: 0;
+}
+</style>
+
+<script src="/HomeScreen/client/shared-utils.js"></script>
 <script defer>
 
     const config = {
-        setup: function () {
-            ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
-                document.querySelector('#modularHomeEnabled').checked = userSettings.CustomPrefs['useModularHome'] === 'true';
+        // State management
+        state: {
+            cfg: null,
+            user: null,
+            sections: [],
+            optsCache: {},
+            adv: false
+        },
+        
+        // DOM element getters
+        elements: {
+            root: () => document.getElementById('sectionSettings'),
+            adv: () => document.getElementById('showAdvancedOptions'),
+            enable: () => document.getElementById('modularHomeEnabled'),
+            adminNote: () => document.getElementById('adminManagedNote'),
+            form: () => document.querySelector('.configForm')
+        },
+        
+        // Utility reference
+        utils: null,
+
+        setup: function() {
+            // Wait for shared utilities
+            if (window.HSSShared) {
+                this.utils = window.HSSShared;
+                this.initialize();
+            } else {
+                setTimeout(() => this.setup(), 50);
+            }
+        },
+
+        initialize: function() {
+            this.loadUserMeta()
+                .then(() => this.loadUserSettings())
+                .then(() => this.loadSectionTypes())
+                .then(() => this.render())
+                .then(() => this.bindEvents())
+                .catch(e => console.warn('[UserCfg] init error', e));
+        },
+
+        loadUserMeta: function() {
+            return ApiClient.fetch({ url:ApiClient.getUrl('HomeScreen/Meta'), type:'GET', dataType:'json', headers:{accept:'application/json'} })
+                .then(meta=>{ 
+                    this.state.cfg=meta||{Enabled:false,AllowUserOverride:false}; 
+                    if(this.state.cfg.AllowUserOverride){ 
+                        return ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(),'emby').then(dp=>{ 
+                            this.elements.enable().checked = dp.CustomPrefs['useModularHome']==='true'; 
+                        }); 
+                    } else { 
+                        this.elements.enable().checked = !!this.state.cfg.Enabled; 
+                        this.elements.enable().disabled = true; 
+                        this.elements.adminNote().style.display='block'; 
+                    } 
+                });
+        },
+
+        loadUserSettings: function() {
+            return ApiClient.fetch({ url:ApiClient.getUrl('ModularHomeViews/User/Settings?userId='+ApiClient.getCurrentUserId()), type:'GET', dataType:'json', headers:{accept:'application/json'} })
+                .then(us=>{ this.state.user=us; })
+                .catch(()=>{ this.state.user = { EnabledSections: [], SectionSettings: [] }; });
+        },
+
+        loadSectionTypes: function() {
+            return ApiClient.fetch({ url:ApiClient.getUrl('ModularHomeViews/User/SectionTypes'), type:'GET', dataType:'json', headers:{accept:'application/json'} })
+                .then(response => {
+                    this.state.sections = response.Items || [];
+                    return response;
+                })
+                .catch(err => {
+                    console.error('[UserCfg] Failed to load sections:', err);
+                    throw err;
+                });
+        },
+
+        render: function() {
+            const enabled = new Set(this.state.user.EnabledSections||[]);
+            const root = this.elements.root();
+            let html='';
+            
+            this.state.sections.forEach(sec=>{
+                // Skip sections that should not be visible, should not be needed, none should be given to the user
+                if(sec.UserVisible === false) return;
+                
+                const allowEnable = sec.AllowUserToggle !== false;
+                const checked = enabled.has(sec.Section) ? 'checked' : '';
+                
+                html += '<div class="user-section" data-section="'+this.utils.escapeAttr(sec.Section)+'">'
+                    + '<div class="user-section-row" data-toggle="'+this.utils.escapeAttr(sec.Section)+'" style="cursor:pointer; min-height:2.5em; padding:0.25em 0; display:flex; align-items:center; gap:0.55em; border-radius:0.35em; transition:background 0.18s ease;" onmouseover="this.style.background=\'rgba(255,255,255,0.08)\'" onmouseout="this.style.background=\'\'">'
+                    + '  <label class="emby-checkbox-label" style="margin:0; flex-shrink:0; position:relative; z-index:2; cursor:pointer; width:auto !important; min-width:auto !important;">'
+                    + '    <input is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="'+this.utils.escapeAttr(sec.Section)+'" '+checked+' '+(!allowEnable?'disabled':'')+' />'
+                    + '    <span class="checkboxLabel"></span>'
+                    + '    <span class="checkboxOutline">'
+                    + '      <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>'
+                    + '      <span class="material-icons checkboxIcon checkboxIcon-unchecked"></span>'
+                    + '    </span>'
+                    + '  </label>'
+                    + '  <div class="section-name-wrapper" style="flex:1; display:flex; align-items:center; cursor:pointer; user-select:none;">'
+                    + '    <span class="section-name" style="pointer-events:none;">'+this.utils.escapeHtml(sec.DisplayText||sec.Section)+'</span>'
+                    + '  </div>'
+                    + '</div>'
+                    + '<div class="user-section-details" data-details="'+this.utils.escapeAttr(sec.Section)+'" style="display:none; padding:0.7em 0.85em 0.9em; margin:0.35em 0 1em; border:1px solid rgba(255,255,255,0.18); border-radius:0.55em; background:rgba(0,0,0,0.25);">'
+                    + '  <div class="details-body" data-body="'+this.utils.escapeAttr(sec.Section)+'">'
+                    + '    <div class="fieldDescription">Click to view section options...</div>'
+                    + '  </div>'
+                    + '</div>'
+                    + '</div>';
             });
-
-            let urlStart = window.location.protocol + '//' + window.location.host;
-
-            ApiClient.fetch({
-                url: ApiClient.getUrl('ModularHomeViews/UserSettings?userId=' + ApiClient.getCurrentUserId()),
-                type: 'GET',
-                dataType: 'json',
-                headers: {
-                    accept: 'application/json'
+            root.innerHTML = html;
+            
+            // Advanced toggle
+            this.state.adv = localStorage.getItem('homeScreenSections.userSettings.showAdvanced')==='true';
+            this.elements.adv().checked = this.state.adv;
+            
+            root.querySelectorAll('.user-section-row').forEach(r=>{
+                r.addEventListener('click', e=>{
+                    if(e.target && (e.target.matches('input.sectionEnabledCheckbox') || e.target.closest('.emby-checkbox-label'))){
+                        return;
+                    }
+                    this.toggle(r.getAttribute('data-toggle'));
+                });
+                
+                const checkbox = r.querySelector('.sectionEnabledCheckbox');
+                if (checkbox) {
+                    checkbox.addEventListener('click', e => {
+                        e.stopPropagation();
+                    });
                 }
-            }).then(function (settings) {
-                ApiClient.fetch({
-                    url: ApiClient.getUrl('ModularHomeViews/Sections'),
-                    type: 'GET',
-                    dataType: 'json',
-                    headers: {
-                        accept: 'application/json'
-                    }
-                }).then(function (response) {
-                    if (response.TotalRecordCount > 0) {
+            });
+        },
 
-                        let html = '';
-                        for (let i = 0; i < response.TotalRecordCount; ++i) {
-                            let section = response.Items[i];
-
-                            let checked = false;
-                            if (settings.EnabledSections.includes(section.Section)) {
-                                checked = true;
-                            }
-
-                            html += '<label class="checkboxContainer">';
-                            html += '<input is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
-                            html += '<span>' + section.DisplayText + '</span>';
-                            html += '</label>';
+        toggle: function(id) {
+            const row = this.elements.root().querySelector('.user-section-row[data-toggle="'+id+'"]');
+            const panel = this.elements.root().querySelector('.user-section-details[data-details="'+id+'"]');
+            if(!panel){ console.warn('[UserCfg] Panel not found for', id); return; }
+            
+            const act = !panel.classList.contains('active');
+            panel.classList.toggle('active', act);
+            
+            // Handle inline styling for expanded/collapsed states
+            if (act) {
+                panel.style.display = 'block';
+                if (row) {
+                    row.classList.add('expanded');
+                    row.style.background = 'rgba(255,255,255,0.12)';
+                    // Update hover handlers to respect expanded state
+                    row.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.12)'; };
+                    row.onmouseout = function() { this.style.background = 'rgba(255,255,255,0.12)'; };
+                }
+            } else {
+                panel.style.display = 'none';
+                if (row) {
+                    row.classList.remove('expanded');
+                    row.style.background = '';
+                    // Restore normal hover handlers
+                    row.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.08)'; };
+                    row.onmouseout = function() { this.style.background = ''; };
+                }
+            }
+            
+            if(act && !panel.dataset.loaded){
+                const body = panel.querySelector('[data-body]');
+                if(body) {
+                    body.innerHTML = '<div class="fieldDescription">Loading configuration options...</div>';
+                    
+                    this.loadOptions(id, body).then(() => {
+                        if (panel.classList.contains('active')) {
+                            panel.dataset.loaded = 'true';
                         }
+                    }).catch(err => {
+                        console.error('[UserCfg] Failed to load options for', id, err);
+                        if (panel.classList.contains('active')) {
+                            body.innerHTML = '<div class="fieldDescription">Failed to load configuration options.</div>';
+                        }
+                    });
+                }
+            }
+        },
 
-                        let elem = document.querySelector('#enabledSections');
-                        elem.innerHTML = html;
+        loadOptions: function(id, body) {
+            const url = ApiClient.getUrl('HomeScreen/User/Section/'+id);
+            return ApiClient.fetch({ url, type:'GET', dataType:'json', headers:{accept:'application/json'} })
+                .then(opts=>{ 
+                    const list = Array.isArray(opts)?opts:[];
+                    this.state.optsCache[id]=list; 
+                    
+                    const optionsHtml = this.buildOptionsHTML(id, list);
+                    
+                    const sec = this.state.sections.find(s => s.Section === id);
+                    
+                    body.innerHTML = '';
+                    
+                    if (sec && sec.Info) {
+                        var infoHtml = this.utils.buildSectionInfo(sec, { isAdmin: false, wrapperClass: '', wrapperStyle: 'margin-bottom: 1em;' });
+                        if (infoHtml) {
+                            body.innerHTML += infoHtml;
+                        }
+                    }
+                    
+                    if (optionsHtml) {
+                        body.innerHTML += optionsHtml;
+                    }
+
+                    body.parentElement.dataset.loaded='1'; 
+                    const optContainer = body.querySelector('[data-options-container]');
+                    if(optContainer){
+                        if (this.state.adv) {
+                            optContainer.classList.add('advanced-visible');
+                        } else {
+                            optContainer.classList.remove('advanced-visible');
+                        }
+                        
+                        optContainer.querySelectorAll('label.emby-checkbox-label').forEach(l=>{ if(l.style.width==='0px' || /width:\s?0/.test(l.getAttribute('style')||'')) l.style.width='auto'; });
+                        optContainer.querySelectorAll('input,select,textarea,button,label').forEach(ctrl=>ctrl.addEventListener('click', ev=>ev.stopPropagation()));
+                        if(window.HSSShared && window.HSSShared.attachUnifiedValidation){
+                            window.HSSShared.attachUnifiedValidation(optContainer, { toast:true, color:true });
+                        }
+                    }
+                    
+                    return opts;
+                })
+                .catch(err => {
+                    console.error('[UserCfg] Failed to load options for', id, err);
+                    body.innerHTML = '<div class="fieldDescription">Failed to load configuration options.</div>';
+                    throw err;
+                });
+        },
+
+        configArrayToMap: function(raw) {
+            if(!raw) return {};
+            if(Array.isArray(raw)){
+                var m={}; raw.forEach(function(p){ if(p && p.Key!=null){ m[p.Key] = ('Value' in p)? p.Value : p.value; }}); return m;
+            }
+            if(typeof raw==='object') return Object.assign({}, raw);
+            return {};
+        },
+
+        buildOptionsHTML: function(id, opts) {
+            if (!opts || opts.length === 0) {
+                return '<div class="fieldDescription">No configurable options available for this section.</div>';
+            }
+            
+            // Filter out the "Enabled" option since it's handled by the main row checkbox
+            const filteredOpts = opts.filter(o => o.Key !== "Enabled");
+            
+            if (filteredOpts.length === 0) {
+                return '<div class="fieldDescription">No configurable options available for this section.</div>';
+            }
+            
+            const userSec = (this.state.user.SectionSettings||[]).find(s=>s.SectionId===id) || {};
+            const userCfg = this.configArrayToMap ? this.configArrayToMap(userSec.PluginConfigurations) : (userSec.PluginConfigurations||{});
+            
+            const out = filteredOpts.map(o => {
+                if (!o || !o.Key) return '';
+                
+                let val = (userCfg && userCfg[o.Key] !== undefined) ? userCfg[o.Key] : o.DefaultValue;
+                
+                if (this.utils.buildUserOptionInput) {
+                    try {
+                        const inputHtml = this.utils.buildUserOptionInput(o, val);
+                        if (inputHtml) {
+                            const advCls = o.IsAdvanced ? 'advanced-options' : '';
+                            return '<div class="option-block '+advCls+'">'
+                                + inputHtml
+                                + '</div>';
+                        }
+                    } catch(e) { 
+                        console.warn('Failed to build option input for', o.Key, e);
+                        return '';
+                    }
+                } else {
+                    console.warn('Shared utilities not available, skipping option', o.Key);
+                    return '';
+                }
+            }).filter(html => html).join('');
+            
+            const finalContent = out || '<div class="fieldDescription">No configurable options available.</div>';
+            const advancedClass = this.state.adv ? 'advanced-visible' : '';
+            return '<div data-options-container="'+id+'" class="'+advancedClass+'">'+finalContent+'</div>';
+        },
+        
+        expandAll: function() {
+            this.elements.root().querySelectorAll('.user-section').forEach(sec => {
+                const sectionId = sec.getAttribute('data-section');
+                const panel = sec.querySelector('.user-section-details');
+                const row = sec.querySelector('.user-section-row');
+                if (panel && !panel.classList.contains('active')) {
+                    panel.classList.add('active');
+                    panel.style.display = 'block';
+                    if (row) {
+                        row.classList.add('expanded');
+                        row.style.background = 'rgba(255,255,255,0.12)';
+                        row.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.12)'; };
+                        row.onmouseout = function() { this.style.background = 'rgba(255,255,255,0.12)'; };
+                    }
+                    if (!panel.dataset.loaded) {
+                        const body = panel.querySelector('[data-body]');
+                        if (body) {
+                            body.innerHTML = '<div class="fieldDescription">Loading configuration options...</div>';
+                            this.loadOptions(sectionId, body).catch(err => {
+                                console.error('[UserCfg] Failed to load options for', sectionId, err);
+                                body.innerHTML = '<div class="fieldDescription">Failed to load configuration options.</div>';
+                            });
+                        }
+                    }
+                }
+            });
+        },
+
+        collapseAll: function() {
+            this.elements.root().querySelectorAll('.user-section').forEach(sec => {
+                const panel = sec.querySelector('.user-section-details');
+                const row = sec.querySelector('.user-section-row');
+                if (panel && panel.classList.contains('active')) {
+                    panel.classList.remove('active');
+                    panel.style.display = 'none';
+                    if (row) {
+                        row.classList.remove('expanded');
+                        row.style.background = '';
+                        row.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.08)'; };
+                        row.onmouseout = function() { this.style.background = ''; };
+                    }
+                }
+            });
+        },
+
+        bindEvents: function() {
+            this.elements.adv().addEventListener('change', () => { 
+                this.state.adv = this.elements.adv().checked; 
+                localStorage.setItem('homeScreenSections.userSettings.showAdvanced', this.state.adv ? 'true' : 'false');
+                
+                document.querySelectorAll('[data-options-container]').forEach(container => {
+                    if (this.state.adv) {
+                        container.classList.add('advanced-visible');
+                    } else {
+                        container.classList.remove('advanced-visible');
                     }
                 });
             });
+            
+            const btnExpandAll = document.getElementById('btnExpandAllSections');
+            const btnCollapseAll = document.getElementById('btnCollapseAllSections');
+            if (btnExpandAll) {
+                btnExpandAll.addEventListener('click', () => this.expandAll());
+            }
+            if (btnCollapseAll) {
+                btnCollapseAll.addEventListener('click', () => this.collapseAll());
+            }
+            
+            this.elements.form().addEventListener('submit', (e) => this.onSave(e));
+        },
 
-            document.querySelector('.configForm')
-                .addEventListener('submit', function (e) {
-                    ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
-                        userSettings.CustomPrefs['useModularHome'] = document.querySelector('#modularHomeEnabled').checked ? 'true' : 'false';
-
-                        ApiClient.updateDisplayPreferences('usersettings', userSettings, ApiClient.getCurrentUserId(), 'emby');
-                    });
-
-                    let data = {
-                        UserId: ApiClient.getCurrentUserId(),
-                        EnabledSections: []
-                    };
-
-                    let checkboxes = document.querySelectorAll('.sectionEnabledCheckbox');
-
-                    checkboxes.forEach(function (checkbox) {
-                        let sectionId = checkbox.getAttribute('data-section');
-
-                        if (checkbox.checked) {
-                            data.EnabledSections.push(sectionId);
+        onSave: function(ev) {
+            ev.preventDefault();
+            if(this.state.cfg.AllowUserOverride){
+                ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby')
+                    .then(dp=>{ dp.CustomPrefs['useModularHome'] = this.elements.enable().checked?'true':'false'; return ApiClient.updateDisplayPreferences('usersettings', dp, ApiClient.getCurrentUserId(),'emby'); });
+            }
+            const payload = { UserId: ApiClient.getCurrentUserId(), EnabledSections: [], SectionSettings: [] };
+            
+            let firstInvalid = null;
+            document.querySelectorAll('[data-options-container]').forEach(container => { 
+                if (firstInvalid) return; 
+                const validation = window.HSSShared && window.HSSShared.validateInputs ? 
+                    window.HSSShared.validateInputs(container) : { valid: true };
+                if (!validation.valid) firstInvalid = validation;
+            });
+            if (firstInvalid) { 
+                Dashboard.alert(firstInvalid.message || 'Invalid input'); 
+                return false; 
+            }
+            
+            const prevSections = Array.isArray(this.state.user?.SectionSettings) ? this.state.user.SectionSettings : [];
+            this.elements.root().querySelectorAll('.user-section').forEach(secEl => {
+                const sectionId = secEl.getAttribute('data-section');
+                const enCb = secEl.querySelector('.sectionEnabledCheckbox');
+                const enabled = !!enCb && enCb.checked;
+                if (enabled) payload.EnabledSections.push(sectionId);
+                
+                const container = secEl.querySelector('[data-options-container]');
+                let pluginConfigurations = {};
+                
+                const existingSection = (this.state.user?.SectionSettings || []).find(s => s.SectionId === sectionId);
+                if (existingSection && existingSection.PluginConfigurations) {
+                    pluginConfigurations = { ...existingSection.PluginConfigurations };
+                }
+                if (container && container.querySelector('.pluginConfig')) {
+                    if (window.HSSShared && window.HSSShared.collectOptionValues) {
+                        try { 
+                            const collected = window.HSSShared.collectOptionValues(container);
+                            collected.forEach(item => {
+                                if (item && item.Key) {
+                                    pluginConfigurations[item.Key] = item.Value;
+                                }
+                            });
+                        } catch(e) {
+                            console.warn('Error collecting option values for section', sectionId, e);
                         }
-                    });
-
-                    ApiClient.ajax({
-                        url: ApiClient.getUrl('ModularHomeViews/UserSettings'),
-                        type: 'POST',
-                        data: JSON.stringify(data),
-                        contentType: 'application/json'
-                    }).then(function () {
-                        Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
-
-                        setTimeout(function () {
-                            location.reload(true);
-                        }, 2000);
-                    })
-
-                    e.preventDefault();
-                    return false;
+                    }
+                }
+                
+                payload.SectionSettings.push({ 
+                    SectionId: sectionId, 
+                    Enabled: enabled, 
+                    PluginConfigurations: pluginConfigurations 
                 });
+            });
+            
+            ApiClient.ajax({ url:ApiClient.getUrl('ModularHomeViews/User/Settings'), type:'POST', data:JSON.stringify(payload), contentType:'application/json' })
+                .then(()=>{ 
+                    Dashboard.alert('Settings saved successfully!');
+                })
+                .catch(()=>{ Dashboard.alert('Error saving settings'); });
+            return false;
         }
-    }
+    };
 
     config.setup();
 
