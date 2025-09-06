@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Net.Http.Headers;
 using System.Reflection;

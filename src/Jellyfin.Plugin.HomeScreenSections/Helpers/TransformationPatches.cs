@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.HomeScreenSections.Attributes;
 using Jellyfin.Plugin.HomeScreenSections.Model;

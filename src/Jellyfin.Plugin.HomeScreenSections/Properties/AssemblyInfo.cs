@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Jellyfin.Plugin.HomeScreenSections.Attributes;
 
 [assembly: AssemblyCompany("IAmParadox27")]

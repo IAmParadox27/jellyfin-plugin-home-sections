@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Model;
@@ -24,7 +24,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private readonly ILogger<ModularHomeViewsController> m_logger;
         private readonly IHomeScreenManager m_homeScreenManager;
 
-        #region Permission Context Helpers
         private sealed class SectionPermissionContext
         {
             public SectionSettings AdminSection { get; init; } = null!;
@@ -50,11 +49,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             {
                 if (!sectionTypeMap.TryGetValue(adminSec.SectionId, out var sectionType)) continue;
 
-                // Use unified configuration approach for O(1) lookups
                 var overrideMap = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 bool enableDisableGranted = false;
 
-                // Build override map from unified PluginConfigurations
+                // Build override map from PluginConfigurations
                 foreach (var entry in adminSec.PluginConfigurations ?? Array.Empty<PluginConfigurationEntry>())
                 {
                     if (!string.IsNullOrEmpty(entry.Key))
@@ -86,13 +84,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private static bool IsOptionOverrideAllowed(SectionPermissionContext ctx, string key, PluginConfigurationOption optDef)
         {
             if (string.IsNullOrWhiteSpace(key)) return false;
-            if (!optDef.AllowUserOverride) return false; // intrinsic block
+            if (!optDef.AllowUserOverride) return false;
             
-            // Use unified configuration system for O(1) permission check
             return ctx.AdminSection.IsUserOverrideAllowedUnified(key);
         }
-
-        #endregion
 
         /// <summary>
         /// Constructor.
@@ -127,6 +122,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public QueryResult<HomeScreenSectionInfo> GetSectionTypes()
         {
+            // Todo add reading whether the section is enabled or disabled by the user.
             List<HomeScreenSectionInfo> items = new List<HomeScreenSectionInfo>();
 
             IEnumerable<IHomeScreenSection> sections = m_homeScreenManager.GetSectionTypes();
