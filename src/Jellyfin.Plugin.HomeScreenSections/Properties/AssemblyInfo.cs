@@ -7,4 +7,4 @@ using Jellyfin.Plugin.HomeScreenSections.Attributes;
 [assembly: AssemblyTitle("Jellyfin.Plugin.HomeScreenSections")]
 [assembly: AssemblyVersion("2.3.0.0")]
 [assembly: JellyfinVersion("10.10.7")]
-//[assembly: JellyfinVersion("10.11.0-rc5")]
+[assembly: JellyfinVersion("10.11.0-rc5")]
