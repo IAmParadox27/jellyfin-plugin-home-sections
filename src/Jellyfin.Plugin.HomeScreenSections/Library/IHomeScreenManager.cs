@@ -23,9 +23,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 
         ModularHomeUserSettings? GetUserSettings(Guid userId);
 
-        bool UpdateUserSettings(Guid userId, ModularHomeUserSettings userSettings);
-        
-        
+        bool UpdateUserSettings(Guid userId, ModularHomeUserSettings userSettings);   
     }
 
     public interface IHomeScreenSection

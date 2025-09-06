@@ -1,4 +1,4 @@
-using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -236,7 +236,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			return result;
 		}
-
+        
 		public HomeScreenSectionInfo GetInfo()
 		{
 			return new HomeScreenSectionInfo
