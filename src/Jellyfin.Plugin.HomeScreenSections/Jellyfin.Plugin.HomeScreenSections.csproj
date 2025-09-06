@@ -47,6 +47,7 @@
       <EmbeddedResource Include="Controllers\loadSections.js" />
       <None Remove="Configuration\config.html" />
       <EmbeddedResource Include="Configuration\config.html" />
+      <EmbeddedResource Include="Configuration\shared-utils.js" />
       <None Remove="Inject\HomeScreenSections.js" />
       <EmbeddedResource Include="Inject\HomeScreenSections.js" />
       <None Remove="Inject\HomeScreenSections.css" />

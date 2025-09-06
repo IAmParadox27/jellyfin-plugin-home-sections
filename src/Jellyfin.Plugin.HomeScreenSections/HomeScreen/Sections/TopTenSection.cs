@@ -1,6 +1,7 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
+using Jellyfin.Plugin.HomeScreenSections.Model;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Dto;
@@ -111,6 +112,9 @@ public class TopTenSection : IHomeScreenSection
         {
             Section = Section,
             DisplayText = DisplayText,
+            Info = SectionInfoHelper.CreateOfficialSectionInfo(
+                description: "Top Ten - Netflix-style number cards for your top ten content, supports movies, tv shows, music"
+            ),
             AdditionalData = AdditionalData,
             Route = Route,
             Limit = Limit ?? 1,
@@ -122,4 +126,6 @@ public class TopTenSection : IHomeScreenSection
             AllowViewModeChange = false
         };
     }
+
+	public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
 }

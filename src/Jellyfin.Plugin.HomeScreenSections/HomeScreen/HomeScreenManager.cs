@@ -94,7 +94,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         {
             if (handler.Section != null)
             {
-                m_delegates[handler.Section] = handler;
+                var enhancedHandler = new SyntheticOptionInjector(handler);
+                m_delegates[handler.Section] = enhancedHandler;
             }
         }
 
@@ -106,7 +107,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             {
                 if (!m_delegates.ContainsKey(handler.Section))
                 {
-                    m_delegates.Add(handler.Section, handler);
+                    var enhancedHandler = new SyntheticOptionInjector(handler);
+                    m_delegates.Add(handler.Section, enhancedHandler);
                 }
                 else
                 {
@@ -114,6 +116,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 }
             }
         }
+
+
 
         /// <inheritdoc/>
         public bool GetUserFeatureEnabled(Guid userId)
@@ -170,20 +174,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
             if (settings != null)
             {
-                IEnumerable<SectionSettings> forcedSectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => !x.AllowUserOverride);
+                // Get forced sections using unified configuration system
+                IEnumerable<SectionSettings> forcedSectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => 
+                    !x.IsUserOverrideAllowedUnified("Enabled"));
 
                 foreach (SectionSettings sectionSettings in forcedSectionSettings)
                 {
-                    if (sectionSettings.Enabled && !settings.EnabledSections.Contains(sectionSettings.SectionId))
+                    if (sectionSettings.IsEnabledByAdmin() && !settings.EnabledSections.Contains(sectionSettings.SectionId))
                     {
                         settings.EnabledSections.Add(sectionSettings.SectionId);
                     }
-                    else if (!sectionSettings.Enabled && settings.EnabledSections.Contains(sectionSettings.SectionId))
+                    else if (!sectionSettings.IsEnabledByAdmin() && settings.EnabledSections.Contains(sectionSettings.SectionId))
                     {
                         settings.EnabledSections.Remove(sectionSettings.SectionId);
                     }
                 }
             }
+
+            // Sync SectionSettings from EnabledSections
+            settings?.SyncSectionSettings();
             
             return settings;
         }
@@ -235,6 +244,136 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             
             m_logger.LogInformation($"User settings updated.");
             return true;
+        }
+
+        /// <summary>
+        /// Private nested class that injects synthetic configuration options like CustomDisplayText and Enabled into any section.
+        /// This ensures all sections have these standard options available organically at registration time.
+        /// </summary>
+        private class SyntheticOptionInjector : IHomeScreenSection
+        {
+            private readonly IHomeScreenSection _innerSection;
+            private readonly List<PluginConfigurationOption>? _enhancedConfigurationOptions;
+
+            public SyntheticOptionInjector(IHomeScreenSection innerSection)
+            {
+                _innerSection = innerSection ?? throw new ArgumentNullException(nameof(innerSection));
+                DisplayText = _innerSection.DisplayText;
+                AdditionalData = _innerSection.AdditionalData;
+                _enhancedConfigurationOptions = CreateEnhancedConfigurationOptions();
+            }
+
+            public string? Section => _innerSection.Section;
+            public string? DisplayText { get; set; }
+            public int? Limit => _innerSection.Limit;
+            public string? Route => _innerSection.Route;
+            public string? AdditionalData { get; set; }
+            public object? OriginalPayload => _innerSection.OriginalPayload;
+
+            public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+            {
+                return _innerSection.GetResults(payload, queryCollection);
+            }
+
+            public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+            {
+                var innerInstance = _innerSection.CreateInstance(userId, otherInstances);
+                if (innerInstance == null)
+                {
+                    return null;
+                }
+                return new SyntheticOptionInjector(innerInstance);
+            }
+
+            public HomeScreenSectionInfo GetInfo()
+            {
+                return _innerSection.GetInfo();
+            }
+
+            /// <summary>
+            /// Returns configuration options with synthetic options injected.
+            /// This is where the injection happens - synthetic options are added organically.
+            /// </summary>
+            public IEnumerable<PluginConfigurationOption> GetConfigurationOptions()
+            {
+                return _enhancedConfigurationOptions ?? new List<PluginConfigurationOption>();
+            }
+
+            /// <summary>
+            /// Creates the configuration options by combining intrinsic options with synthetic ones.
+            /// Synthetic options are only added if they don't already exist.
+            /// </summary>
+            private List<PluginConfigurationOption> CreateEnhancedConfigurationOptions()
+            {
+                // Get the original section's configuration options
+                var originalOptions = _innerSection.GetConfigurationOptions()?.ToList() ?? new List<PluginConfigurationOption>();
+
+                bool enabledByDefault = true;
+                var sectionInfo = _innerSection.GetInfo();
+                if (sectionInfo.EnableByDefault.HasValue)
+                {
+                    enabledByDefault = sectionInfo.EnableByDefault.Value;
+                }
+
+                // Create synthetic options with section-specific defaults
+                var syntheticOptions = CreateSyntheticOptions(_innerSection.DisplayText, enabledByDefault);
+
+                // Only add synthetic options that don't already exist
+                foreach (var syntheticOption in syntheticOptions)
+                {
+                    if (!originalOptions.Any(o => string.Equals(o.Key, syntheticOption.Key, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        originalOptions.Insert(0, syntheticOption); // Insert at beginning for consistency
+                    }
+                }
+
+                return originalOptions;
+            }
+
+            /// <summary>
+            /// Creates the standard synthetic options that all sections should have.
+            /// </summary>
+            /// <param name="sectionDisplayText">The section's default display text to use as CustomDisplayText default</param>
+            /// <param name="enabledByDefault">Whether the section should be enabled by default</param>
+            private static List<PluginConfigurationOption> CreateSyntheticOptions(string? sectionDisplayText = null, bool enabledByDefault = true)
+            {
+                return new List<PluginConfigurationOption>
+                {
+                    new PluginConfigurationOption
+                    {
+                        Key = "SectionHeaderDisplay",
+                        Name = "Section Header Display",
+                        Description = "Control how the section header is displayed",
+                        Type = PluginConfigurationType.Dropdown,
+                        AllowUserOverride = true,
+                        DefaultValue = "ShowWithNavigation",
+                        IsAdvanced = true,
+                        DropdownOptions = new[] { "ShowWithNavigation", "ShowWithoutNavigation", "Hide" },
+                        DropdownLabels = new[] { "Show with Navigation", "Show without Navigation", "Hide" }
+                    },
+                    new PluginConfigurationOption
+                    {
+                        Key = "CustomDisplayText",
+                        Name = "Custom Display Name",
+                        Description = "Display a custom name for this section",
+                        Type = PluginConfigurationType.TextBox,
+                        AllowUserOverride = true,
+                        DefaultValue = sectionDisplayText ?? "",
+                        IsAdvanced = true,
+                        MaxLength = 64
+                    },
+                    new PluginConfigurationOption
+                    {
+                        Key = "Enabled",
+                        Name = "Enabled",
+                        Description = "Enable this section on your home screen",
+                        Type = PluginConfigurationType.Checkbox,
+                        AllowUserOverride = true,
+                        DefaultValue = enabledByDefault,
+                        IsAdvanced = false
+                    }
+                };
+            }
         }
     }
 }

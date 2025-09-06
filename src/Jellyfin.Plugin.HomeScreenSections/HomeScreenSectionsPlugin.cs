@@ -31,6 +31,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
             {
                 Directory.CreateDirectory(homeScreenSectionsConfigDir);
             }
+            PerformMigrations();
             
             string pluginPagesConfig = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.PluginPages", "config.json");
         
@@ -95,6 +96,105 @@ namespace Jellyfin.Plugin.HomeScreenSections
                     EmbeddedResourcePath = $"{GetType().Namespace}.Config.settings.html"
                 }
             };
+        }
+        
+        /// <summary>
+        /// Get the current plugin version.
+        /// </summary>
+        private string GetCurrentPluginVersion()
+        {
+            return base.Version.ToString();
+        }
+
+        /// <summary>
+        /// Perform migrations based on configuration version.
+        /// </summary>
+        private void PerformMigrations()
+        {
+            try
+            {
+                var config = base.Configuration;
+                var currentVersion = GetCurrentPluginVersion();
+                var configVersion = config.ConfigVersion ?? "0.0.0";
+                
+                bool migrationNeeded = false;
+                
+                if (CompareVersions(configVersion, "2.3.6") < 0)
+                {
+                    migrationNeeded = PerformEnabledPropertyMigration();
+                }
+                
+                if (migrationNeeded || string.IsNullOrEmpty(config.ConfigVersion))
+                {
+                    config.ConfigVersion = currentVersion;
+                    base.SaveConfiguration();
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        /// <summary>
+        /// Migration: Convert legacy Enabled properties to plugin configuration.
+        /// </summary>
+        private bool PerformEnabledPropertyMigration()
+        {
+            var config = base.Configuration;
+            bool migrationPerformed = false;
+
+            foreach (var section in config.SectionSettings)
+            {
+                // Check if Enabled plugin configuration already exists
+                var configList = section.PluginConfigurations?.ToList() ?? new List<PluginConfigurationEntry>();
+                var enabledConfig = configList.FirstOrDefault(pc => pc.Key == "Enabled");
+                
+                if (enabledConfig != null)
+                {
+                    // Update synthetic Enabled config if it exists to match legacy value
+                    var legacyValue = section.Enabled.ToString().ToLowerInvariant();
+                    if (enabledConfig.Value != legacyValue || enabledConfig.Type != "boolean")
+                    {
+                        enabledConfig.Value = legacyValue;
+                        enabledConfig.Type = "boolean";
+                        enabledConfig.AllowUserOverride = section.AllowUserOverride;
+                        section.PluginConfigurations = configList.ToArray();
+                        migrationPerformed = true;
+                    }
+                }
+                else
+                {
+                    // Create new Enabled plugin configuration
+                    configList.Add(new PluginConfigurationEntry
+                    {
+                        Key = "Enabled",
+                        Value = section.Enabled.ToString().ToLowerInvariant(),
+                        Type = "boolean",
+                        AllowUserOverride = section.AllowUserOverride
+                    });
+                    section.PluginConfigurations = configList.ToArray();
+                    migrationPerformed = true;
+                }
+            }
+
+            return migrationPerformed;
+        }
+
+        /// <summary>
+        /// Compare two version strings. Returns negative if version1 < version2, positive if version1 > version2, and 0 if equal.
+        /// </summary>
+        private static int CompareVersions(string version1, string version2)
+        {
+            try
+            {
+                var v1 = new Version(version1);
+                var v2 = new Version(version2);
+                return v1.CompareTo(v2);
+            }
+            catch
+            {
+                return string.Compare(version1, version2, StringComparison.OrdinalIgnoreCase);
+            }
         }
     }
 }

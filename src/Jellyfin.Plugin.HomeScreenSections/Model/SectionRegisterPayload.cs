@@ -10,6 +10,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
         [JsonPropertyName("displayText")]
         public string? DisplayText { get; set; }
         
+        [JsonPropertyName("enableByDefault")]
+        public bool? EnableByDefault { get; set; }
+        
+        [JsonPropertyName("info")]
+        public SectionInfo? Info { get; set; }
+        
         [JsonPropertyName("limit")]
         public int? Limit { get; set; }
         
@@ -21,5 +27,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
         
         [JsonPropertyName("resultsEndpoint")]
         public string? ResultsEndpoint { get; set; }
+        
+        [JsonPropertyName("configurationOptions")]
+        public string? ConfigurationOptions { get; set; }
     }
 }
