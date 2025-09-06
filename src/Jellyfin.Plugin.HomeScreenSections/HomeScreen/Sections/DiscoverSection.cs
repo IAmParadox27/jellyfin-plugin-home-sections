@@ -57,7 +57,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             // Make the API call to discover and get the 20 results
             int page = 1;
-            do
+            do 
             {
                 HttpResponseMessage discoverResponse = client.GetAsync($"{JellyseerEndpoint}?page={page}").GetAwaiter().GetResult();
 
@@ -76,7 +76,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                             {
                                 continue;
                             }
-
+                            
                             if (item.Value<JObject>("mediaInfo") == null)
                             {
                                 returnItems.Add(new BaseItemDto()

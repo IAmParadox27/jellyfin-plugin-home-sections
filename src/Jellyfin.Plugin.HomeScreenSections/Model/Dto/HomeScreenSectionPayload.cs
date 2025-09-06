@@ -3,16 +3,24 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 {
+    
+
+
     public class HomeScreenSectionPayload
     {
+
+
+
         public Guid UserId { get; set; }
+
+        
 
         public string? AdditionalData { get; set; }
 
         public ModularHomeUserSettings? UserSettings { get; set; }
-        
+
         private readonly Dictionary<string, object?> _pluginConfigCache = new Dictionary<string, object?>();
-        
+
         /// <summary>
         /// Gets the effective configuration value with user override precedence.
         /// Uses caching to avoid repeated lookups during a single request.
@@ -21,14 +29,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
         {
             if (string.IsNullOrEmpty(sectionId) || string.IsNullOrEmpty(configurationKey))
                 return defaultValue;
-            
+
             var adminConfig = HomeScreenSectionsPlugin.Instance?.Configuration;
             var sectionSettings = adminConfig?.SectionSettings?.FirstOrDefault(s => s.SectionId == sectionId);
-            
+
             var allowUserOverride = sectionSettings?.IsUserOverrideAllowedUnified(configurationKey) ?? false;
-            
+
             var cacheKey = $"{sectionId}:{configurationKey}:{allowUserOverride}";
-            
+
             if (_pluginConfigCache.TryGetValue(cacheKey, out var cachedValue))
             {
                 try
@@ -40,9 +48,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
                     return defaultValue;
                 }
             }
-            
+
             object? effectiveValue = null;
-            
+
             if (sectionSettings != null)
             {
                 if (allowUserOverride && UserSettings?.SectionSettings != null)
@@ -54,18 +62,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
                         effectiveValue = userValue;
                     }
                 }
-                
+
                 if (effectiveValue == null)
                 {
                     var adminValue = sectionSettings.GetAdminConfig<T>(configurationKey, defaultValue);
                     effectiveValue = adminValue;
                 }
             }
-            
+
             effectiveValue ??= defaultValue;
-            
+
             _pluginConfigCache[cacheKey] = effectiveValue;
-            
+
             try
             {
                 return (T)Convert.ChangeType(effectiveValue, typeof(T))!;
