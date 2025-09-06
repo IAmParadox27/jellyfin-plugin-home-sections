@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 using MediaBrowser.Model.Plugins;
 
@@ -30,6 +30,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? DefaultMoviesLibraryId { get; set; } = "";
         
         public string? DefaultTVShowsLibraryId { get; set; } = "";
+        
+        public string? DefaultMusicLibraryId { get; set; } = "";
         
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
     }
