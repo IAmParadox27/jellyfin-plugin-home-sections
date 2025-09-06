@@ -37,7 +37,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 
         public static string IndexHtml(PatchRequestPayload content)
         {
-
             NetworkConfiguration networkConfiguration = HomeScreenSectionsPlugin.Instance.ServerConfigurationManager.GetNetworkConfiguration();
 
             string rootPath = "";

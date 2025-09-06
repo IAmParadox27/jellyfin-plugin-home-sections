@@ -120,8 +120,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             }
         }
 
-
-
         /// <inheritdoc/>
         public bool GetUserFeatureEnabled(Guid userId)
         {
