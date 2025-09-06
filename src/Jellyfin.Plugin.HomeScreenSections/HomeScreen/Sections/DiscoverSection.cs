@@ -76,7 +76,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                             {
                                 continue;
                             }
-
+                            
                             if (item.Value<JObject>("mediaInfo") == null)
                             {
                                 returnItems.Add(new BaseItemDto()

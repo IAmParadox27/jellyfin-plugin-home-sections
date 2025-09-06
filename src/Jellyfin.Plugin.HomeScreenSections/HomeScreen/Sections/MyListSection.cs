@@ -236,7 +236,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			return result;
 		}
-        
+		
 		public HomeScreenSectionInfo GetInfo()
 		{
 			return new HomeScreenSectionInfo

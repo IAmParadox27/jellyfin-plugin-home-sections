@@ -109,7 +109,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					.Where(x => x.IsPlayed(user))
 					.Select(x =>
 					{
-                        IReadOnlyList<BaseItem>? children = x.GetChildren(user, true);
+						IReadOnlyList<BaseItem>? children = x.GetChildren(user, true);
 
 						if (children.Any())
 						{
