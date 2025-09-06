@@ -93,6 +93,13 @@
                                     </select>
                                     <div class="fieldDescription">Select the specific TV shows library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
+                                <div class="inputContainer">
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultMusicLibrary">Default Music Library</label>
+                                    <select is="emby-select" id="defaultMusicLibrary" class="emby-select-withcolor emby-select">
+                                        <option value="">Default</option>
+                                    </select>
+                                    <div class="fieldDescription">Select the specific music library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                </div>
                             </div>
                         </details>
                     </div>
@@ -236,12 +243,14 @@
                 window.ApiClient.getVirtualFolders().then(function (result) {
                     const moviesSelect = document.querySelector('#defaultMoviesLibrary');
                     const tvShowsSelect = document.querySelector('#defaultTVShowsLibrary');
+                    const musicSelect = document.querySelector('#defaultMusicLibrary');
 
                     moviesSelect.innerHTML = '<option value="">Default</option>';
                     tvShowsSelect.innerHTML = '<option value="">Default</option>';
+                    musicSelect.innerHTML = '<option value="">Default</option>';
 
                     result.forEach(function (folder) {
-                         if (folder.CollectionType === 'movies' || folder.CollectionType === 'tvshows') {
+                         if (folder.CollectionType === 'movies' || folder.CollectionType === 'tvshows' || folder.CollectionType === 'music') {
                              const option = document.createElement('option');
                             let folderId = folder.ItemId;
                             if (folderId && !folderId.includes('-')) {
@@ -252,6 +261,7 @@
 
                             if(folder.CollectionType === 'movies') moviesSelect.appendChild(option);
                             if(folder.CollectionType === 'tvshows') tvShowsSelect.appendChild(option);
+                            if(folder.CollectionType === 'music') musicSelect.appendChild(option);
                         }
                     });
                 }).catch(function (error) {
@@ -272,6 +282,7 @@
                     JellyseerrPreferredLanguages: document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value,
                     DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
                     DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
+                    DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value,
                     SectionSettings: []
                 };
 
@@ -312,6 +323,9 @@
                             }
                             if (config.DefaultTVShowsLibraryId) {
                                 document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
+                            }
+                            if (config.DefaultMusicLibraryId) {
+                                document.querySelector('#defaultMusicLibrary').value = config.DefaultMusicLibraryId;
                             }
                         }, 500);
 
