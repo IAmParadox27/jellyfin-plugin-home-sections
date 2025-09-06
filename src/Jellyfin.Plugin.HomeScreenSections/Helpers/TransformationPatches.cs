@@ -37,10 +37,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 
         public static string IndexHtml(PatchRequestPayload content)
         {
-            if (!IsHomePage(content.Contents))
-            {
-                return content.Contents;
-            }
 
             NetworkConfiguration networkConfiguration = HomeScreenSectionsPlugin.Instance.ServerConfigurationManager.GetNetworkConfiguration();
 
@@ -56,19 +52,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             return content.Contents!
                 .Replace("</head>", $"{replacementText0}</head>")
                 .Replace("</body>", $"{replacementText1}</body>");
-        }
-
-        private static bool IsHomePage(string? content)
-        {
-            if (string.IsNullOrEmpty(content))
-                return false;
-
-            bool hasIndexPageId = content.Contains("id=\"indexPage\"");
-            bool hasHomePageClass = content.Contains("class=\"page homePage");
-            bool hasSectionsDiv = content.Contains("<div class=\"sections\"></div>");
-            bool hasPageRole = content.Contains("data-role=\"page\"");
-            
-            return hasIndexPageId && hasHomePageClass && hasSectionsDiv && hasPageRole;
         }
     }
 }
