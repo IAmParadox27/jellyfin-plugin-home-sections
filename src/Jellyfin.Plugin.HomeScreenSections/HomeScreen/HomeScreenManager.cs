@@ -297,7 +297,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             /// Returns configuration options with synthetic options injected.
             /// This is where the injection happens - synthetic options are added organically.
             /// </summary>
-            public IEnumerable<PluginConfigurationOption> GetConfigurationOptions()
+            public IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
             {
                 return _enhancedConfigurationOptions ?? new List<PluginConfigurationOption>();
             }

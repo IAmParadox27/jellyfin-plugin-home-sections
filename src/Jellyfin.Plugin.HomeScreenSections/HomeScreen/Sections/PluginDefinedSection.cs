@@ -84,7 +84,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         /// Get configuration options for this section
         /// </summary>
         /// <returns>Collection of configuration options</returns>
-        public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions()
+        public virtual IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
         {
             // If we have typed configuration options, return them directly
             if (_configurationOptions != null)

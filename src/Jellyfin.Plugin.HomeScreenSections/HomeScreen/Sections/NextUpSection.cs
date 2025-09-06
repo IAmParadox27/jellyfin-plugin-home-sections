@@ -1,7 +1,5 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
-using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
-using Jellyfin.Plugin.HomeScreenSections.Model;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -140,9 +138,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             {
                 Section = Section,
                 DisplayText = DisplayText,
-				Info = SectionInfoHelper.CreateOfficialSectionInfo(
-					description: "Next Up"
-				),
                 AdditionalData = AdditionalData,
                 Route = Route,
                 Limit = Limit ?? 1,
@@ -150,7 +145,5 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ViewMode = SectionViewMode.Landscape
             };
         }
-
-		public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
     }
 }

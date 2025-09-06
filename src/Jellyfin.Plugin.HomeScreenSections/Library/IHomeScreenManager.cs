@@ -46,7 +46,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 
         public HomeScreenSectionInfo GetInfo();
         
-        public IEnumerable<PluginConfigurationOption> GetConfigurationOptions();
+        public IEnumerable<PluginConfigurationOption>? GetConfigurationOptions() => null;
     }
 
     public class HomeScreenSectionInfo

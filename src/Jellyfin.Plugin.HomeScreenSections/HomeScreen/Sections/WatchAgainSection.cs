@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
-using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
-using Jellyfin.Plugin.HomeScreenSections.Model;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Dto;
@@ -176,9 +174,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			{
 				Section = Section,
 				DisplayText = DisplayText,
-				Info = SectionInfoHelper.CreateOfficialSectionInfo(
-					description: "Shows items that you've started watching but haven't finished yet."
-				),
 				AdditionalData = AdditionalData,
 				Route = Route,
 				Limit = Limit ?? 1,
@@ -186,7 +181,5 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				ViewMode = SectionViewMode.Landscape
 			};
 		}
-
-		public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
 	}
 }
