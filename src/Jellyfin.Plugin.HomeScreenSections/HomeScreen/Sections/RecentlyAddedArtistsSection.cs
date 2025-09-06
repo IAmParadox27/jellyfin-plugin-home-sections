@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -24,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? AdditionalData { get; set; } = "artists";
 
         public object? OriginalPayload { get; set; } = null;
-        
+
         private readonly IUserViewManager m_userViewManager;
         private readonly IUserManager m_userManager;
         private readonly ILibraryManager m_libraryManager;
@@ -85,25 +86,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
 
             BaseItemDto? originalPayload = null;
-            
+
             var musicFolders = m_libraryManager.GetUserRootFolder()
                 .GetChildren(user, true)
                 .OfType<Folder>()
                 .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.music)
                 .ToArray();
-            
+
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
             var folder = !string.IsNullOrEmpty(config?.DefaultMusicLibraryId)
                 ? musicFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultMusicLibraryId)
                 : null;
-            
+
             folder ??= musicFolders.FirstOrDefault();
-            
+
             if (folder != null)
             {
                 DtoOptions dtoOptions = new DtoOptions();
                 dtoOptions.Fields =
-                    [..dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
+                    [.. dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
 
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
@@ -115,13 +116,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 OriginalPayload = originalPayload
             };
         }
-        
+
         public HomeScreenSectionInfo GetInfo()
         {
             return new HomeScreenSectionInfo
             {
                 Section = Section,
                 DisplayText = DisplayText,
+                Info = SectionInfoHelper.CreateOfficialSectionInfo(
+					description: "Recently Added Artists"
+				),
                 AdditionalData = AdditionalData,
                 Route = Route,
                 Limit = Limit ?? 1,
@@ -129,5 +133,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ViewMode = SectionViewMode.Portrait
             };
         }
+        
+        public virtual IEnumerable<PluginConfigurationOption> GetConfigurationOptions() => Enumerable.Empty<PluginConfigurationOption>();
     }
 }
