@@ -14,7 +14,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
         public Guid UserId { get; set; }
 
         
-    
+        
+        
+        
         public string? AdditionalData { get; set; }
 
         public ModularHomeUserSettings? UserSettings { get; set; }

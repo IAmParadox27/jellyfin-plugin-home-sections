@@ -127,10 +127,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
             // Ensure all enabled sections have corresponding SectionSettings
             foreach (string sectionId in EnabledSections)
             {
-                GetSectionSettings(sectionId); // This will create if missing
+                GetSectionSettings(sectionId);
             }
-            
-            // Update existing SectionSettings based on EnabledSections
+
             foreach (var sectionSetting in SectionSettings)
             {
                 sectionSetting.Enabled = EnabledSections.Contains(sectionSetting.SectionId);

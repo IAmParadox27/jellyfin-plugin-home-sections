@@ -169,7 +169,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         }
 
         /// <summary>
-        /// Ultra-fast readiness check for external plugin coordination.
         /// Returns 200 OK when ready for section registration, 503 when not ready.
         /// </summary>
         [HttpGet("Ready")]
@@ -179,20 +178,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         {
             try
             {
-                // Check plugin initialization
                 if (HomeScreenSectionsPlugin.Instance?.Configuration == null)
                     return StatusCode(503, "Plugin not initialized");
                     
-                // Check HomeScreenManager availability
                 if (m_homeScreenManager == null)
                     return StatusCode(503, "HomeScreenManager not available");
                     
-                // Check section types are registered
                 var sectionTypes = m_homeScreenManager.GetSectionTypes();
                 if (!sectionTypes.Any())
                     return StatusCode(503, "No section types registered");
                     
-                // All good - ready for external registrations
                 return Ok();
             }
             catch (Exception ex)
@@ -325,27 +320,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                         UserSettings = settings
                     };
                     
-                    // Check section header display setting (new consolidated option)
                     string headerDisplay = tempPayload.GetEffectiveStringConfig(info.Section, "SectionHeaderDisplay", "ShowWithNavigation");
                     
-                    // Backward compatibility: check old options if new one isn't set
-                    if (headerDisplay == "ShowWithNavigation")
-                    {
-                        bool hideDisplayText = tempPayload.GetEffectiveBoolConfig(info.Section, "HideDisplayText", false);
-                        bool hideRouteButton = tempPayload.GetEffectiveBoolConfig(info.Section, "HideRouteButton", false);
-                        
-                        // Convert old settings to new format
-                        if (hideDisplayText)
-                        {
-                            headerDisplay = "Hide";
-                        }
-                        else if (hideRouteButton)
-                        {
-                            headerDisplay = "ShowWithoutNavigation";
-                        }
-                    }
-                    
-                    // Apply header display settings
                     if (headerDisplay == "Hide")
                     {
                         info.DisplayText = string.Empty;
@@ -378,7 +354,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
                     info.DisplayText = translatedResult;
                 }
-
+                
                 return info;
             }).ToList();
 
@@ -635,7 +611,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                     HttpClient client = new HttpClient();
                     client.BaseAddress = new Uri(publishedServerUrl ?? $"http://localhost:{m_serverApplicationHost.HttpPort}");
                     
-                    HttpResponseMessage responseMessage = client.PostAsync(payload.ResultsEndpoint,
+                    HttpResponseMessage responseMessage = client.PostAsync(payload.ResultsEndpoint, 
                         new StringContent(jsonPayload.ToString(Formatting.None), MediaTypeHeaderValue.Parse("application/json"))).GetAwaiter().GetResult();
 
                     return JsonConvert.DeserializeObject<QueryResult<BaseItemDto>>(responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult()) ?? new QueryResult<BaseItemDto>();

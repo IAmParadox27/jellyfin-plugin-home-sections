@@ -161,9 +161,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			{
 				Section = Section,
 				DisplayText = DisplayText,
-				Info = SectionInfoHelper.CreateOfficialSectionInfo(
-					description: "Very similar to Netflix's \"because you watched\" section, a maximum of 5 of these will appear when the section is enabled"
-				),
 				AdditionalData = AdditionalData,
 				Route = Route,
 				Limit = Limit ?? 1,

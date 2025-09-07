@@ -306,7 +306,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             /// </summary>
             private List<PluginConfigurationOption> CreateEnhancedConfigurationOptions()
             {
-                // Get the original section's configuration options
                 var originalOptions = _innerSection.GetConfigurationOptions()?.ToList() ?? new List<PluginConfigurationOption>();
 
                 bool enabledByDefault = true;
@@ -319,7 +318,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 // Create synthetic options with section-specific defaults
                 var syntheticOptions = CreateSyntheticOptions(_innerSection.DisplayText, enabledByDefault);
 
-                // Only add synthetic options that don't already exist
                 foreach (var syntheticOption in syntheticOptions)
                 {
                     if (!originalOptions.Any(o => string.Equals(o.Key, syntheticOption.Key, StringComparison.OrdinalIgnoreCase)))
