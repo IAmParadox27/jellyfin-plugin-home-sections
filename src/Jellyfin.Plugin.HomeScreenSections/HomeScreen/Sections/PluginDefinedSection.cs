@@ -26,7 +26,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public required GetResultsDelegate OnGetResults { get; set; }
         
         private readonly List<PluginConfigurationOption>? _configurationOptions;
-        private readonly string? _jsonConfigurationOptionsString;
         
         public PluginDefinedSection(string sectionUuid, string displayText, SectionInfo? info = null, string? route = null, string? additionalData = null, List<PluginConfigurationOption>? configurationOptions = null, bool? enableByDefault = null)
         {
@@ -38,7 +37,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             AdditionalData = additionalData;
             EnableByDefault = enableByDefault;
             _configurationOptions = configurationOptions;
-            _jsonConfigurationOptionsString = null;
         }
         
         public PluginDefinedSection(string sectionUuid, string displayText, SectionInfo? info = null, string? route = null, string? additionalData = null, string? jsonConfigurationOptions = null, bool? enableByDefault = null)
@@ -50,10 +48,56 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             Route = route;
             AdditionalData = additionalData;
             EnableByDefault = enableByDefault;
-            _configurationOptions = null;
-            _jsonConfigurationOptionsString = jsonConfigurationOptions;
+            _configurationOptions = ParseJsonConfigurationOptions(jsonConfigurationOptions);
         }
         
+        private static List<PluginConfigurationOption>? ParseJsonConfigurationOptions(string? jsonConfigurationOptions)
+        {
+            if (string.IsNullOrEmpty(jsonConfigurationOptions))
+                return null;
+                
+            try
+            {
+                var jsonArray = JArray.Parse(jsonConfigurationOptions);
+                return jsonArray.Select(token => 
+                {
+                    var option = token.ToObject<PluginConfigurationOption>() ?? new PluginConfigurationOption();
+                    
+                    // Handle dropdown options
+                    if (token["options"] is JArray optionsArray && 
+                        string.Equals(token["type"]?.ToString(), "dropdown", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var opts = optionsArray.ToObject<List<dynamic>>();
+                        option.DropdownOptions = opts?.Select(o => (string)o.key).ToArray() ?? Array.Empty<string>();
+                        option.DropdownLabels = opts?.Select(o => (string)o.value).ToArray() ?? Array.Empty<string>();
+                    }
+                    
+                    // Handle validation object
+                    if (token["validation"] is JObject validation)
+                    {
+                        option.MinValue = validation["min"]?.ToObject<double?>();
+                        option.MaxValue = validation["max"]?.ToObject<double?>();
+                        option.MinLength = validation["minLength"]?.ToObject<int?>();
+                        option.MaxLength = validation["maxLength"]?.ToObject<int?>();
+                        option.Step = validation["step"]?.ToObject<double?>();
+                        option.Pattern = validation["pattern"]?.ToString();
+                        option.ValidationMessage = validation["message"]?.ToString() ?? validation["validationMessage"]?.ToString();
+                    }
+                    
+                    if (token["advanced"] != null)
+                    {
+                        option.IsAdvanced = token["advanced"]?.ToObject<bool>() ?? false;
+                    }
+                    
+                    return option;
+                }).ToList();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             return OnGetResults(payload);
@@ -86,54 +130,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         /// <returns>Collection of configuration options</returns>
         public virtual IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
         {
-            // If we have typed configuration options, return them directly
-            if (_configurationOptions != null)
-            {
-                return _configurationOptions;
-            }
-            
-            // If we have JSON configuration options string, parse and convert them to typed options
-            if (!string.IsNullOrEmpty(_jsonConfigurationOptionsString))
-            {
-                try
-                {
-                    var jsonArray = JArray.Parse(_jsonConfigurationOptionsString);
-                    return jsonArray.Select(token => 
-                    {
-                        // Let ToObject handle most of the conversion automatically
-                        var option = token.ToObject<PluginConfigurationOption>() ?? new PluginConfigurationOption();
-                        
-                        // Handle the nested properties that ToObject can't handle automatically
-                        if (token["options"] is JArray optionsArray && token["type"]?.ToString().ToLower() == "dropdown")
-                        {
-                            var opts = optionsArray.ToObject<List<dynamic>>();
-                            option.DropdownOptions = opts?.Select(o => (string)o.key).ToArray() ?? Array.Empty<string>();
-                            option.DropdownLabels = opts?.Select(o => (string)o.value).ToArray() ?? Array.Empty<string>();
-                        }
-                        
-                        if (token["validation"] is JObject validation)
-                        {
-                            option.MinValue = validation["min"]?.ToObject<double?>();
-                            option.MaxValue = validation["max"]?.ToObject<double?>();
-                            option.MinLength = validation["minLength"]?.ToObject<int?>();
-                            option.MaxLength = validation["maxLength"]?.ToObject<int?>();
-                            option.Step = validation["step"]?.ToObject<double?>();
-                            option.Pattern = validation["pattern"]?.ToString();
-                            option.ValidationMessage = validation["message"]?.ToString() ?? validation["validationMessage"]?.ToString();
-                        }
-                        
-                        return option;
-                    });
-                }
-                catch (Exception)
-                {
-                    // If JSON parsing fails, return empty collection
-                    return Enumerable.Empty<PluginConfigurationOption>();
-                }
-            }
-            
-            // Return empty collection if no configuration options are provided
-            return Enumerable.Empty<PluginConfigurationOption>();
+            return _configurationOptions ?? Enumerable.Empty<PluginConfigurationOption>();
         }
     }
 }

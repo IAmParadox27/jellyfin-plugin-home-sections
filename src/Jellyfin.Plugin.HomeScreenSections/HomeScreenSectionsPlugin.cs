@@ -119,7 +119,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 
                 bool migrationNeeded = false;
                 
-                if (CompareVersions(configVersion, "2.3.6") < 0)
+                if (CompareVersions(configVersion, "2.3.0.0") < 0)
                 {
                     migrationNeeded = PerformEnabledPropertyMigration();
                 }

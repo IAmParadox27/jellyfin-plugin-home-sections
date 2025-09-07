@@ -303,12 +303,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                         }
                     }
                 }
-
+                
                 tmpPluginSections.Shuffle();
-
+                
                 sectionInstances.AddRange(tmpPluginSections);
             }
-
+            
             List<HomeScreenSectionInfo> sections = sectionInstances.Where(x => x != null).Select(x =>
             {
                 HomeScreenSectionInfo info = x.AsInfo();
