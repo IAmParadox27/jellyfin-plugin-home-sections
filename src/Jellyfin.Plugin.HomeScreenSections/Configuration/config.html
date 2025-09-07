@@ -42,13 +42,6 @@
                         </label>
                         <div class="fieldDescription">Can users enable/disable this plugin for their own view?</div>
                     </div>
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="globalRespectUserHomepage" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                            <span>Respect User Homepage</span>
-                        </label>
-                        <div class="fieldDescription">When enabled, the plugin will respect existing user homepage preferences and only apply to users who haven't set a custom homepage. When disabled, the plugin will override all user homepage settings.</div>
-                    </div>
                 </div>
             </fieldset>
 
@@ -375,7 +368,6 @@
                     var config = {
                         Enabled: document.querySelector('#globalEnabledDefault').checked,
                         AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
-                        RespectUserHomepage: document.querySelector('#globalRespectUserHomepage') ? document.querySelector('#globalRespectUserHomepage').checked : false,
                         LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value || '',
                         LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value || '',
                         JellyseerrUrl: document.querySelector('[data-id=txtJellyseerrUrl]').value || '',
@@ -512,7 +504,6 @@
                         const formFields = {
                             '#globalEnabledDefault': config.Enabled,
                             '#globalAllowUserOverride': config.AllowUserOverride,
-                            '#globalRespectUserHomepage': config.RespectUserHomepage,
                             '[data-id=txtLibreTranslateUrl]': config.LibreTranslateUrl,
                             '[data-id=txtLibreTranslateApiKey]': config.LibreTranslateApiKey,
                             '[data-id=txtJellyseerrUrl]': config.JellyseerrUrl,

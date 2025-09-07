@@ -15,8 +15,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 
         public bool AllowUserOverride { get; set; } = true;
 
-        public bool RespectUserHomepage { get; set; } = true;
-
         public string? LibreTranslateUrl { get; set; } = "";
 
         public string? LibreTranslateApiKey { get; set; } = "";

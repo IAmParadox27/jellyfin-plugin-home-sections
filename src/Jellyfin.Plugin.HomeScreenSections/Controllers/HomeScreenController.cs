@@ -218,9 +218,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
             List<IHomeScreenSection> sectionInstances = new List<IHomeScreenSection>();
 
-            if (HomeScreenSectionsPlugin.Instance.Configuration.RespectUserHomepage)
+            List<string> homeSectionOrderTypes = new List<string>();
+            if (HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride)
             {
-                List<string> homeSectionOrderTypes = new List<string>();
                 foreach (HomeSection section in displayPreferences.HomeSections.OrderBy(x => x.Order))
                 {
                     switch (section.Type)
@@ -240,35 +240,35 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                             break;
                     }
                 }
+            }
 
-                foreach (string type in homeSectionOrderTypes)
+            foreach (string type in homeSectionOrderTypes)
+            {
+                IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
+
+                if (sectionType != null)
                 {
-                    IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
-
-                    if (sectionType != null)
+                    if (sectionType.Limit > 1)
                     {
-                        if (sectionType.Limit > 1)
-                        {
-                            SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
-                                x.SectionId == sectionType.Section);
+                        SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
+                            x.SectionId == sectionType.Section);
 
-                            Random rnd = new Random();
-                            int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
+                        Random rnd = new Random();
+                        int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
 
-                            for (int i = 0; i < instanceCount; ++i)
-                            {
-                                sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
-                            }
-                        }
-                        else if (sectionType.Limit == 1)
+                        for (int i = 0; i < instanceCount; ++i)
                         {
-                            sectionInstances.Add(sectionType.CreateInstance(userId));
+                            sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
                         }
                     }
+                    else if (sectionType.Limit == 1)
+                    {
+                        sectionInstances.Add(sectionType.CreateInstance(userId));
+                    }
                 }
-
-                sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
             }
+
+            sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
 
             IEnumerable<IGrouping<int, SectionSettings>> groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
                 .OrderBy(x => x.OrderIndex)
