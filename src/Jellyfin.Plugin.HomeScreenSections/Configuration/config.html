@@ -78,7 +78,7 @@
                                 </div>
                             </div>
                         </details>
-                         <details>
+                        <details style="margin-bottom: 1em;">
                             <summary style="cursor: pointer; font-weight: bold;">Default Libraries</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
@@ -104,6 +104,34 @@
                                 </div>
                             </div>
                         </details>
+                        <details>
+                            <summary style="cursor: pointer; font-weight: bold;">Cache</summary>
+                            <div style="padding-top: 1em;">
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="txtCacheTimeoutSeconds" label="Cache Timeout (seconds)" min="0" max="604800" />
+                                    <div class="fieldDescription">How long browsers should cache plugin resources (default: 86400 = 24 hours). Set to 0 to disable caching.</div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </fieldset>
+
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer</legend>
+                    <div style="padding-left: .5em;">
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
+                            <label class="emby-checkbox-label">
+                                <input id="globalDeveloperMode" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                <span>Developer Mode</span>
+                            </label>
+                            <div class="fieldDescription">Disable browser caching for plugin resources during development.</div>
+                        </div>
+                        <div style="margin-top: 1em;">
+                            <button type="button" id="btnBustCache" class="raised button-submit emby-button" style="margin-right: 1em;">
+                                <span>Bust Cache Now</span>
+                            </button>
+                            <span id="cacheBustStatus" style="color: #52b54b; display: none;">Cache busted successfully</span>
+                        </div>
                     </div>
                 </fieldset>
             </div>
@@ -376,6 +404,8 @@
                         DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value || '',
                         DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value || '',
                         DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value || '',
+                        DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
+                        CacheTimeoutSeconds: parseInt(document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || '86400', 10),
                         SectionSettings: []
                     };
 
@@ -508,7 +538,9 @@
                             '[data-id=txtLibreTranslateApiKey]': config.LibreTranslateApiKey,
                             '[data-id=txtJellyseerrUrl]': config.JellyseerrUrl,
                             '[data-id=txtJellyseerrApiKey]': config.JellyseerrApiKey,
-                            '[data-id=txtJellyseerrPreferredLanguages]': config.JellyseerrPreferredLanguages
+                            '[data-id=txtJellyseerrPreferredLanguages]': config.JellyseerrPreferredLanguages,
+                            '#globalDeveloperMode': config.DeveloperMode,
+                            '[data-id=txtCacheTimeoutSeconds]': config.CacheTimeoutSeconds || 86400
                         };
 
                         Object.entries(formFields).forEach(([selector, value]) => {
@@ -992,6 +1024,35 @@
                 const btnRefreshDebug = document.querySelector('#btnRefreshDebug');
                 if (btnRefreshDebug) {
                     btnRefreshDebug.addEventListener('click', loadDebugData);
+                }
+
+                // Cache bust functionality
+                const btnBustCache = document.querySelector('#btnBustCache');
+                if (btnBustCache) {
+                    btnBustCache.addEventListener('click', function() {
+                        btnBustCache.disabled = true;
+                        btnBustCache.innerHTML = '<span>Busting Cache...</span>';
+
+                        window.ApiClient.fetch({
+                            url: window.ApiClient.getUrl('HomeScreen/BustCache'),
+                            type: 'POST',
+                            dataType: 'json',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        }).then(response => {
+                            const status = document.getElementById('cacheBustStatus');
+                            if (status) {
+                                status.style.display = 'inline';
+                                setTimeout(() => status.style.display = 'none', 3000);
+                            }
+                        }).catch(error => {
+                            console.error('Cache bust error:', error);
+                        }).finally(() => {
+                            btnBustCache.disabled = false;
+                            btnBustCache.innerHTML = '<span>Bust Cache Now</span>';
+                        });
+                    });
                 }
 
                 function loadDebugData() {

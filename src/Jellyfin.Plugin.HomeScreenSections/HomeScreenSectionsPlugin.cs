@@ -99,11 +99,51 @@ namespace Jellyfin.Plugin.HomeScreenSections
         }
         
         /// <summary>
+        /// Override UpdateConfiguration to preserve cache bust counter and config version.
+        /// </summary>
+        /// <param name="configuration">The new configuration to save</param>
+        public override void UpdateConfiguration(BasePluginConfiguration configuration)
+        {
+            if (configuration is PluginConfiguration pluginConfig)
+            {
+                var currentConfig = base.Configuration;
+
+                // Handle cache busting when developer mode is turned ON
+                if (!currentConfig.DeveloperMode && pluginConfig.DeveloperMode)
+                {
+                    pluginConfig.CacheBustCounter = currentConfig.CacheBustCounter + 1;
+                }
+                else
+                {
+                    pluginConfig.CacheBustCounter = currentConfig.CacheBustCounter;
+                }
+
+                // Preserve ConfigVersion unless it's being explicitly updated
+                if (string.IsNullOrEmpty(pluginConfig.ConfigVersion))
+                {
+                    pluginConfig.ConfigVersion = currentConfig.ConfigVersion;
+                }
+            }
+
+            base.UpdateConfiguration(configuration);
+        }
+
+        /// <summary>
+        /// Increment the cache bust counter and save configuration.
+        /// </summary>
+        public void BustCache()
+        {
+            var config = base.Configuration;
+            config.CacheBustCounter++;
+            base.UpdateConfiguration(config);
+        }
+
+        /// <summary>
         /// Get the current plugin version.
         /// </summary>
-        private string GetCurrentPluginVersion()
+        public string GetCurrentPluginVersion()
         {
-            return base.Version.ToString();
+            return base.Version?.ToString() ?? "0.0.0";
         }
 
         /// <summary>

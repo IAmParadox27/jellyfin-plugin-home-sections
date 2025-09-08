@@ -49,6 +49,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             m_applicationPaths = applicationPaths;
         }
 
+        /// <summary>
+        /// Sets appropriate cache headers based on developer mode and cache bust counter.
+        /// </summary>
+        private void SetCacheHeaders()
+        {
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
+
+            if (config.DeveloperMode)
+            {
+                // Developer mode: Force immediate cache invalidation
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+            }
+            else
+            {
+                // Normal mode: Use configured cache timeout
+                Response.Headers["Cache-Control"] = $"public, max-age={config.CacheTimeoutSeconds}";
+            }
+
+            Response.Headers["ETag"] = $"\"v{HomeScreenSectionsPlugin.Instance.Version}-c{config.CacheBustCounter}\"";
+        }
+
         [HttpGet("home-screen-sections.js")]
         [Produces("application/javascript")]
         public ActionResult GetPluginScript()
@@ -62,6 +85,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound();
             }
             
+            SetCacheHeaders();
+
             return File(stream, "application/javascript");
         }
 
@@ -78,12 +103,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound();
             }
             
+            SetCacheHeaders();
+
             return File(stream, "text/css");
         }
 
         [HttpGet("client/shared-utils.js")]
         [Produces("application/javascript")]
-        [ResponseCache(Duration = 3600)]
         public ActionResult GetSharedUtils()
         {
             try
@@ -97,6 +123,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 }
                 Stream? stream = asm.GetManifestResourceStream(resName);
                 if (stream == null) return NotFound();
+
+                SetCacheHeaders();
+
                 return File(stream, "application/javascript");
             }
             catch (Exception ex)
@@ -148,6 +177,23 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             catch (Exception ex)
             {
                 return BadRequest($"Error updating configuration: {ex.Message}");
+            }
+        }
+
+        [HttpPost("BustCache")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult BustCache()
+        {
+            try
+            {
+                HomeScreenSectionsPlugin.Instance.BustCache();
+                var newCounter = HomeScreenSectionsPlugin.Instance.Configuration.CacheBustCounter;
+                return Ok(new { newCounter });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error busting cache: {ex.Message}");
             }
         }
 

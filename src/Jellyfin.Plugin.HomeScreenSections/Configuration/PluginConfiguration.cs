@@ -31,6 +31,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         
         public string? DefaultMusicLibraryId { get; set; } = "";
         
+        public bool DeveloperMode { get; set; } = false;
+
+        public int CacheBustCounter { get; set; } = 0;
+
+        public int CacheTimeoutSeconds { get; set; } = 86400;
+
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
     }
 
