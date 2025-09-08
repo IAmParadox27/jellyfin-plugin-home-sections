@@ -31,6 +31,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         
         public string? DefaultMusicLibraryId { get; set; } = "";
         
+        public string? DefaultBooksLibraryId { get; set; } = "";
+
         public bool DeveloperMode { get; set; } = false;
 
         public int CacheBustCounter { get; set; } = 0;

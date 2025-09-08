@@ -242,6 +242,49 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             }
         }
         
+        [HttpGet("Meta")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize]
+        public ActionResult<object> GetUserMeta()
+        {
+            var cfg = HomeScreenSectionsPlugin.Instance?.Configuration;
+            if (cfg == null)
+            {
+                return Ok(new { Enabled = false, AllowUserOverride = false });
+            }
+
+            return Ok(new { Enabled = cfg.Enabled, AllowUserOverride = cfg.AllowUserOverride });
+        }
+
+        [HttpGet("Ready")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public ActionResult GetReady()
+        {
+            try
+            {
+                // Check plugin initialization
+                if (HomeScreenSectionsPlugin.Instance?.Configuration == null)
+                    return StatusCode(503, "Plugin not initialized");
+
+                // Check HomeScreenManager availability
+                if (m_homeScreenManager == null)
+                    return StatusCode(503, "HomeScreenManager not available");
+
+                // Check section types are registered
+                var sectionTypes = m_homeScreenManager.GetSectionTypes();
+                if (!sectionTypes.Any())
+                    return StatusCode(503, "No section types registered");
+
+                // All good - ready for external registrations
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(503, $"Plugin error: {ex.Message}");
+            }
+        }
+
         [HttpGet("Sections")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [Authorize]

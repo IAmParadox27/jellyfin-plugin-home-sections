@@ -102,6 +102,13 @@
                                     </select>
                                     <div class="fieldDescription">Select the specific music library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
+                                <div class="inputContainer">
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultBooksLibrary">Default Books Library</label>
+                                    <select is="emby-select" id="defaultBooksLibrary" class="emby-select-withcolor emby-select">
+                                        <option value="">Default</option>
+                                    </select>
+                                    <div class="fieldDescription">Select the specific books library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                </div>
                             </div>
                         </details>
                         <details>
@@ -113,6 +120,25 @@
                                 </div>
                             </div>
                         </details>
+                    </div>
+                </fieldset>
+
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer</legend>
+                    <div style="padding-left: .5em;">
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
+                            <label class="emby-checkbox-label">
+                                <input id="globalDeveloperMode" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                <span>Developer Mode</span>
+                            </label>
+                            <div class="fieldDescription">Disable browser caching for plugin resources during development.</div>
+                        </div>
+                        <div style="margin-top: 1em;">
+                            <button type="button" id="btnBustCache" class="raised button-submit emby-button" style="margin-right: 1em;">
+                                <span>Bust Cache Now</span>
+                            </button>
+                            <span id="cacheBustStatus" style="color: #52b54b; display: none;">Cache busted successfully</span>
+                        </div>
                     </div>
                 </fieldset>
 
@@ -359,7 +385,8 @@
                         const selects = {
                             movies: document.querySelector('#defaultMoviesLibrary'),
                             tvshows: document.querySelector('#defaultTVShowsLibrary'),
-                            music: document.querySelector('#defaultMusicLibrary')
+                            music: document.querySelector('#defaultMusicLibrary'),
+                            books: document.querySelector('#defaultBooksLibrary')
                         };
                         
                         // Clear existing options
@@ -404,6 +431,7 @@
                         DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value || '',
                         DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value || '',
                         DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value || '',
+                        DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value || '',
                         DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
                         CacheTimeoutSeconds: parseInt(document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || '86400', 10),
                         SectionSettings: []
@@ -555,6 +583,7 @@
                             if (config.DefaultMoviesLibraryId) document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
                             if (config.DefaultTVShowsLibraryId) document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
                             if (config.DefaultMusicLibraryId) document.querySelector('#defaultMusicLibrary').value = config.DefaultMusicLibraryId;
+                            if (config.DefaultBooksLibraryId) document.querySelector('#defaultBooksLibrary').value = config.DefaultBooksLibraryId;
                         }, 500);
 
                         window.ApiClient.fetch({
