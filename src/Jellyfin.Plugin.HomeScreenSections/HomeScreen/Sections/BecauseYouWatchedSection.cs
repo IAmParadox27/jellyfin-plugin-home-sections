@@ -1,6 +1,8 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
+using Jellyfin.Plugin.HomeScreenSections.Model;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Dto;
@@ -115,6 +117,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
 		{
+			bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "supportsShowPlayedItems", false);
 			User user = UserManager.GetUserById(payload.UserId)!;
 			
 			DtoOptions? dtoOptions = new DtoOptions
@@ -144,7 +147,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				},
 				IsMovie = true,
 				User = user,
-				IsPlayed = false, // Maybe make this configuable but this is the preferred default behaviour.
+				IsPlayed = showPlayedItems,
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
 			}.ApplySimilarSettings(item));
@@ -163,6 +166,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
 				ViewMode = SectionViewMode.Landscape
+			};
+		}
+
+		/// <summary>
+		/// Get configuration options for this section
+		/// </summary>
+		/// <returns>Collection of configuration options</returns>
+		public virtual IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
+		{
+			return new[]
+			{
+				PluginConfigurationHelper.CreateCheckbox(
+					"supportsShowPlayedItems",
+					"Enable Rewatching",
+					"Enable showing already watched episodes",
+					defaultValue: false,
+					userOverridable: true,
+					isAdvanced: false
+				)
 			};
 		}
 	}

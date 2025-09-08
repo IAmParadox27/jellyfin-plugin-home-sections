@@ -1,11 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <title>Home Screen Sections</title>
 </head>
 <body>
 <div data-role="page" id="homeScreenSectionsConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent">
-    <div class="content-primary">
+    <script src="/HomeScreen/client/shared-utils.js"></script>
+    <div class="content-primary" style="display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 1200px !important; margin: 0 auto !important; padding: 0 2em !important; box-sizing: border-box !important;">
         <div class="verticalSection">
             <div class="sectionTitleContainer">
                 <h2 class="sectionTitle">Home Screen Sections</h2>
@@ -19,9 +20,10 @@
         <div style="margin-bottom: 1.5em;">
             <button class="jellyfin-tab-button active" data-tab="global" style="background: none; border: none; color: #fff; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid #fff; padding: 0.5em 1em;"><h3>Global Settings</h3></button>
             <button class="jellyfin-tab-button" data-tab="sections" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Section Settings</h3></button>
+            <button class="jellyfin-tab-button" data-tab="debug" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Debug</h3></button>
         </div>
 
-        <form class="artworkConfigurationForm">
+        <form class="artworkConfigurationForm" style="max-width: none !important; width: 100% !important; flex: 1 !important;">
             <div id="global" class="jellyfin-tab-content active" style="display: block;">
             <fieldset class="verticalSection-extrabottompadding">
                 <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Default Settings</legend>
@@ -76,7 +78,7 @@
                                 </div>
                             </div>
                         </details>
-                         <details>
+                        <details style="margin-bottom: 1em;">
                             <summary style="cursor: pointer; font-weight: bold;">Default Libraries</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
@@ -109,39 +111,167 @@
                                 </div>
                             </div>
                         </details>
+                        <details>
+                            <summary style="cursor: pointer; font-weight: bold;">Cache</summary>
+                            <div style="padding-top: 1em;">
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="txtCacheTimeoutSeconds" label="Cache Timeout (seconds)" min="0" max="604800" />
+                                    <div class="fieldDescription">How long browsers should cache plugin resources (default: 86400 = 24 hours). Set to 0 to disable caching.</div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </fieldset>
+
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer</legend>
+                    <div style="padding-left: .5em;">
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
+                            <label class="emby-checkbox-label">
+                                <input id="globalDeveloperMode" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                <span>Developer Mode</span>
+                            </label>
+                            <div class="fieldDescription">Disable browser caching for plugin resources during development.</div>
+                        </div>
+                        <div style="margin-top: 1em;">
+                            <button type="button" id="btnBustCache" class="raised button-submit emby-button" style="margin-right: 1em;">
+                                <span>Bust Cache Now</span>
+                            </button>
+                            <span id="cacheBustStatus" style="color: #52b54b; display: none;">Cache busted successfully</span>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer</legend>
+                    <div style="padding-left: .5em;">
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
+                            <label class="emby-checkbox-label">
+                                <input id="globalDeveloperMode" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                <span>Developer Mode</span>
+                            </label>
+                            <div class="fieldDescription">Disable browser caching for plugin resources during development.</div>
+                        </div>
+                        <div style="margin-top: 1em;">
+                            <button type="button" id="btnBustCache" class="raised button-submit emby-button" style="margin-right: 1em;">
+                                <span>Bust Cache Now</span>
+                            </button>
+                            <span id="cacheBustStatus" style="color: #52b54b; display: none;">Cache busted successfully</span>
+                        </div>
                     </div>
                 </fieldset>
             </div>
 
             <div id="sections" class="jellyfin-tab-content" style="display: none;">
                 <fieldset class="verticalSection-extrabottompadding">
-                     <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Field Descriptions</legend>
-                    <ul style="margin: 0; padding-left: 1.5em;">
-                        <li><strong>Order:</strong>  Sets the display order for this section in Jellyfin. Lower numbers appear first. <i>Note: Sections with the same number are shown in random order among themselves</i></li>
-                        <li><strong>Enabled:</strong> Enable this section by default</li>
-                        <li><strong>User Override:</strong> Let the user override this section</li>
-                        <li><strong>Lower Limit (Min):</strong> The minimum number of times this section should appear</li>
-                        <li><strong>Upper Limit (Max):</strong> The maximum number of times this section can appear</li>
-                        <li><strong>View Mode:</strong> Defines the card layout used when displaying results.<i>If disabled, the section only supports the displayed layout.</i></li>
-                    </ul>
+                     <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Section Settings</legend>
+                    <div style="margin-bottom: 2em;">
+                        <h4>Field Descriptions:</h4>
+                        <ul style="margin: 0; padding-left: 1.5em;">
+                            <li><strong>Order:</strong> Sets the display order for this section in Jellyfin. Lower numbers appear first. <i>Note: Sections with the same number are shown in random order among themselves.</i></li>
+                            <li><strong>Enabled:</strong> Enable this section by default.</li>
+                            <li><strong>Allow User Overrides:</strong> Enable user customization for this section. When checked, all available settings become user-customizable by default. <i>Individual settings can be restricted in the section details if needed.</i></li>
+                            <li><strong>Lower Limit (Min):</strong> The minimum number of times this section should appear.</li>
+                            <li><strong>Upper Limit (Max):</strong> The maximum number of times this section can appear.</li>
+                            <li><strong>View Mode:</strong> Defines the card layout used when displaying results. <i>If disabled, the section only supports the displayed layout.</i></li>
+                        </ul>
+                        <div style="margin-top: 1.5em;">
+                            <h4>User Override System:</h4>
+                            <ul style="margin: 0; padding-left: 1.5em;">
+                                <li><strong>Simple Control:</strong> Check "Allow User Overrides" to let users customize this section's settings.</li>
+                                <li><strong>Default Behavior:</strong> When enabled, all available settings become user-customizable by default.</li>
+                                <li><strong>Fine-Tuning:</strong> Expand section details to restrict specific settings if needed.</li>
+                                <li><strong>Configuration Priority:</strong> User Setting → Admin Setting → Built-in Default</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="advanced-toggle">
+                        <label class="emby-checkbox-label">
+                            <input id="adminShowAdvanced" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                            <span class="checkboxLabel">Show Advanced Options</span>
+                            <span class="checkboxOutline">
+                                <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                                <span class="material-icons checkboxIcon checkboxIcon-unchecked "></span>
+                            </span>
+                        </label>
+                        <div class="fieldDescription">Toggle visibility of advanced settings like custom display names and advanced option fields.</div>
+                    </div>
+                    
+                    <div class="expand-collapse-controls" style="margin: 1em 0; display:flex; gap:.75em; flex-wrap:wrap;">
+                        <button type="button" is="emby-button" class="raised mini emby-button" id="btnExpandAllSections"><span>Expand All</span></button>
+                        <button type="button" is="emby-button" class="raised mini emby-button" id="btnCollapseAllSections"><span>Collapse All</span></button>
+                    </div>
+                    <table class="tblConnections" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Allow User Overrides</th>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
+                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sectionWrapper"></tbody>
+                    </table>
                 </fieldset>
-                <div style="overflow-x: auto;">
-                <table id="sectionsTable" class="tblConnections" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sectionWrapper">
-                    </tbody>
-                </table>
+            </div>
+
+            <div id="debug" class="jellyfin-tab-content" style="display: none;">
+                <!-- Refresh Button -->
+                <div style="margin-bottom: 2em;">
+                    <button type="button" is="emby-button" class="raised button-submit" id="btnRefreshDebug">
+                        <span>Refresh Debug Data</span>
+                    </button>
                 </div>
+                
+                <!-- Admin Debug Section -->
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Admin Debug</legend>
+                    <div style="padding-left: .5em;">
+                        <details style="margin-bottom: 1em;">
+                            <summary style="cursor: pointer; font-weight: bold;">Plugin Configuration</summary>
+                            <div id="adminConfigContent" style="padding: 1em; font-family: monospace; font-size: 11px; background: #2a2a2a; color: #d4d4d4; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;">
+                                <div style="color: #9cdcfe;">Click "Refresh Debug Data" to load...</div>
+                            </div>
+                        </details>
+                        
+                        <details style="margin-bottom: 1em;">
+                            <summary style="cursor: pointer; font-weight: bold;">Section Types</summary>
+                            <div id="adminSectionTypesContent" style="padding: 1em; font-family: monospace; font-size: 11px; background: #2a2a2a; color: #d4d4d4; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;">
+                                <div style="color: #9cdcfe;">Click "Refresh Debug Data" to load...</div>
+                            </div>
+                        </details>
+                    </div>
+                </fieldset>
+                
+                <!-- User Debug Section -->
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">User Debug</legend>
+                    <div style="padding-left: .5em;">
+                        <div style="margin-bottom: 1em;">
+                            <h4 style="margin: 0 0 0.5em 0; font-weight: bold;">User Selector</h4>
+                            <div id="userSelectorControls" style="padding: 1em;">
+                                <div style="color: #9cdcfe;">Click "Refresh Debug Data" to load...</div>
+                            </div>
+                        </div>
+                        
+                        <details style="margin-bottom: 1em;">
+                            <summary style="cursor: pointer; font-weight: bold;">User Settings</summary>
+                            <div id="userSettingsContent" style="padding: 1em; font-family: monospace; font-size: 11px; background: #2a2a2a; color: #d4d4d4; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;">
+                                <div style="color: #9cdcfe;">Click "Refresh Debug Data" to load...</div>
+                            </div>
+                        </details>
+                        
+                        <details style="margin-bottom: 1em;">
+                            <summary style="cursor: pointer; font-weight: bold;">User Section Types</summary>
+                            <div id="userSectionTypesContent" style="padding: 1em; font-family: monospace; font-size: 11px; background: #2a2a2a; color: #d4d4d4; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;">
+                                <div style="color: #9cdcfe;">Click "Refresh Debug Data" to load...</div>
+                            </div>
+                        </details>
+                    </div>
+                </fieldset>
             </div>
 
             <br>
@@ -152,33 +282,37 @@
     </div>
 
     <template id="sectionConfigTemplate">
-        <tr data-id="section-config">
-            <td style="text-align: left; vertical-align: middle; padding: 8px 12px;">
+        <tr data-id="section-config" class="section-expandable-row" tabindex="0" aria-expanded="false">
+            <td style="text-align: left; vertical-align: middle; padding: 8px 12px; white-space:nowrap;">
                 <input type="hidden" data-id="hiddenSectionId" />
-                <strong data-id="lblSectionName"></strong>
+                <strong class="section-name" title="Click to show/hide details" data-id="lblSectionName"></strong>
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
                 <input data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
-                <label style="width: 0;" class="emby-checkbox-label">
+                <div class="cell-center" style="display:flex;justify-content:center;align-items:center;width:100%;">
+                <label class="emby-checkbox-label" style="width:0;">
                     <input data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
                     <span class="checkboxLabel"></span>
                     <span class="checkboxOutline">
                         <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        <span class="material-icons checkboxIcon checkboxIcon-unchecked "></span>
                     </span>
                 </label>
+                </div>
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
-                <label style="width: 0;" class="emby-checkbox-label">
+                <div class="cell-center" style="display:flex;justify-content:center;align-items:center;width:100%;">
+                <label class="emby-checkbox-label" style="width:0;">
                     <input data-id="chkSectionUserOverrideAllowed" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
                     <span class="checkboxLabel"></span>
                     <span class="checkboxOutline">
                         <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        <span class="material-icons checkboxIcon checkboxIcon-unchecked "></span>
                     </span>
                 </label>
+                </div>
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
                 <input data-id="txtSectionMinLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
@@ -187,7 +321,7 @@
                 <input data-id="txtSectionMaxLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
-                <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect" style="width: fit-content; text-align: center;">
+                <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect" style="width: 100%; text-align: center;">
                     <option value="Portrait">Portrait</option>
                     <option value="Landscape">Landscape</option>
                     <option value="Square">Square</option>
@@ -196,9 +330,645 @@
         </tr>
     </template>
 
+    <template id="sectionDetailsTemplate">
+        <tr class="section-details-row" data-id="section-details" style="display: none;">
+            <td colspan="7" style="padding-top:6px;">
+                <div class="details-wrapper-panel">
+                    <div class="details-outer-container" data-id="detailsBox">
+                        <div class="info-card" style="display: block; padding: .7em .85em .9em; margin: .35em 0 1em; border: 1px solid rgba(255,255,255,.18); border-radius: .55em; background: rgba(0,0,0,.25);">
+                            
+                            <!-- Section Info Content -->
+                            <div class="section-info-content" data-id="sectionInfoContent" style="display: none; margin-bottom: 1.5em;"></div>
+                            
+                            <!-- Options Matrix -->
+                            <div>
+                                <table class="options-matrix" data-id="optionsMatrix" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 25%;">Setting Name</th>
+                                            <th style="width: 30%;">Admin Setting</th>
+                                            <th class="col-override" style="text-align: center; width: 100px;">Allow User Override</th>
+                                            <th class="col-desc" style="width: 35%;">Description</th>
+                                            <th class="col-default" style="text-align: center; width: 10%;">Built-in Default</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-id="optionsMatrixBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </template>
+
     <script type="text/javascript">
-        (() => {
-            const pluginId = 'b8298e01-2697-407a-b44d-aa8dc795e850';
+        (function () {
+            
+            var HomeScreenSections = window.HomeScreenSections = {
+                pluginId: 'b8298e01-2697-407a-b44d-aa8dc795e850',
+                sectionTemplate: null,
+                sectionWrapper: null,
+                btnSave: null,
+
+                init: function () {
+                    HomeScreenSections.sectionTemplate = document.querySelector('#sectionConfigTemplate');
+                    HomeScreenSections.sectionWrapper = document.querySelector('#sectionWrapper');
+                    HomeScreenSections.btnSave = document.querySelector('#btnSaveConfig');
+                    
+                    HomeScreenSections.loadConfig();
+                    HomeScreenSections.loadLibraries();
+                },
+
+                loadLibraries: function () {
+                    window.ApiClient.getVirtualFolders().then(function (result) {
+                        const selects = {
+                            movies: document.querySelector('#defaultMoviesLibrary'),
+                            tvshows: document.querySelector('#defaultTVShowsLibrary'),
+                            music: document.querySelector('#defaultMusicLibrary'),
+                            books: document.querySelector('#defaultBooksLibrary')
+                        };
+                        
+                        // Clear existing options
+                        Object.values(selects).forEach(select => {
+                            while (select.options.length > 1) select.remove(1);
+                        });
+
+                        function addOption(select, folder) {
+                            var opt = document.createElement('option');
+                            var folderId = folder.ItemId;
+                            if (folderId && folderId.indexOf('-') === -1) {
+                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+                            }
+                            opt.value = folderId;
+                            opt.textContent = folder.Name;
+                            select.appendChild(opt);
+                        }
+
+                        result.forEach(function(f) {
+                            if (f.CollectionType === 'movies') addOption(selects.movies, f);
+                            if (f.CollectionType === 'tvshows') addOption(selects.tvshows, f);
+                        });
+                    }).catch(function (err) {
+                        console.error('Failed to load libraries:', err);
+                    });
+                },
+
+                saveConfig: function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    
+                    var H = window.HSSShared || {};
+                    
+                    var config = {
+                        Enabled: document.querySelector('#globalEnabledDefault').checked,
+                        AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
+                        LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value || '',
+                        LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value || '',
+                        JellyseerrUrl: document.querySelector('[data-id=txtJellyseerrUrl]').value || '',
+                        JellyseerrApiKey: document.querySelector('[data-id=txtJellyseerrApiKey]').value || '',
+                        JellyseerrPreferredLanguages: document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value || '',
+                        DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value || '',
+                        DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value || '',
+                        DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value || '',
+                        DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value || '',
+                        DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
+                        CacheTimeoutSeconds: parseInt(document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || '86400', 10),
+                        SectionSettings: []
+                    };
+
+                    var rows = document.querySelectorAll('[data-id=section-config]');
+                    rows.forEach(function (row) {
+                        var sectionId = row.querySelector('[data-id=hiddenSectionId]').value;
+                        var detailsRow = (row.nextElementSibling && row.nextElementSibling.getAttribute('data-id') === 'section-details') ? row.nextElementSibling : null;
+                        
+                        var sec = {
+                            SectionId: sectionId,
+                            Enabled: !!row.querySelector('[data-id=chkSectionEnabled]').checked,
+                            AllowUserOverride: !!row.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
+                            LowerLimit: parseInt(row.querySelector('[data-id=txtSectionMinLimit]').value || '0', 10),
+                            UpperLimit: parseInt(row.querySelector('[data-id=txtSectionMaxLimit]').value || '0', 10),
+                            OrderIndex: parseInt(row.querySelector('[data-id=txtOrderIndex]').value || '0', 10),
+                            ViewMode: (row.querySelector('[data-id=viewModeSelect]') && row.querySelector('[data-id=viewModeSelect]').value) || 'Portrait',
+                            PluginConfigurations: [],
+                            UserOverrideSettings: []
+                        };
+
+                        if (detailsRow) {
+                            if (H.validateAndCollectInputs) {
+                                var validation = H.validateAndCollectInputs(detailsRow);
+                                if (!validation.valid) {
+                                    Dashboard.hideLoadingMsg();
+                                    Dashboard.alert(validation.message || 'Please fix invalid inputs before saving.');
+                                    throw new Error('Validation failed');
+                                }
+                            }
+                            
+                            var configurationValues = [];
+                            if (window.HSSShared && window.HSSShared.validateAndCollectInputs) {
+                                var validation = window.HSSShared.validateAndCollectInputs(detailsRow);
+                                if (validation.isValid) {
+                                    configurationValues = validation.collected;
+                                } else {
+                                    console.warn('Validation failed, using basic collection');
+                                    configurationValues = H.collectOptionValues ? H.collectOptionValues(detailsRow) : [];
+                                }
+                            } else {
+                                console.warn('Shared utilities not available, using basic collection');
+                                configurationValues = H.collectOptionValues ? H.collectOptionValues(detailsRow) : [];
+                            }
+                            
+                            if (!Array.isArray(configurationValues)) configurationValues = [];
+                            
+                            var idxEnabledSynth = configurationValues.findIndex(function(pc){ return pc && pc.Key === 'Enabled'; });
+                            if (idxEnabledSynth === -1) {
+                                configurationValues.push({ Key:'Enabled', Value: sec.Enabled, Type:'bool' });
+                            } else {
+                                configurationValues[idxEnabledSynth].Value = sec.Enabled;
+                            }
+
+                            var masterCbForSave = row.querySelector('[data-id=chkSectionUserOverrideAllowed]');
+                            var masterEnabledForSave = !!masterCbForSave?.checked;
+                            var storedStates = detailsRow._storedOverrideStates || [];
+                            var overrideCheckboxes = detailsRow.querySelectorAll('input[type="checkbox"][data-config-override]');
+                            
+                            var masterOverride = !!row.querySelector('[data-id=chkSectionUserOverrideAllowed]')?.checked;
+                            
+                            overrideCheckboxes.forEach(function (ocb) {
+                                if (ocb.getAttribute('data-disallow') === 'true') return;
+                                var oKey = ocb.getAttribute('data-config-override');
+                                if (!oKey) return;
+                                
+                                var effectiveChecked = masterEnabledForSave ? 
+                                    (storedStates.length && !masterEnabledForSave ? 
+                                        (storedStates.find(r => r.el === ocb)?.checked || false) : 
+                                        ocb.checked) : false;
+                                
+                                var existingConfig = configurationValues.find(cv => cv?.Key === oKey);
+                                if (existingConfig) {
+                                    existingConfig.AllowUserOverride = effectiveChecked;
+                                } else {
+                                    configurationValues.push({ 
+                                        Key: oKey, 
+                                        Value: null,
+                                        Type: "System.Object", 
+                                        AllowUserOverride: effectiveChecked
+                                    });
+                                }
+                            });
+                            
+                            // Store the unified configuration
+                            sec.PluginConfigurations = configurationValues;
+                        }
+
+                        config.SectionSettings.push(sec);
+                    });
+
+                    window.ApiClient.updatePluginConfiguration(HomeScreenSections.pluginId, config)
+                        .then(function(result){
+                            try { console.group('HomeScreenSections SAVE'); console.log('Saved payload', config); console.log('Server result', result); console.groupEnd(); } catch(_){}
+                            return result;
+                        })
+                        .then(() => window.ApiClient.getPluginConfiguration(HomeScreenSections.pluginId))
+                        .then(function(fresh){
+                            try { console.group('HomeScreenSections POST-SAVE FETCH'); console.log('Fresh plugin configuration', fresh); console.groupEnd(); } catch(_){ }
+                            return fresh;
+                        })
+                        .then(Dashboard.processPluginConfigurationUpdateResult)
+                        .catch(console.error)
+                        .finally(() => Dashboard.hideLoadingMsg());
+                },
+
+                validateDetailsRow: function (detailsRow) { 
+                    var H = window.HSSShared || {};
+                    return (H.validateInputs) ? H.validateInputs(detailsRow) : { valid: true }; 
+                },
+
+                loadConfig: function () {
+                    Dashboard.showLoadingMsg();
+                    window.ApiClient.getPluginConfiguration(HomeScreenSections.pluginId).then(function (config) {
+                        try {
+                            console.group('HomeScreenSections LOAD');
+                            console.log('Raw plugin configuration', config);
+                            if (Array.isArray(config.SectionSettings)) {
+                                config.SectionSettings.forEach(function(s,i){
+                                    console.log('SectionSettings['+i+']', s.SectionId, s);
+                                });
+                            }
+                            console.groupEnd();
+                        } catch(_) {}
+
+                        // Set form values
+                        const formFields = {
+                            '#globalEnabledDefault': config.Enabled,
+                            '#globalAllowUserOverride': config.AllowUserOverride,
+                            '[data-id=txtLibreTranslateUrl]': config.LibreTranslateUrl,
+                            '[data-id=txtLibreTranslateApiKey]': config.LibreTranslateApiKey,
+                            '[data-id=txtJellyseerrUrl]': config.JellyseerrUrl,
+                            '[data-id=txtJellyseerrApiKey]': config.JellyseerrApiKey,
+                            '[data-id=txtJellyseerrPreferredLanguages]': config.JellyseerrPreferredLanguages,
+                            '#globalDeveloperMode': config.DeveloperMode,
+                            '[data-id=txtCacheTimeoutSeconds]': config.CacheTimeoutSeconds || 86400
+                        };
+
+                        Object.entries(formFields).forEach(([selector, value]) => {
+                            const el = document.querySelector(selector);
+                            if (el) {
+                                if (el.type === 'checkbox') el.checked = !!value;
+                                else el.value = value || '';
+                            }
+                        });
+
+                        setTimeout(function () {
+                            if (config.DefaultMoviesLibraryId) document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
+                            if (config.DefaultTVShowsLibraryId) document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
+                            if (config.DefaultMusicLibraryId) document.querySelector('#defaultMusicLibrary').value = config.DefaultMusicLibraryId;
+                            if (config.DefaultBooksLibraryId) document.querySelector('#defaultBooksLibrary').value = config.DefaultBooksLibraryId;
+                        }, 500);
+
+                        window.ApiClient.fetch({
+                            url: window.ApiClient.getUrl('ModularHomeViews/Admin/SectionTypes'),
+                            type: 'GET',
+                            dataType: 'json',
+                            headers: { accept: 'application/json' }
+                        }).then(function (resp) {
+                            var json = resp || {};
+                            var items = json.Items || json || [];
+                            HomeScreenSections.loadConfigResponse(config, items);
+                        }).catch(function (err) {
+                            console.error('Failed to fetch sections:', err);
+                            Dashboard.hideLoadingMsg();
+                        });
+                    });
+                },
+
+                loadConfigResponse: function (pluginConfig, sectionTypes) {
+                    HomeScreenSections.sectionWrapper.innerHTML = '';
+                    const existing = pluginConfig.SectionSettings || [];
+                    const map = Object.fromEntries(existing.map(s => [s.SectionId, s]));
+                    
+                    const pending = sectionTypes
+                        .map(info => {
+                            const sectionId = info.Section || info.SectionId || info.Id;
+                            if (!sectionId) return null;
+                            
+                            let cfg = map[sectionId] || {
+                                SectionId: sectionId,
+                                Enabled: true,
+                                AllowUserOverride: true,
+                                LowerLimit: 1,
+                                UpperLimit: info.Limit || 0,
+                                ViewMode: info.ViewMode || 'Portrait',
+                                OrderIndex: 999,
+                                PluginConfigurations: [],
+                                UserOverrideSettings: []
+                            };
+                            
+                            if (!Array.isArray(cfg.UserOverrideSettings)) cfg.UserOverrideSettings = [];
+                            cfg.OrderIndex = parseInt(cfg.OrderIndex, 10) || 999;
+                            return { cfg, info };
+                        })
+                        .filter(Boolean)
+                        .sort((a,b) => {
+                            if (a.cfg.OrderIndex !== b.cfg.OrderIndex) return a.cfg.OrderIndex - b.cfg.OrderIndex;
+                            return (a.cfg.SectionId || '').localeCompare(b.cfg.SectionId || '');
+                        });
+
+                    pending.forEach(p => HomeScreenSections.addSectionSetting(p.cfg, p.info));
+
+                    var adv = document.querySelector('#adminShowAdvanced');
+                    var saved = localStorage.getItem('homeScreenSections.admin.showAdvanced') === 'true';
+                    if (adv) adv.checked = saved;
+                    HomeScreenSections.applyAdvancedToggle(saved);
+                    Dashboard.hideLoadingMsg();
+                },
+
+                addSectionSetting: function (sectionConfig, sectionInfo) {
+                    var H = window.HSSShared || {};
+                    
+                    var rowFrag = HomeScreenSections.sectionTemplate.cloneNode(true).content;
+                    rowFrag.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
+                    rowFrag.querySelector('[data-id=chkSectionEnabled]').checked = !!sectionConfig.Enabled;
+                    rowFrag.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = (sectionConfig.AllowUserOverride !== false);
+                    rowFrag.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit || 0;
+                    rowFrag.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit || 0;
+                    rowFrag.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex || 0;
+                    var viewSel = rowFrag.querySelector('[data-id=viewModeSelect]');
+                    viewSel.value = sectionConfig.ViewMode || 'Portrait';
+                    if (sectionInfo && sectionInfo.AllowViewModeChange === false) {
+                        viewSel.value = sectionInfo.ViewMode || viewSel.value;
+                        viewSel.setAttribute('disabled', 'true');
+                    } else if (sectionInfo && Array.isArray(sectionInfo.SupportedViewModes) && sectionInfo.SupportedViewModes.length) {
+                        var allowed = {};
+                        sectionInfo.SupportedViewModes.forEach(function (v) { allowed[v] = true; });
+                        Array.prototype.forEach.call(viewSel.options, function (opt) { opt.hidden = !allowed[opt.value]; });
+                        if (!allowed[viewSel.value]) viewSel.value = sectionInfo.SupportedViewModes[0];
+                    }
+                    rowFrag.querySelector('[data-id=lblSectionName]').textContent = (sectionInfo && sectionInfo.DisplayText) || sectionConfig.SectionId;
+                    HomeScreenSections.sectionWrapper.appendChild(rowFrag);
+
+                    var mainRow = HomeScreenSections.sectionWrapper.lastElementChild;
+                    var detailsFrag = document.querySelector('#sectionDetailsTemplate').content.cloneNode(true);
+                    HomeScreenSections.sectionWrapper.appendChild(detailsFrag);
+                    var detailsRow = mainRow.nextElementSibling;
+
+                    var infoContent = detailsRow.querySelector('[data-id=sectionInfoContent]');
+                    
+                    if (infoContent && sectionInfo && sectionInfo.Info) {
+                        var infoHtml = '';
+
+                        infoHtml = H.buildSectionInfo(sectionInfo, { isAdmin: true });
+                        
+                        if (infoHtml) {
+                            infoContent.innerHTML = infoHtml;
+                            infoContent.style.display = 'block';
+                        }
+                    }
+
+                    var nameClickable = mainRow.querySelector('[data-id=lblSectionName]');
+                    function toggleDetails(force) {
+                        var show = force !== undefined ? force : detailsRow.style.display === 'none';
+                        detailsRow.style.display = show ? '' : 'none';
+                        mainRow.classList.toggle('expanded', show);
+                        mainRow.setAttribute('aria-expanded', show ? 'true' : 'false');
+                        
+                        var sectionName = mainRow.querySelector('[data-id=lblSectionName]');
+                        if (sectionName) {
+                            sectionName.setAttribute('title', show ? 'Click to hide details' : 'Click to show details');
+                        }
+                    }
+                    nameClickable.addEventListener('click', function (e) { e.stopPropagation(); toggleDetails(); });
+                    mainRow.addEventListener('click', function (e) {
+                        if (e.target.closest('input,select,option,label,.checkboxOutline')) return;
+                        toggleDetails();
+                    });
+                    mainRow._toggleDetails = toggleDetails;
+
+                    if (addHoverEffects) {
+                        addHoverEffects(mainRow);
+                    } else {
+                        console.warn('Shared hover effects not available');
+                    }
+
+                    var originalToggle = mainRow._toggleDetails;
+                    mainRow._toggleDetails = function(force) {
+                        originalToggle.call(this, force);
+                        var isExpanded = mainRow.classList.contains('expanded');
+                        
+                        if (isExpanded) {
+                            var tds = mainRow.querySelectorAll('td');
+                            tds.forEach(function(td) {
+                                td.style.backgroundColor = '#2a2a2a';
+                            });
+                            
+                            var sectionName = mainRow.querySelector('.section-name');
+                            if (sectionName) {
+                                sectionName.style.fontWeight = '600';
+                                sectionName.style.color = 'var(--theme-primary-color, #00a4dc)';
+                            }
+                        } else {
+                            var tds = mainRow.querySelectorAll('td');
+                            tds.forEach(function(td) {
+                                td.style.backgroundColor = '';
+                            });
+                            
+                            var sectionName = mainRow.querySelector('.section-name');
+                            if (sectionName) {
+                                sectionName.style.fontWeight = '';
+                                sectionName.style.color = '';
+                            }
+                        }
+                    };
+
+                    var masterCb = mainRow.querySelector('[data-id=chkSectionUserOverrideAllowed]');
+                    function applyMasterOverrideState(isUserInteraction) {
+                        var matrix = detailsRow;
+                        var allOverrideInputs = detailsRow.querySelectorAll('input[type="checkbox"][data-config-override]');
+                        var overrideCells = detailsRow.querySelectorAll('td.col-override');
+                        
+                        if (!masterCb.checked) {
+                            // Master disabled: Hide all override controls
+                            matrix.classList.add('hide-overrides');
+                            for (var i = 0; i < allOverrideInputs.length; i++) {
+                                allOverrideInputs[i].checked = false;
+                                allOverrideInputs[i].disabled = true;
+                            }
+                            overrideCells.forEach(function (td) {
+                                var labelEl = td.querySelector('.emby-checkbox-label');
+                                var inputEl = td.querySelector('input[is="emby-checkbox"], input.emby-checkbox');
+                                var outlineEl = td.querySelector('.checkboxOutline');
+                                if (labelEl) labelEl.style.display = 'none';
+                                if (inputEl) inputEl.style.display = 'none';
+                                if (outlineEl) outlineEl.style.display = 'none';
+                            });
+                        } else {
+                            // Master enabled: Show all override controls
+                            matrix.classList.remove('hide-overrides');
+                            var perOption = detailsRow.querySelectorAll('input[type="checkbox"][data-config-override]');
+                            for (var j = 0; j < perOption.length; j++) {
+                                var input = perOption[j];
+                                var disallowed = input.getAttribute('data-disallow') === 'true';
+                                if (disallowed) {
+                                    // Some settings can't be overridden
+                                    input.disabled = true;
+                                    input.checked = false;
+                                    var labelElX = input.closest('label.emby-checkbox-label');
+                                    var outlineElX = labelElX ? labelElX.querySelector('.checkboxOutline') : null;
+                                    if (labelElX) labelElX.style.display = 'none';
+                                    if (outlineElX) outlineElX.style.display = 'none';
+                                } else {
+                                    input.disabled = false;
+                                    if (isUserInteraction) {
+                                        input.checked = true;
+                                    }
+                                }
+                            }
+                            
+                            overrideCells.forEach(function (td) {
+                                var labelEl = td.querySelector('.emby-checkbox-label');
+                                var inputEl = td.querySelector('input[is="emby-checkbox"], input.emby-checkbox');
+                                var outlineEl = td.querySelector('.checkboxOutline');
+                                if (labelEl && labelEl.getAttribute('data-override-disallowed') === 'true') {
+                                    labelEl.style.display = 'none';
+                                } else if (labelEl) {
+                                    labelEl.style.display = '';
+                                }
+                                if (inputEl) inputEl.style.display = '';
+                                if (outlineEl) outlineEl.style.display = '';
+                            });
+                        }
+                    }
+                    masterCb.addEventListener('change', function() { applyMasterOverrideState(true); });
+
+                    HomeScreenSections.populateDynamicConfigOptions(detailsRow, sectionConfig)
+                        .then(function () {
+                            var H = window.HSSShared || {};
+                            if (H.attachUnifiedValidation) {
+                                H.attachUnifiedValidation(detailsRow, { toast:true, color:true });
+                            }
+                            
+                            applyMasterOverrideState(false);
+                        });
+                },
+                
+                expandAll: function(){
+                    var rows = HomeScreenSections.sectionWrapper.querySelectorAll('[data-id=section-config]');
+                    rows.forEach(function(r){ if (typeof r._toggleDetails === 'function') r._toggleDetails(true); });
+                },
+                collapseAll: function(){
+                    var rows = HomeScreenSections.sectionWrapper.querySelectorAll('[data-id=section-config]');
+                    rows.forEach(function(r){ if (typeof r._toggleDetails === 'function') r._toggleDetails(false); });
+                },
+
+                applyAdvancedToggle: function (enabled) {
+                    var nodes = document.querySelectorAll('.advanced-options');
+                    for (var i = 0; i < nodes.length; i++) {
+                        var el = nodes[i];
+                        if (enabled) {
+                            el.classList.add('show');
+                            el.style.display = '';
+                        } else {
+                            el.classList.remove('show');
+                            el.style.display = 'none';
+                        }
+                    }
+                },
+
+                populateDynamicConfigOptions: async function (detailsRow, sectionConfig) {
+                    try {
+                        var matrixBody = detailsRow.querySelector('[data-id=optionsMatrixBody]');
+                        if (!matrixBody) return;
+                        matrixBody.innerHTML = '';
+                        var sectionId = sectionConfig.SectionId;
+                        var relativeApi = 'HomeScreen/Admin/Section/' + encodeURIComponent(sectionId);
+                        var url = window.ApiClient.getUrl(relativeApi);
+                        var options = [];
+                        try {
+                            var resp = await window.ApiClient.fetch({
+                                url: url,
+                                type: 'GET',
+                                dataType: 'json',
+                                headers: { accept: 'application/json' }
+                            });
+                            if (Array.isArray(resp)) {
+                                options = resp;
+                            } else if (resp && Array.isArray(resp.Items)) {
+                                options = resp.Items;
+                            } else if (resp) {
+                                options = resp;
+                            }
+                            if (!Array.isArray(options)) options = [];
+                        } catch (e) {
+                            try {
+                                var token = (window.ApiClient.accessToken && window.ApiClient.accessToken()) || (window.ApiClient._accessToken || '');
+                                var rawResp = await fetch(url, { headers: { accept: 'application/json', 'X-Emby-Token': token } });
+                                if (rawResp.ok) {
+                                    options = await rawResp.json();
+                                    if (!Array.isArray(options)) options = [];
+                                } else {
+                                    console.warn('[AdminConfig] ConfigurationOptions fetch failed', { url: url, status: rawResp.status, statusText: rawResp.statusText });
+                                    try { var txt2 = await rawResp.text(); console.warn('[AdminConfig] Response body snippet:', txt2.slice(0,250)); } catch(_) {}
+                                }
+                            } catch (e2) {
+                                console.error('[AdminConfig] Fetch exception (both methods failed)', e, e2);
+                            }
+                        }
+
+                        var valueMap = {};
+                        if (Array.isArray(sectionConfig.PluginConfigurations)) {
+                            sectionConfig.PluginConfigurations.forEach(function (pc) { valueMap[pc.Key] = pc; });
+                        }
+                        function isGranted(key){
+                            // Read AllowUserOverride from unified PluginConfigurations system
+                            if (!key || !Array.isArray(sectionConfig.PluginConfigurations)) return false;
+                            for (var i = 0; i < sectionConfig.PluginConfigurations.length; i++) {
+                                var pc = sectionConfig.PluginConfigurations[i];
+                                if (!pc || pc.Key !== key) continue;
+                                return !!pc.AllowUserOverride;
+                            }
+                            return false;
+                        }
+                        var showAdvanced = localStorage.getItem('homeScreenSections.admin.showAdvanced') === 'true';
+
+                        var H = window.HSSShared || {};
+                        options.forEach(function(opt){
+                            if(!opt || !opt.Key) return;
+                            var curRec = valueMap[opt.Key];
+                            var curValue = (curRec && curRec.Value !== undefined) ? curRec.Value : opt.DefaultValue;
+                            
+                            var inputHtml = H.buildAdminOptionInput ? H.buildAdminOptionInput(opt, curValue) : '';
+                            if (!inputHtml) return;
+                            
+                            var intrinsic = !!opt.AllowUserOverride;
+                            var grantChecked = isGranted(opt.Key);
+                            var overrideCbAttrs = ' data-config-override="'+(H.escapeAttr?H.escapeAttr(opt.Key):opt.Key)+'"'+(intrinsic? (grantChecked?' checked':'') : ' data-disallow="true"');
+                            var overrideLabelExtra = intrinsic ? '' : ' data-override-disallowed="true"';
+                            
+                            var overrideCellContent = '<div class="cell-center" style="display:flex;justify-content:center;align-items:center;width:100%;"><label class="emby-checkbox-label" style="width:0;"'+overrideLabelExtra+'>'
+                                + '<input type="checkbox" is="emby-checkbox" class="emby-checkbox"'+overrideCbAttrs+'>'
+                                + '<span class="checkboxLabel"></span>'
+                                + '<span class="checkboxOutline">'
+                                + '<span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>'
+                                + '<span class="material-icons checkboxIcon checkboxIcon-unchecked "></span>'
+                                + '</span></label></div>';
+                            
+                            var advancedCls = (opt.Advanced || opt.IsAdvanced) ? 'advanced-options' : '';
+                            var defVal = (opt.DefaultValue === undefined || opt.DefaultValue === null) ? '' : String(opt.DefaultValue);
+                            
+                            // Convert dropdown key to label for display using shared utility
+                            defVal = H.convertDropdownKeyToLabel ? H.convertDropdownKeyToLabel(opt, defVal) : defVal;
+                            
+                            var desc = opt.Description || '';
+                            var rowHtml = '<tr class="'+advancedCls+'"'+(((opt.Advanced||opt.IsAdvanced) && !showAdvanced) ? ' style="display:none;"' : '')+'>'
+                                + '<td class="name-cell">'+(H.escapeHtml?H.escapeHtml(opt.Name || opt.Label || opt.Key):(opt.Name||opt.Label||opt.Key))+'</td>'
+                                + '<td style="text-align: center; vertical-align: middle; padding: 8px 12px;"><div class="cell-center" style="display:flex;justify-content:center;align-items:center;width:100%;">' + inputHtml + '</div></td>'
+                                + '<td class="col-override" style="text-align: center; vertical-align: middle; padding: 8px 12px;">' + overrideCellContent + '</td>'
+                                + '<td class="col-desc">'+(H.escapeHtml?H.escapeHtml(desc):desc)+'</td>'
+                                + '<td class="col-default"><div class="cell-center">'+(H.escapeHtml?H.escapeHtml(defVal):defVal)+'</div></td>'
+                                + '</tr>';
+                            
+                            matrixBody.insertAdjacentHTML('beforeend', rowHtml);
+                        });
+
+                        setTimeout(function(){
+                            try {
+                                var overrideInputs = matrixBody.querySelectorAll('input[type="checkbox"][data-config-override]');
+                                overrideInputs.forEach(function(inp){
+                                    var key = inp.getAttribute('data-config-override');
+                                    if (!key) return;
+                                    if (isGranted(key)) {
+                                        inp.checked = true;
+                                    } else if (inp.getAttribute('data-disallow') === 'true') {
+                                        inp.checked = false;
+                                    }
+                                });
+                                var mainEnabledCb = detailsRow.previousElementSibling?.querySelector('[data-id=chkSectionEnabled]');
+                                var synthEnabled = matrixBody.querySelector('input.pluginConfig[data-config-key="Enabled"]');
+                                if (mainEnabledCb && synthEnabled) {
+                                    synthEnabled.checked = !!mainEnabledCb.checked;
+                                    if (!synthEnabled._boundSync) {
+                                        mainEnabledCb.addEventListener('change', function(){ synthEnabled.checked = mainEnabledCb.checked; });
+                                        synthEnabled.addEventListener('change', function(){ mainEnabledCb.checked = synthEnabled.checked; });
+                                        synthEnabled._boundSync = true;
+                                    }
+                                }
+                            } catch(stabErr) {
+                                console.warn('Stabilization pass error', stabErr);
+                            }
+                        }, 0);
+                        
+                        var H = window.HSSShared || {};
+                        if (H.attachUnifiedValidation) {
+                            H.attachUnifiedValidation(detailsRow);
+                        }
+                        
+                    } catch (err) {
+                        console.error('populateDynamicConfigOptions error:', err);
+                    }
+                },
+
+                populateUserOverrideSettings: function () {}
+            };
 
             function setupTabs() {
                 const tabs = document.querySelectorAll('.jellyfin-tab-button');
@@ -224,153 +994,240 @@
                 });
             }
 
-            function addSectionSetting(sectionConfig, sectionInfo) {
-                const sectionWrapper = document.querySelector('#sectionWrapper');
-                const template = document.querySelector('#sectionConfigTemplate').content.cloneNode(true);
-
-                template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
-                template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
-                template.querySelector('[data-id=chkSectionEnabled]').checked = sectionConfig.Enabled;
-                template.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = sectionConfig.AllowUserOverride;
-                template.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit;
-                template.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit;
-                template.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex;
-
-                const viewModeSelect = template.querySelector('[data-id=viewModeSelect]');
-                viewModeSelect.value = sectionConfig.ViewMode;
-                if (!sectionInfo.AllowViewModeChange) {
-                    viewModeSelect.value = sectionInfo.ViewMode;
-                    viewModeSelect.setAttribute('disabled', true);
-                }
-
-                sectionWrapper.appendChild(template);
-            }
-
-            function loadLibraries() {
-                window.ApiClient.getVirtualFolders().then(function (result) {
-                    const moviesSelect = document.querySelector('#defaultMoviesLibrary');
-                    const tvShowsSelect = document.querySelector('#defaultTVShowsLibrary');
-                    const musicSelect = document.querySelector('#defaultMusicLibrary');
-                    const booksSelect = document.querySelector('#defaultBooksLibrary');
-
-                    moviesSelect.innerHTML = '<option value="">Default</option>';
-                    tvShowsSelect.innerHTML = '<option value="">Default</option>';
-                    musicSelect.innerHTML = '<option value="">Default</option>';
-                    booksSelect.innerHTML = '<option value="">Default</option>';
-
-                    result.forEach(function (folder) {
-                         if (folder.CollectionType === 'movies' || folder.CollectionType === 'tvshows' || folder.CollectionType === 'music' || folder.CollectionType === 'books') {
-                             const option = document.createElement('option');
-                            let folderId = folder.ItemId;
-                            if (folderId && !folderId.includes('-')) {
-                                folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
-                            }
-                            option.value = folderId;
-                            option.textContent = folder.Name;
-
-                            if(folder.CollectionType === 'movies') moviesSelect.appendChild(option);
-                            if(folder.CollectionType === 'tvshows') tvShowsSelect.appendChild(option);
-                            if(folder.CollectionType === 'music') musicSelect.appendChild(option);
-                            if(folder.CollectionType === 'books') booksSelect.appendChild(option);
-                        }
+            function addHoverEffects(row) {
+                row.addEventListener('mouseenter', function() {
+                    const cells = this.querySelectorAll('td');
+                    cells.forEach(function(td) {
+                        td.style.backgroundColor = '#242424';
+                        td.style.transition = 'background-color 0.2s ease';
                     });
-                }).catch(function (error) {
-                    console.error('Failed to load libraries:', error);
+                });
+                
+                row.addEventListener('mouseleave', function() {
+                    if (!this.classList.contains('expanded')) {
+                        const cells = this.querySelectorAll('td');
+                        cells.forEach(function(td) {
+                            td.style.backgroundColor = '';
+                        });
+                    }
                 });
             }
 
-            function saveConfig(e) {
-                e.preventDefault();
-                Dashboard.showLoadingMsg();
-                const config = {
-                    Enabled: document.querySelector('#globalEnabledDefault').checked,
-                    AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
-                    LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
-                    LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
-                    JellyseerrUrl: document.querySelector('[data-id=txtJellyseerrUrl]').value,
-                    JellyseerrApiKey: document.querySelector('[data-id=txtJellyseerrApiKey]').value,
-                    JellyseerrPreferredLanguages: document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value,
-                    DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
-                    DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
-                    DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value,
-                    DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value,
-                    SectionSettings: []
+            document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener('pageshow', function () {
+                setupTabs();
+                
+                // Event listeners setup
+                const eventBindings = {
+                    '#btnSaveConfig': () => HomeScreenSections.saveConfig,
+                    '#btnExpandAllSections': () => () => HomeScreenSections.expandAll(),
+                    '#btnCollapseAllSections': () => () => HomeScreenSections.collapseAll(),
+                    '#adminShowAdvanced': (el) => function() {
+                        const enabled = !!this.checked;
+                        localStorage.setItem('homeScreenSections.admin.showAdvanced', enabled ? 'true' : 'false');
+                        HomeScreenSections.applyAdvancedToggle(enabled);
+                    },
+                    '#btnRefreshDebug': () => loadDebugData
                 };
 
-                document.querySelectorAll('#sectionWrapper tr').forEach(row => {
-                    const sectionConfig = {
-                        SectionId: row.querySelector('[data-id=hiddenSectionId]').value,
-                        Enabled: row.querySelector('[data-id=chkSectionEnabled]').checked,
-                        AllowUserOverride: row.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
-                        LowerLimit: row.querySelector('[data-id=txtSectionMinLimit]').value,
-                        UpperLimit: row.querySelector('[data-id=txtSectionMaxLimit]').value,
-                        OrderIndex: row.querySelector('[data-id=txtOrderIndex]').value,
-                        ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
-                    };
-                    config.SectionSettings.push(sectionConfig);
+                Object.entries(eventBindings).forEach(([selector, handlerFn]) => {
+                    const el = document.querySelector(selector);
+                    if (el) {
+                        if (selector === '#btnSaveConfig') {
+                            el.removeEventListener('click', HomeScreenSections.saveConfig);
+                        }
+                        el.addEventListener('click', handlerFn(el));
+                    }
                 });
 
-                window.ApiClient.updatePluginConfiguration(pluginId, config)
-                    .then(Dashboard.processPluginConfigurationUpdateResult)
-                    .catch(e => console.error(e))
-                    .finally(() => Dashboard.hideLoadingMsg());
-            }
+                // Advanced toggle setup
+                const adv = document.querySelector('#adminShowAdvanced');
+                if (adv) {
+                    const saved = localStorage.getItem('homeScreenSections.admin.showAdvanced') === 'true';
+                    adv.checked = saved;
+                    HomeScreenSections.applyAdvancedToggle(saved);
+                }
+                
+                //
+                // Debug functionality
+                //
+                const btnRefreshDebug = document.querySelector('#btnRefreshDebug');
+                if (btnRefreshDebug) {
+                    btnRefreshDebug.addEventListener('click', loadDebugData);
+                }
 
-            function loadConfig() {
-                Dashboard.showLoadingMsg();
-                window.ApiClient.getPluginConfiguration(pluginId)
-                    .then(function (config) {
-                        document.querySelector('#globalEnabledDefault').checked = config.Enabled;
-                        document.querySelector('#globalAllowUserOverride').checked = config.AllowUserOverride;
-                        document.querySelector('[data-id=txtLibreTranslateUrl]').value = config.LibreTranslateUrl;
-                        document.querySelector('[data-id=txtLibreTranslateApiKey]').value = config.LibreTranslateApiKey;
-                        document.querySelector('[data-id=txtJellyseerrUrl]').value = config.JellyseerrUrl;
-                        document.querySelector('[data-id=txtJellyseerrApiKey]').value = config.JellyseerrApiKey;
-                        document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
+                // Cache bust functionality
+                const btnBustCache = document.querySelector('#btnBustCache');
+                if (btnBustCache) {
+                    btnBustCache.addEventListener('click', function() {
+                        btnBustCache.disabled = true;
+                        btnBustCache.innerHTML = '<span>Busting Cache...</span>';
 
-                        setTimeout(function() {
-                            if (config.DefaultMoviesLibraryId) {
-                                document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
+                        window.ApiClient.fetch({
+                            url: window.ApiClient.getUrl('HomeScreen/BustCache'),
+                            type: 'POST',
+                            dataType: 'json',
+                            headers: {
+                                'Accept': 'application/json'
                             }
-                            if (config.DefaultTVShowsLibraryId) {
-                                document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
+                        }).then(response => {
+                            const status = document.getElementById('cacheBustStatus');
+                            if (status) {
+                                status.style.display = 'inline';
+                                setTimeout(() => status.style.display = 'none', 3000);
                             }
-                            if (config.DefaultMusicLibraryId) {
-                                document.querySelector('#defaultMusicLibrary').value = config.DefaultMusicLibraryId;
-                            }
-                            if (config.DefaultBooksLibraryId) {
-                                document.querySelector('#defaultBooksLibrary').value = config.DefaultBooksLibraryId;
-                            }
-                        }, 500);
-
-                        window.ApiClient.ajax({
-                            url: ApiClient.getUrl('ModularHomeViews/Sections'),
-                            type: 'GET'
-                        }).then(response => response.json()).then(function (json) {
-                            json.Items.forEach(sectionType => {
-                                let sectionConfig = config.SectionSettings.find(s => s.SectionId === sectionType.Section);
-                                if (!sectionConfig) {
-                                    sectionConfig = {
-                                        SectionId: sectionType.Section,
-                                        Enabled: true,
-                                        AllowUserOverride: true,
-                                        LowerLimit: 1,
-                                        UpperLimit: sectionType.Limit,
-                                        ViewMode: sectionType.ViewMode,
-                                        OrderIndex: 999
-                                    };
-                                }
-                                addSectionSetting(sectionConfig, sectionType);
-                            });
-                        }).finally(() => Dashboard.hideLoadingMsg());
+                        }).catch(error => {
+                            console.error('Cache bust error:', error);
+                        }).finally(() => {
+                            btnBustCache.disabled = false;
+                            btnBustCache.innerHTML = '<span>Bust Cache Now</span>';
+                        });
                     });
-            }
+                }
 
-            document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
-                setupTabs();
-                loadLibraries();
-                loadConfig();
-                document.querySelector('#btnSaveConfig').addEventListener("click", saveConfig);
+                function loadDebugData() {
+                    const containers = {
+                        adminConfigContent: 'Loading...',
+                        adminSectionTypesContent: 'Loading...',
+                        userSelectorControls: 'Loading users...',
+                        userSettingsContent: 'Loading...',
+                        userSectionTypesContent: 'Loading...'
+                    };
+
+                    Object.entries(containers).forEach(([id, msg]) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerHTML = `<div style="color: #9cdcfe;">${msg}</div>`;
+                    });
+
+                    const debugData = {};
+                    const apiCalls = [
+                        { key: 'pluginConfiguration', call: () => window.ApiClient.getPluginConfiguration(HomeScreenSections.pluginId) },
+                        { key: 'sectionTypes', call: () => window.ApiClient.fetch({
+                            url: window.ApiClient.getUrl('ModularHomeViews/Admin/SectionTypes'),
+                            type: 'GET', dataType: 'json', headers: { accept: 'application/json' }
+                        })},
+                        { key: 'availableUsers', call: () => window.ApiClient.getUsers() }
+                    ];
+
+                    apiCalls.forEach(({key, call}) => {
+                        call().then(data => {
+                            debugData[key] = key === 'sectionTypes' ? (data?.Items || data || []) : data;
+                            updateDebugDisplay();
+                            
+                            // After loading users, load data for the current user
+                            if (key === 'availableUsers' && data && data.length > 0) {
+                                const currentUserId = window.ApiClient?.getCurrentUserId();
+                                const selectedUserId = currentUserId || data[0].Id;
+                                if (selectedUserId) {
+                                    loadUserDataForUser(selectedUserId);
+                                }
+                            }
+                        }).catch(e => {
+                            debugData[key] = { error: `Failed to load ${key}: ${e.message}` };
+                            updateDebugDisplay();
+                        });
+                    });
+
+                    function loadUserDataForUser(userId) {
+                        console.log('loadUserDataForUser called with userId:', userId);
+                        if (!userId || userId === 'undefined' || userId === 'null') {
+                            console.warn('Invalid userId provided to loadUserDataForUser:', userId);
+                            return;
+                        }
+                        
+                        ['userSettings', 'userSectionTypes'].forEach(key => debugData[key] = null);
+                        updateDebugDisplay();
+
+                        const userApiCalls = [
+                            { key: 'userSettings', url: 'ModularHomeViews/User/Settings?userId=' + userId },
+                            { key: 'userSectionTypes', url: 'ModularHomeViews/User/SectionTypes?userId=' + userId }
+                        ];
+
+                        console.log('Making API calls for userId:', userId);
+                        userApiCalls.forEach((apiCall) => {
+                            const fullUrl = window.ApiClient.getUrl(apiCall.url);
+                            window.ApiClient.fetch({
+                                url: fullUrl,
+                                type: 'GET', dataType: 'json',
+                                headers: { accept: 'application/json' }
+                            }).then(data => {
+                                debugData[apiCall.key] = apiCall.key === 'userSectionTypes' ? (data?.Items || data || []) : data;
+                                updateDebugDisplay();
+                            }).catch(e => {
+                                console.error(`Failed to load ${apiCall.key} for user ${userId}:`, e);
+                                debugData[apiCall.key] = { error: `Failed to load ${apiCall.key}: ${e.message}`, selectedUserId: userId };
+                                updateDebugDisplay();
+                            });
+                        });
+                    }
+
+                    function updateDebugDisplay() {
+                        const displayMappings = {
+                            adminConfigContent: debugData.pluginConfiguration,
+                            adminSectionTypesContent: debugData.sectionTypes,
+                            userSettingsContent: debugData.userSettings,
+                            userSectionTypesContent: debugData.userSectionTypes
+                        };
+
+                        Object.entries(displayMappings).forEach(([id, data]) => {
+                            const el = document.getElementById(id);
+                            if (el) {
+                                el.innerHTML = data ? JSON.stringify(data, null, 2) : '<div style="color: #9cdcfe;">Loading...</div>';
+                            }
+                        });
+
+                        const userSelector = document.getElementById('userSelectorControls');
+                        if (userSelector && debugData.availableUsers && Array.isArray(debugData.availableUsers)) {
+                            const currentUserId = window.ApiClient?.getCurrentUserId();
+                            console.log('Current user ID from ApiClient:', currentUserId);
+                            console.log('Available users:', debugData.availableUsers);
+                            
+                            // Check if there's already a user selected in the dropdown, preserve that selection
+                            const existingDropdown = document.getElementById('debug-user-select');
+                            let selectedUserId = existingDropdown ? existingDropdown.value : currentUserId;
+                            
+                            // Fallback to current user or first available user if no valid selection
+                            if (!selectedUserId && debugData.availableUsers.length > 0) {
+                                selectedUserId = currentUserId || debugData.availableUsers[0].Id;
+                                console.log('Using fallback user:', selectedUserId);
+                            }
+                            
+                            const options = debugData.availableUsers.map(user => {
+                                const isSelected = user.Id === selectedUserId ? ' selected' : '';
+                                const youLabel = user.Id === currentUserId ? ' (You)' : '';
+                                return '<option value="' + user.Id + '"' + isSelected + '>' + user.Name + youLabel + '</option>';
+                            }).join('');
+                            
+                            userSelector.innerHTML = '<div style="display: flex; align-items: center; gap: 1em; flex-wrap: wrap;">' +
+                                '<label for="debug-user-select" style="color: #d4d4d4;">Select User:</label>' +
+                                '<select id="debug-user-select" style="padding: 0.5em; background: #1e1e1e; color: #fff; border: 1px solid #555; border-radius: 4px;" onchange="onUserSelectionChange()">' +
+                                options +
+                                '</select>' +
+                                '</div>';
+                        }
+                        
+                        window.onUserSelectionChange = function() {
+                            const selectedUserId = document.getElementById('debug-user-select')?.value;
+                            console.log('User selection changed to:', selectedUserId);
+                            if (selectedUserId && selectedUserId !== 'undefined' && selectedUserId !== 'null') {
+                                ['userSettings', 'userSectionTypes'].forEach(key => debugData[key] = null);
+                                updateDebugDisplay();
+                                loadUserDataForUser(selectedUserId);
+                            } else {
+                                console.warn('Invalid user selection:', selectedUserId);
+                            }
+                        };
+                    }
+                }
+
+                window.HomeScreenSectionsDebugFetch = () =>
+                    fetch(window.ApiClient.getUrl('HomeScreen/Configuration'), { headers:{ 'Accept':'application/json' }})
+                        .then(r => r.json())
+                        .then(j => { console.log('Direct /HomeScreen/Configuration', j); return j; });
+                //
+                // End Debug functionality
+                //
+
+                HomeScreenSections.init();
             });
         })();
     </script>

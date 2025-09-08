@@ -6,11 +6,10 @@ using System.Text.RegularExpressions;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
-using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
-using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller;
@@ -41,13 +40,36 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         public HomeScreenController(
             IHomeScreenManager homeScreenManager,
             IDisplayPreferencesManager displayPreferencesManager,
-            IServerApplicationHost serverApplicationHost, 
+            IServerApplicationHost serverApplicationHost,
             IApplicationPaths applicationPaths)
         {
             m_homeScreenManager = homeScreenManager;
             m_displayPreferencesManager = displayPreferencesManager;
             m_serverApplicationHost = serverApplicationHost;
             m_applicationPaths = applicationPaths;
+        }
+
+        /// <summary>
+        /// Sets appropriate cache headers based on developer mode and cache bust counter.
+        /// </summary>
+        private void SetCacheHeaders()
+        {
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
+
+            if (config.DeveloperMode)
+            {
+                // Developer mode: Force immediate cache invalidation
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+            }
+            else
+            {
+                // Normal mode: Use configured cache timeout
+                Response.Headers["Cache-Control"] = $"public, max-age={config.CacheTimeoutSeconds}";
+            }
+
+            Response.Headers["ETag"] = $"\"v{HomeScreenSectionsPlugin.Instance.Version}-c{config.CacheBustCounter}\"";
         }
 
         [HttpGet("home-screen-sections.js")]
@@ -63,6 +85,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound();
             }
             
+            SetCacheHeaders();
+
             return File(stream, "application/javascript");
         }
 
@@ -79,14 +103,98 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound();
             }
             
+            SetCacheHeaders();
+
             return File(stream, "text/css");
+        }
+
+        [HttpGet("client/shared-utils.js")]
+        [Produces("application/javascript")]
+        public ActionResult GetSharedUtils()
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                string? resName = asm.GetManifestResourceNames()
+                    .FirstOrDefault(n => n.EndsWith("Configuration.shared-utils.js", StringComparison.OrdinalIgnoreCase));
+                if (resName == null)
+                {
+                    return NotFound();
+                }
+                Stream? stream = asm.GetManifestResourceStream(resName);
+                if (stream == null) return NotFound();
+
+                SetCacheHeaders();
+
+                return File(stream, "application/javascript");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Failed to load shared utils: {ex.Message}");
+            }
         }
 
         [HttpGet("Configuration")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
         public ActionResult<PluginConfiguration> GetHomeScreenConfiguration()
         {
-            return HomeScreenSectionsPlugin.Instance.Configuration;
+            try
+            {
+                var config = HomeScreenSectionsPlugin.Instance.Configuration;
+                return config;
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error loading configuration: {ex.Message}");
+            }
+        }
+
+        [HttpPost("Configuration")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult UpdateHomeScreenConfiguration([FromBody] PluginConfiguration configuration)
+        {
+            try
+            {
+                if (configuration == null)
+                {
+                    return BadRequest("Configuration cannot be null");
+                }
+
+                // Validate configuration before saving
+                var validationHelper = new ConfigurationValidationHelper();
+                var validationErrors = validationHelper.ValidateAdminSettings(configuration, m_homeScreenManager);
+                if (validationErrors.Any())
+                {
+                    return BadRequest(new { errors = validationErrors });
+                }
+
+                HomeScreenSectionsPlugin.Instance.UpdateConfiguration(configuration);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error updating configuration: {ex.Message}");
+            }
+        }
+
+        [HttpPost("BustCache")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult BustCache()
+        {
+            try
+            {
+                HomeScreenSectionsPlugin.Instance.BustCache();
+                var newCounter = HomeScreenSectionsPlugin.Instance.Configuration.CacheBustCounter;
+                return Ok(new { newCounter });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error busting cache: {ex.Message}");
+            }
         }
         
         [HttpGet("Meta")]
@@ -134,6 +242,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
         [HttpGet("Sections")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize]
         public ActionResult<QueryResult<HomeScreenSectionInfo>> GetHomeScreenSections(
             [FromQuery] Guid? userId,
             [FromQuery] string? language)
@@ -243,8 +352,44 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             {
                 HomeScreenSectionInfo info = x.AsInfo();
 
-                info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x => x.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
-                
+                SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(s => s.SectionId == info.Section);
+                info.ViewMode = sectionSettings?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+                string? displayTextToUse = null;
+
+                if (sectionSettings != null && !string.IsNullOrEmpty(info.Section))
+                {
+                    var tempPayload = new HomeScreenSectionPayload
+                    {
+                        UserId = settings?.UserId ?? Guid.Empty,
+                        UserSettings = settings
+                    };
+                    
+                    string headerDisplay = tempPayload.GetEffectiveStringConfig(info.Section, "SectionHeaderDisplay", "ShowWithNavigation");
+                    
+                    if (headerDisplay == "Hide")
+                    {
+                        info.DisplayText = string.Empty;
+                    }
+                    else
+                    {
+                        displayTextToUse = tempPayload.GetEffectiveStringConfig(info.Section, "CustomDisplayText", "");
+                        if (!string.IsNullOrWhiteSpace(displayTextToUse))
+                        {
+                            info.DisplayText = displayTextToUse;
+                        }
+                    }
+                    
+                    // Handle route button visibility
+                    if (headerDisplay == "ShowWithoutNavigation" || headerDisplay == "Hide")
+                    {
+                        info.Route = null;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(displayTextToUse))
+                {
+                    info.DisplayText = displayTextToUse;
+                }
+
                 if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
                     info.DisplayText != null)
                 {
@@ -263,7 +408,177 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 sections);
         }
 
+        [HttpGet("Admin/Section/{sectionType}")]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult<List<PluginConfigurationOption>> GetAdminSectionConfigurationOptions(
+            [FromRoute] string sectionType)
+        {
+            return GetAdminConfigurationOptions(sectionType);
+        }
+
+        [HttpGet("User/Section/{sectionType}")]
+        [Authorize]
+        public ActionResult<List<PluginConfigurationOption>> GetUserSectionConfigurationOptions(
+            [FromRoute] string sectionType)
+        {
+            return GetUserConfigurationOptions(sectionType);
+        }
+
+        private ActionResult<List<PluginConfigurationOption>> GetAdminConfigurationOptions(string sectionType)
+        {
+            var section = m_homeScreenManager.GetSectionTypes()
+                .FirstOrDefault(s => s.Section?.Equals(sectionType, StringComparison.OrdinalIgnoreCase) == true);
+            
+            if (section == null)
+            {
+                return NotFound("Unknown section type: " + sectionType);
+            }
+            
+            PluginConfigurationOption[]? intrinsicConfigurationOptions = section.GetConfigurationOptions()?.ToArray();
+            if (intrinsicConfigurationOptions == null)
+            {
+                intrinsicConfigurationOptions = Array.Empty<PluginConfigurationOption>();
+            }
+
+            List<PluginConfigurationOption> configOptionsList = intrinsicConfigurationOptions.ToList();
+
+            PluginConfiguration pluginConfig = HomeScreenSectionsPlugin.Instance.Configuration;
+            SectionSettings? currentSectionSettings = pluginConfig.SectionSettings?.FirstOrDefault(s => string.Equals(s.SectionId, sectionType, StringComparison.OrdinalIgnoreCase));
+
+            Dictionary<string, bool> perOptionOverrideMap = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+            if (currentSectionSettings?.PluginConfigurations != null)
+            {
+                foreach (var entry in currentSectionSettings.PluginConfigurations)
+                {
+                    if (!string.IsNullOrEmpty(entry.Key))
+                    {
+                        perOptionOverrideMap[entry.Key] = entry.AllowUserOverride;
+                    }
+                }
+            }
+
+            bool changed = false;
+            foreach (string key in configOptionsList.Select(o => o.Key).Distinct())
+            {
+                if (!perOptionOverrideMap.ContainsKey(key))
+                {
+                    if (currentSectionSettings == null)
+                    {
+                        currentSectionSettings = new SectionSettings { SectionId = sectionType };
+                        List<SectionSettings> sectionSettingsList = pluginConfig.SectionSettings?.ToList() ?? new List<SectionSettings>();
+                        sectionSettingsList.Add(currentSectionSettings);
+                        pluginConfig.SectionSettings = sectionSettingsList.ToArray();
+                    }
+
+                    currentSectionSettings.SetAdminConfigWithPermission<object?>(key, null, allowUserOverride: false);
+                    perOptionOverrideMap[key] = false;
+                    changed = true;
+                }
+            }
+            
+            if (changed)
+            {
+                HomeScreenSectionsPlugin.Instance.UpdateConfiguration(pluginConfig);
+            }
+
+            return Ok(configOptionsList);
+        }
+
+        private ActionResult<List<PluginConfigurationOption>> GetUserConfigurationOptions(string sectionType)
+        {
+            var section = m_homeScreenManager.GetSectionTypes()
+                .FirstOrDefault(s => s.Section?.Equals(sectionType, StringComparison.OrdinalIgnoreCase) == true);
+            
+            if (section == null)
+            {
+                return NotFound("Unknown section type: " + sectionType);
+            }
+            
+            PluginConfigurationOption[]? intrinsicConfigurationOptions = section.GetConfigurationOptions()?.ToArray();
+            if (intrinsicConfigurationOptions == null)
+            {
+                intrinsicConfigurationOptions = Array.Empty<PluginConfigurationOption>();
+            }
+
+            List<PluginConfigurationOption> configOptionsList = intrinsicConfigurationOptions.ToList();
+
+            PluginConfiguration pluginConfig = HomeScreenSectionsPlugin.Instance.Configuration;
+            SectionSettings? currentSectionSettings = pluginConfig.SectionSettings?.FirstOrDefault(s => string.Equals(s.SectionId, sectionType, StringComparison.OrdinalIgnoreCase));
+
+            Dictionary<string, bool> perOptionOverrideMap = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+            if (currentSectionSettings?.PluginConfigurations != null)
+            {
+                foreach (var entry in currentSectionSettings.PluginConfigurations)
+                {
+                    if (!string.IsNullOrEmpty(entry.Key))
+                    {
+                        perOptionOverrideMap[entry.Key] = entry.AllowUserOverride;
+                    }
+                }
+            }
+
+            if (currentSectionSettings?.AllowUserOverride != true)
+            {
+                configOptionsList = new List<PluginConfigurationOption>();
+            }
+            else
+            {
+                configOptionsList = configOptionsList.Where(o => o.AllowUserOverride && perOptionOverrideMap.TryGetValue(o.Key, out var allow) && allow)
+                    .Select(o =>
+                    {
+                        var adminConfiguredValue = currentSectionSettings?.GetAdminConfig<object>(o.Key, o.DefaultValue);
+
+                        return new PluginConfigurationOption
+                        {
+                            Key = o.Key,
+                            Name = o.Name,
+                            Description = o.Description,
+                            Type = o.Type,
+                            AllowUserOverride = o.AllowUserOverride,
+                            IsAdvanced = o.IsAdvanced,
+                            Required = o.Required,
+                            DefaultValue = adminConfiguredValue ?? o.DefaultValue,
+                            DropdownOptions = o.DropdownOptions,
+                            DropdownLabels = o.DropdownLabels,
+                            Placeholder = o.Placeholder,
+                            MinLength = o.MinLength,
+                            MaxLength = o.MaxLength,
+                            MinValue = o.MinValue,
+                            MaxValue = o.MaxValue,
+                            Step = o.Step,
+                            Pattern = o.Pattern,
+                            ValidationMessage = o.ValidationMessage
+                        };
+                    }).ToList();
+            }
+
+            var normalizedOptions = configOptionsList.Select(NormalizePluginConfigurationOption).ToList();
+
+            return Ok(normalizedOptions);
+        }
+
+        /// <summary>
+        /// Normalizes PluginConfigurationOption dropdowns to ensure consistent format.
+        /// </summary>
+        private static PluginConfigurationOption NormalizePluginConfigurationOption(PluginConfigurationOption option)
+        {
+            if (option?.Type != PluginConfigurationType.Dropdown) 
+                return option;
+            
+            option.DropdownOptions ??= Array.Empty<string>();
+            
+            if (option.DropdownLabels == null || option.DropdownLabels.Length != option.DropdownOptions.Length)
+            {
+                option.DropdownLabels = option.DropdownOptions;
+            }
+            
+            return option;
+        }
+
         [HttpGet("Section/{sectionType}")]
+        [Authorize]
         public QueryResult<BaseItemDto> GetSectionContent(
             [FromRoute] string sectionType,
             [FromQuery, Required] Guid userId,
@@ -273,7 +588,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             HomeScreenSectionPayload payload = new HomeScreenSectionPayload
             {
                 UserId = userId,
-                AdditionalData = additionalData
+                AdditionalData = additionalData,
+                UserSettings = m_homeScreenManager.GetUserSettings(userId)
             };
 
             return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
@@ -282,7 +598,52 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [HttpPost("RegisterSection")]
         public ActionResult RegisterSection([FromBody] SectionRegisterPayload payload)
         {
-            m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
+            if (string.IsNullOrEmpty(payload.DisplayText))
+            {
+                return BadRequest("Section registration requires DisplayText");
+            }
+
+            if (string.IsNullOrEmpty(payload.ResultsEndpoint))
+            {
+                return BadRequest("Section registration requires ResultsEndpoint");
+            }
+
+            if (payload.Info?.VersionControl != null)
+            {
+                var vc = payload.Info.VersionControl;
+                
+                vc.RepositoryUrl = null;
+                vc.IssuesUrl = null;
+                
+                var (repositoryUrl, issuesUrl) = SectionInfoHelper.BuildVcsUrls(
+                    vc.Platform, 
+                    vc.Username, 
+                    vc.Repository, 
+                    vc.IncludeIssuesLink);
+                
+                vc.RepositoryUrl = repositoryUrl;
+                vc.IssuesUrl = issuesUrl;
+            }
+            
+            if (payload.Info != null)
+            {
+                payload.Info.FeatureRequestUrl = null;
+                
+                if (payload.Info.VersionControl?.RepositoryUrl != null)
+                {
+                    payload.Info.FeatureRequestUrl = SectionInfoHelper.BuildFeatureRequestUrl(
+                        payload.Info.VersionControl.FeatureRequestTag);
+                }
+            }
+
+            var section = new PluginDefinedSection(
+                payload.Id, 
+                payload.DisplayText!, 
+                payload.Info, 
+                payload.Route, 
+                payload.AdditionalData, 
+                payload.ConfigurationOptions, 
+                payload.EnableByDefault)
             {
                 OnGetResults = sectionPayload =>
                 {
@@ -299,7 +660,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
                     return JsonConvert.DeserializeObject<QueryResult<BaseItemDto>>(responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult()) ?? new QueryResult<BaseItemDto>();
                 }
-            });
+            };
+
+            m_homeScreenManager.RegisterResultsDelegate(section);
             
             return Ok();
         }
