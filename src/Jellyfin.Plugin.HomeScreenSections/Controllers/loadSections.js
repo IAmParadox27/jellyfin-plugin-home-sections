@@ -1,4 +1,17 @@
 ﻿async function test(elem, apiClient, user, userSettings) {
+    if (!isHomePage()) {
+        return;
+    }
+
+    function isHomePage() {
+        const hasIndexPageId = document.getElementById('indexPage') !== null;
+        const hasHomePageClass = document.querySelector('.page.homePage') !== null;
+        const hasSectionsDiv = document.querySelector('.sections') !== null;
+        const hasPageRole = document.querySelector('[data-role="page"]') !== null;
+
+        return hasIndexPageId && hasHomePageClass && hasSectionsDiv && hasPageRole;
+    }
+
     function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
         return function() {
             var __userSettings = _userSettings;

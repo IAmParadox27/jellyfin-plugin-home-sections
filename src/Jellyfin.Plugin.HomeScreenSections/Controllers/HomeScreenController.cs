@@ -50,6 +50,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             m_applicationPaths = applicationPaths;
         }
 
+        /// <summary>
+        /// Sets appropriate cache headers based on developer mode and cache bust counter.
+        /// </summary>
+        private void SetCacheHeaders()
+        {
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
+
+            if (config.DeveloperMode)
+            {
+                // Developer mode: Force immediate cache invalidation
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+            }
+            else
+            {
+                // Normal mode: Use configured cache timeout
+                Response.Headers["Cache-Control"] = $"public, max-age={config.CacheTimeoutSeconds}";
+            }
+
+            Response.Headers["ETag"] = $"\"v{HomeScreenSectionsPlugin.Instance.Version}-c{config.CacheBustCounter}\"";
+        }
+
         [HttpGet("home-screen-sections.js")]
         [Produces("application/javascript")]
         public ActionResult GetPluginScript()
@@ -63,6 +86,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound();
             }
             
+            SetCacheHeaders();
+
             return File(stream, "application/javascript");
         }
 
@@ -79,16 +104,36 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound();
             }
             
+            SetCacheHeaders();
+
             return File(stream, "text/css");
         }
 
         [HttpGet("Configuration")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
         public ActionResult<PluginConfiguration> GetHomeScreenConfiguration()
         {
             return HomeScreenSectionsPlugin.Instance.Configuration;
         }
         
+        [HttpPost("BustCache")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult BustCache()
+        {
+            try
+            {
+                HomeScreenSectionsPlugin.Instance.BustCache();
+                var newCounter = HomeScreenSectionsPlugin.Instance.Configuration.CacheBustCounter;
+                return Ok(new { newCounter });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error busting cache: {ex.Message}");
+            }
+        }
+
         [HttpGet("Meta")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [Authorize]
@@ -134,6 +179,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
         [HttpGet("Sections")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize]
         public ActionResult<QueryResult<HomeScreenSectionInfo>> GetHomeScreenSections(
             [FromQuery] Guid? userId,
             [FromQuery] string? language)
@@ -264,6 +310,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         }
 
         [HttpGet("Section/{sectionType}")]
+        [Authorize]
         public QueryResult<BaseItemDto> GetSectionContent(
             [FromRoute] string sectionType,
             [FromQuery, Required] Guid userId,

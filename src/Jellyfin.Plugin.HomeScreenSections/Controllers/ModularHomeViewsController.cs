@@ -3,6 +3,7 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Model;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Querying;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="viewName">The view identifier.</param>
         /// <returns>View.</returns>
         [HttpGet("{viewName}")]
+        [Authorize]
         public ActionResult GetView([FromRoute] string viewName)
         {
             return ServeView(viewName);
@@ -45,6 +47,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// </summary>
         /// <returns>Array of <see cref="HomeScreenSectionInfo"/>.</returns>
         [HttpGet("Sections")]
+        [Authorize]
         public QueryResult<HomeScreenSectionInfo> GetSectionTypes()
         {
             // Todo add reading whether the section is enabled or disabled by the user.
@@ -70,6 +73,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="userId">The user ID.</param>
         /// <returns><see cref="ModularHomeUserSettings"/>.</returns>
         [HttpGet("UserSettings")]
+        [Authorize]
         public ActionResult<ModularHomeUserSettings> GetUserSettings([FromQuery] Guid userId)
         {
             IEnumerable<SectionSettings> defaultEnabledSections =
@@ -88,6 +92,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="obj">Instance of <see cref="ModularHomeUserSettings" />.</param>
         /// <returns>Status.</returns>
         [HttpPost("UserSettings")]
+        [Authorize]
         public ActionResult UpdateSettings([FromBody] ModularHomeUserSettings obj)
         {
             m_homeScreenManager.UpdateUserSettings(obj.UserId, obj);

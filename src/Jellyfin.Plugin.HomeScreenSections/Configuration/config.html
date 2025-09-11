@@ -76,7 +76,7 @@
                                 </div>
                             </div>
                         </details>
-                         <details>
+                        <details style="margin-bottom: 1em;">
                             <summary style="cursor: pointer; font-weight: bold;">Default Libraries</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
@@ -109,6 +109,43 @@
                                 </div>
                             </div>
                         </details>
+                        <details>
+                            <summary style="cursor: pointer; font-weight: bold;">Cache</summary>
+                            <div style="padding-top: 1em;">
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="txtCacheTimeoutSeconds" label="Cache Timeout (seconds)" min="0" max="604800" />
+                                    <div class="fieldDescription">How long browsers should cache plugin resources (default: 86400 = 24 hours). Set to 0 to disable caching.</div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </fieldset>
+
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer Settings</legend>
+                    <div style="padding-left: .5em;">
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
+                            <label class="emby-checkbox-label">
+                                <input id="globalDeveloperMode" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                <span>Developer Mode</span>
+                            </label>
+                            <div class="fieldDescription">Disable browser caching for plugin resources during development.</div>
+                        </div>
+                        <div style="margin-top: 1em;">
+                            <div style="display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
+                                <button type="button" id="btnBustHomeSectionsCache" class="raised button-submit emby-button">
+                                    <span>Bust Static Assets Cache</span>
+                                </button>
+                                <button type="button" id="btnBustAllCaches" class="raised emby-button" style="background-color: #2196F3;">
+                                    <span>Bust All Caches (Assets + Index)</span>
+                                </button>
+                                <span id="cacheBustStatus" style="color: #52b54b; display: none; font-weight: bold;"></span>
+                            </div>
+                            <div style="margin-top: 0.5em; font-size: 0.9em; color: #ccc;">
+                                <strong>Static Assets Cache:</strong> Clears browser cache for CSS/JS files only.<br>
+                                <strong>All Caches:</strong> Clears both static assets and index.html transformation cache.
+                            </div>
+                        </div>
                     </div>
                 </fieldset>
             </div>
@@ -198,7 +235,10 @@
 
     <script type="text/javascript">
         (() => {
+            // Plugin GUID for configuration API
             const pluginId = 'b8298e01-2697-407a-b44d-aa8dc795e850';
+            // Plugin assembly name for transformation cache system
+            const pluginAssemblyName = 'Jellyfin.Plugin.HomeScreenSections';
 
             function setupTabs() {
                 const tabs = document.querySelectorAll('.jellyfin-tab-button');
@@ -294,6 +334,8 @@
                     DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
                     DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value,
                     DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value,
+                    DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
+                    CacheTimeoutSeconds: document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || 86400,
                     SectionSettings: []
                 };
 
@@ -327,6 +369,8 @@
                         document.querySelector('[data-id=txtJellyseerrUrl]').value = config.JellyseerrUrl;
                         document.querySelector('[data-id=txtJellyseerrApiKey]').value = config.JellyseerrApiKey;
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
+                        document.querySelector('#globalDeveloperMode').checked = config.DeveloperMode;
+                        document.querySelector('[data-id=txtCacheTimeoutSeconds]').value = config.CacheTimeoutSeconds || 86400;
 
                         setTimeout(function() {
                             if (config.DefaultMoviesLibraryId) {
@@ -371,6 +415,106 @@
                 loadLibraries();
                 loadConfig();
                 document.querySelector('#btnSaveConfig').addEventListener("click", saveConfig);
+
+                // Cache bust functionality
+                const btnBustHomeSectionsCache = document.querySelector('#btnBustHomeSectionsCache');
+                const btnBustAllCaches = document.querySelector('#btnBustAllCaches');
+                const cacheBustStatus = document.getElementById('cacheBustStatus');
+
+                function showStatus(message, isError = false) {
+                    if (cacheBustStatus) {
+                        cacheBustStatus.textContent = message;
+                        cacheBustStatus.style.color = isError ? '#d32f2f' : '#52b54b';
+                        cacheBustStatus.style.display = 'inline';
+                        setTimeout(() => cacheBustStatus.style.display = 'none', 4000);
+                    }
+                }
+
+                function setButtonState(button, loading, originalText) {
+                    button.disabled = loading;
+                    button.innerHTML = loading ? '<span>Busting Cache...</span>' : `<span>${originalText}</span>`;
+                }
+
+                if (btnBustHomeSectionsCache) {
+                    btnBustHomeSectionsCache.addEventListener('click', function() {
+                        setButtonState(btnBustHomeSectionsCache, true, 'Bust Static Assets Cache');
+
+                        window.ApiClient.ajax({
+                            url: window.ApiClient.getUrl('HomeScreen/BustCache'),
+                            type: 'POST',
+                            dataType: 'json',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        }).then(response => {
+                            showStatus('Static assets cache busted successfully');
+                        }).catch(error => {
+                            console.error('Static assets cache bust error:', error);
+                            showStatus('Failed to bust static assets cache', true);
+                        }).finally(() => {
+                            setButtonState(btnBustHomeSectionsCache, false, 'Bust Static Assets Cache');
+                        });
+                    });
+                }
+
+                if (btnBustAllCaches) {
+                    btnBustAllCaches.addEventListener('click', function() {
+                        setButtonState(btnBustAllCaches, true, 'Bust All Caches (Assets + Index)');
+                        
+                        // First bust static assets cache (Home Sections)
+                        const staticAssetsPromise = window.ApiClient.ajax({
+                            url: window.ApiClient.getUrl('HomeScreen/BustCache'),
+                            type: 'POST',
+                            dataType: 'json',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        // Then bust index.html transformation cache (for home-sections plugin assembly name)
+                        const indexTransformPromise = window.ApiClient.ajax({
+                            url: window.ApiClient.getUrl('TransformationCache/bust-cache?pluginName=' + encodeURIComponent(pluginAssemblyName)),
+                            type: 'POST',
+                            dataType: 'json',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        Promise.allSettled([staticAssetsPromise, indexTransformPromise])
+                            .then(results => {
+                                const staticResult = results[0];
+                                const transformResult = results[1];
+                                
+                                let message = '';
+                                let isError = false;
+                                
+                                if (staticResult.status === 'fulfilled' && transformResult.status === 'fulfilled') {
+                                    message = 'All caches busted successfully (assets + index)';
+                                } else if (staticResult.status === 'fulfilled' && transformResult.status === 'rejected') {
+                                    console.warn('Transformation cache bust failed:', transformResult.reason);
+                                    if (transformResult.reason?.status === 404) {
+                                        message = 'Static assets cache busted - transformation plugin not found or plugin not registered';
+                                    } else {
+                                        message = 'Static assets cache busted - transformation cache failed (check console)';
+                                    }
+                                } else if (staticResult.status === 'rejected') {
+                                    console.error('Static assets cache bust failed:', staticResult.reason);
+                                    message = 'Failed to bust static assets cache';
+                                    isError = true;
+                                } else {
+                                    message = 'Cache bust completed with mixed results (check console)';
+                                }
+                                
+                                showStatus(message, isError);
+                            }).finally(() => {
+                                setButtonState(btnBustAllCaches, false, 'Bust All Caches (Assets + Index)');
+                            });
+                    });
+                }
             });
         })();
     </script>

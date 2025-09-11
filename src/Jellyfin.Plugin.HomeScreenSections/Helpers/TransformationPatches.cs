@@ -38,6 +38,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
         public static string IndexHtml(PatchRequestPayload content)
         {
             NetworkConfiguration networkConfiguration = HomeScreenSectionsPlugin.Instance.ServerConfigurationManager.GetNetworkConfiguration();
+            var pluginConfig = HomeScreenSectionsPlugin.Instance.Configuration;
 
             string rootPath = "";
             if (!string.IsNullOrWhiteSpace(networkConfiguration.BaseUrl))
@@ -45,8 +46,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                 rootPath = $"/{networkConfiguration.BaseUrl.TrimStart('/').Trim()}";
             }
             
-            string replacementText0 = $"<link rel=\"stylesheet\" href=\"{rootPath}/HomeScreen/home-screen-sections.css\" />";
-            string replacementText1 = $"<script type=\"text/javascript\" plugin=\"Jellyfin.Plugin.HomeScreenSections\" src=\"{rootPath}/HomeScreen/home-screen-sections.js\" defer></script>";
+            string pluginVersion = HomeScreenSectionsPlugin.Instance.GetCurrentPluginVersion();
+
+            string cacheParam;
+            if (pluginConfig.DeveloperMode)
+            {
+                // Developer mode: Add timestamp
+                cacheParam = $"?v={pluginVersion}&t={DateTimeOffset.UtcNow.Ticks}";
+            }
+            else
+            {
+                // Normal mode: Use version + cache bust counter
+                cacheParam = $"?v={pluginVersion}&c={pluginConfig.CacheBustCounter}";
+            }
+
+            string replacementText0 = $"<link rel=\"stylesheet\" href=\"{rootPath}/HomeScreen/home-screen-sections.css{cacheParam}\" />";
+            string replacementText1 = $"<script type=\"text/javascript\" plugin=\"Jellyfin.Plugin.HomeScreenSections\" src=\"{rootPath}/HomeScreen/home-screen-sections.js{cacheParam}\" defer></script>";
             
             return content.Contents!
                 .Replace("</head>", $"{replacementText0}</head>")
