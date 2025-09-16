@@ -19,12 +19,15 @@ namespace Jellyfin.Plugin.HomeScreenSections
         public override string Name => "Home Screen Sections";
 
         public static HomeScreenSectionsPlugin Instance { get; private set; } = null!;
+        
+        internal IServiceProvider ServiceProvider { get; set; }
     
-        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager) : base(applicationPaths, xmlSerializer)
+        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider) : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
             
             ServerConfigurationManager = serverConfigurationManager;
+            ServiceProvider = serviceProvider;
         
             string homeScreenSectionsConfigDir = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.HomeScreenSections");
             if (!Directory.Exists(homeScreenSectionsConfigDir))
