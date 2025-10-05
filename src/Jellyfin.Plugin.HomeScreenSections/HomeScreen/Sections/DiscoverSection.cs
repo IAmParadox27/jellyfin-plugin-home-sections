@@ -86,6 +86,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                 {
                                     Name = item.Value<string>("title") ?? item.Value<string>("name"),
                                     OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
+                                    Overview = item.Value<string>("overview"),
                                     SourceType = item.Value<string>("mediaType"),
                                     ProviderIds = new Dictionary<string, string>()
                                     {
