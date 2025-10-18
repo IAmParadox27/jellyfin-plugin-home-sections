@@ -183,6 +183,17 @@
                                     <input is="emby-input" type="text" data-id="txtJellyseerrPreferredLanguages" required="required" label="Discover Sections Language Filter" />
                                     <div class="fieldDescription">Preferred languages to filter for Discover section. (comma delimited)</div>
                                 </div>
+                                 <div style="margin-top: 1.5em;">
+                                     <h4 style="margin-bottom: 0.5em;">Network-Specific Discover Sections</h4>
+                                     <div class="fieldDescription" style="margin-bottom: 1em;">Enable or disable
+                                         discover sections for specific streaming networks. When enabled, a dedicated
+                                         section will appear for each network (e.g., "Discover Netflix").
+                                     </div>
+                                     <div id="jellyseerrNetworksContainer"
+                                          style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5em;">
+                                         <!-- Network checkboxes will be added here dynamically -->
+                                     </div>
+                                 </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
@@ -490,9 +501,66 @@
                 });
             }
 
+            function loadJellyseerrNetworks(networks) {
+                const container = document.querySelector('#jellyseerrNetworksContainer');
+                if (!container) {
+                    return;
+                }
+
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+
+                if (!networks || networks.length === 0) {
+                    return;
+                }
+
+                networks.forEach(function (network) {
+                    const checkboxContainer = document.createElement('div');
+                    checkboxContainer.className = 'checkboxContainer';
+                    checkboxContainer.style.marginBottom = '0.5em';
+
+                    const label = document.createElement('label');
+                    label.className = 'emby-checkbox-label';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'emby-checkbox';
+                    checkbox.setAttribute('is', 'emby-checkbox');
+                    checkbox.setAttribute('data-network-id', network.Id);
+                    checkbox.setAttribute('data-network-name', network.Name);
+                    checkbox.checked = network.Enabled;
+
+                    const span = document.createElement('span');
+                    span.textContent = network.Name;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(span);
+                    checkboxContainer.appendChild(label);
+                    container.appendChild(checkboxContainer);
+                });
+            }
+
             function saveConfig(e) {
                 e.preventDefault();
                 Dashboard.showLoadingMsg();
+
+                const networkCheckboxes = document.querySelectorAll('#jellyseerrNetworksContainer input[type="checkbox"]');
+                const networksArray = Array.from(networkCheckboxes).map(checkbox => ({
+                    Id: parseInt(checkbox.getAttribute('data-network-id')),
+                    Name: checkbox.getAttribute('data-network-name'),
+                    Enabled: checkbox.checked
+                }));
+
+                const seenIds = new Set();
+                const jellyseerrNetworks = networksArray.filter(network => {
+                    if (seenIds.has(network.Id)) {
+                        return false;
+                    }
+                    seenIds.add(network.Id);
+                    return true;
+                });
+
                 const config = {
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
                     AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
@@ -501,6 +569,7 @@
                     JellyseerrUrl: document.querySelector('[data-id=txtJellyseerrUrl]').value,
                     JellyseerrApiKey: document.querySelector('[data-id=txtJellyseerrApiKey]').value,
                     JellyseerrPreferredLanguages: document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value,
+                    JellyseerrNetworks: jellyseerrNetworks,
                     DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
                     DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
                     DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value,
@@ -548,7 +617,16 @@
                         document.querySelector('[data-id=txtJellyseerrUrl]').value = config.JellyseerrUrl;
                         document.querySelector('[data-id=txtJellyseerrApiKey]').value = config.JellyseerrApiKey;
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
-                        
+
+                        if (config.JellyseerrNetworks && config.JellyseerrNetworks.length > 0) {
+                            loadJellyseerrNetworks(config.JellyseerrNetworks);
+                        } else {
+                            const networkContainer = document.querySelector('#jellyseerrNetworksContainer');
+                            if (networkContainer) {
+                                networkContainer.innerHTML = '';
+                            }
+                        }
+
                         arrServiceConfigs.forEach(serviceConfig => {
                             loadArrConfig(serviceConfig, config);
                         });

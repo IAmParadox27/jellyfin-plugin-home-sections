@@ -28,7 +28,9 @@ public class HomeScreenSectionService
         DisplayPreferences displayPreferences = m_displayPreferencesManager.GetDisplayPreferences(userId, itemId, "emby");
         ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
 
-        List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
+        List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes()
+            .Where(x => x.Section == "DiscoverNetwork" || (settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false))
+            .ToList();
 
         List<IHomeScreenSection> sectionInstances = new List<IHomeScreenSection>();
 
@@ -133,7 +135,28 @@ public class HomeScreenSectionService
         {
             sectionInstances.AddRange(groupedSections[key]);
         }
-        
+
+        // Handle sections without SectionSettings entry (e.g., DiscoverNetwork)
+        var processedSectionIds = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
+            .Select(s => s.SectionId)
+            .Concat(homeSectionOrderTypes)
+            .ToHashSet();
+
+        foreach (var sectionType in sectionTypes.Where(s => !processedSectionIds.Contains(s.Section ?? string.Empty)))
+        {
+            if (sectionType.Limit > 1)
+            {
+                for (int i = 0; i < sectionType.Limit; ++i)
+                {
+                    sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
+                }
+            }
+            else if (sectionType.Limit == 1)
+            {
+                sectionInstances.Add(sectionType.CreateInstance(userId));
+            }
+        }
+
         return sectionInstances.Where(x => x != null).Select(x =>
         {
             HomeScreenSectionInfo info = x.AsInfo();
