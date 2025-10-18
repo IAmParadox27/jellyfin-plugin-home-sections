@@ -138,7 +138,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             var usedNetworkIds = otherInstances?
                 .Where(x => x is DiscoverNetworkSection)
                 .Select(x => x.AdditionalData)
-                .ToHashSet() ?? new HashSet<string>();
+                .Where(x => x != null)
+                .ToHashSet() ?? new HashSet<string?>();
 
             var availableNetwork = config.JellyseerrNetworks
                 .Where(n => n.Enabled && !usedNetworkIds.Contains(n.Id.ToString()))

@@ -148,7 +148,7 @@ public class HomeScreenSectionService
             {
                 for (int i = 0; i < sectionType.Limit; ++i)
                 {
-                    sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
+                    sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x != null && x.GetType() == sectionType.GetType())));
                 }
             }
             else if (sectionType.Limit == 1)
