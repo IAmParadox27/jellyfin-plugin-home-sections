@@ -97,6 +97,11 @@ public class HomeScreenSectionService
             
             Parallel.ForEach(orderedSections, sectionSettings =>
             {
+                if (!sectionSettings.IsEnabledByAdmin())
+                {
+                    return;
+                }
+                
                 IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
 
                 if (sectionType != null)
