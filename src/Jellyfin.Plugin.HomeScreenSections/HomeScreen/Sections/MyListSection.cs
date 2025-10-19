@@ -1,5 +1,6 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
@@ -203,7 +204,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				
 				if (!showPlayedItems)
 				{
-					playlistItems = playlistItems.Where(item => !item.IsPlayed(user, null));
+					playlistItems = playlistItems.Where(item => !item.IsPlayedVersionSpecific(user));
 				}
 				
 				playlistItems = playlistItems.Take(itemLimit);
