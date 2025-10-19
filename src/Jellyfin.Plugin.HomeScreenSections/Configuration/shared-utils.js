@@ -110,7 +110,7 @@
             return '<label class="emby-checkbox-label" style="width:0;">'
                 +'<input is="emby-checkbox" type="checkbox" class="emby-checkbox pluginConfig"'+base+(parseBoolean(value)?' checked':'')+'>'
                 +'<span class="checkboxLabel"></span>'
-                +'<span class="checkboxOutline"><span class="material-icons checkboxIcon checkboxIcon-checked check"></span><span class="material-icons checkboxIcon checkboxIcon-unchecked"></span></span>'
+                // +'<span class="checkboxOutline"><span class="material-icons checkboxIcon checkboxIcon-checked check"></span><span class="material-icons checkboxIcon checkboxIcon-unchecked"></span></span>'
                 +'</label>';
         }
         if(t==='dropdown'){
