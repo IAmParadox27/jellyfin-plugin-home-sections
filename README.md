@@ -98,18 +98,49 @@ This is common, particularly on a fresh install. The first thing you should try 
 
 Yep! Home Screen Sections exposes HTTP endpoints which can be used to register sections.
 
-Send an HTTP POST request to `http(s)://{YOUR_JELLYFIN_URL}/HomeScreen/RegisterSection` with data in the following structure
+Due to issues with Jellyfin's plugins being loaded into different load contexts this cannot be referenced directly.
+
+Instead you can use reflection to invoke the plugin directly to register your section.
+
+1. Prepare your payload
 ```json
 {
-	"id": "", // Unique ID for your section
-	"displayText":"", // What text should be displayed for your section
-	"limit": 1, // This can only be 1 at the moment, I am working hard to support more than 1 section via HTTP request 
-	"additionalData": "", // Any accompanying data you want sent to your endpoint
-	"resultsEndpoint":"" // The endpoint that will be requested when the section is requested. Expected to return `QueryResult<BaseItemDto>`
+    "id": "00000000-0000-0000-0000-000000000000", // Guid
+    "displayText": "", // What text should be displayed by default for your section
+    "limit": 1, // The number of times this section can appear up to
+    "route": "", // The route that should be linked on the section header, if applicable
+    "additionalData": "", // Any accompanying data you want sent to your results handler
+	"resultsAssembly": GetType().Assembly.FullName, // Example value is a string from C# that should be resolved before adding to json
+	"resultsClass": "", // The name of the class that should be invoked from the above assembly
+	"resultsMethod": "" // The name of the function that should be invoked from the above class
+}
+```
+2. Send your payload to the home screen sections assembly
+```csharp
+Assembly? homeScreenSectionsAssembly =
+	AssemblyLoadContext.All.SelectMany(x => x.Assemblies).FirstOrDefault(x =>
+		x.FullName?.Contains(".HomeScreenSections") ?? false);
+
+if (homeScreenSectionsAssembly != null)
+{
+	Type? pluginInterfaceType = homeScreenSectionsAssembly.GetType("Jellyfin.Plugin.HomeScreenSections.PluginInterface");
+
+	if (pluginInterfaceType != null)
+	{
+		pluginInterfaceType.GetMethod("RegisterSection")?.Invoke(null, new object?[] { payload });
+	}
 }
 ```
 
-### Pull Requests
-I'm open to any and all pull requests that expand the functionality of this plugin, while keeping within the scope of what its outlined to do, however if the PR includes new sections which **are not** vanilla implementations it will be rejected as the above approach is preferred.
+When your section results method is invoked you will receive an object representing the following json format (it will try to serialize it to the type you specify in the signature)
+```json
+{
+  "UserId": "", // The GUID of the user that is requesting the section
+  "AdditionalData": "" // The additional data you sent in the registration
+}
+```
 
-I don't want this plugin to bloat with lots of section types another server admin might not want, best to keep those as "plugin plugins".
+You must make sure that your section results method returns a `QueryResult<BaseItemDto>`.
+
+### Pull Requests
+I'm open to any and all pull requests that expand the functionality of this plugin, while keeping within the scope of what its outlined to do.

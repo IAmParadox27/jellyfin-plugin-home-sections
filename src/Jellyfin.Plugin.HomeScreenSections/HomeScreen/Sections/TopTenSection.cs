@@ -69,7 +69,7 @@ public class TopTenSection : IHomeScreenSection
 
         TopTenType type = Enum.Parse<TopTenType>(payload.AdditionalData ?? "Movies");
         
-        IReadOnlyList<BaseItem> items =  collection?.GetChildren(user, true) ?? new List<BaseItem>();
+        IReadOnlyList<BaseItem> items =  collection?.GetChildren(user, true, null) ?? new List<BaseItem>();
         items = items.Where(x => (x is Movie && type == TopTenType.Movies) || (x is Series && type == TopTenType.Shows)).ToList();
         
         items = items.Take(Math.Min(items.Count, 10)).ToList();

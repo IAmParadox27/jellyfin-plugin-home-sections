@@ -203,7 +203,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				
 				if (watchedItemsHandling == "Hide")
 				{
-					playlistItems = playlistItems.Where(item => !item.IsPlayed(user));
+					playlistItems = playlistItems.Where(item => !item.IsPlayed(user, null));
 				}
 				else if (watchedItemsHandling == "Remove")
 				{

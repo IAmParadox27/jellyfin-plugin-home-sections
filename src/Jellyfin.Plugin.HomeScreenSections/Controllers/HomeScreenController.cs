@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -10,6 +11,7 @@ using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller;
@@ -36,17 +38,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private readonly IDisplayPreferencesManager m_displayPreferencesManager;
         private readonly IServerApplicationHost m_serverApplicationHost;
         private readonly IApplicationPaths m_applicationPaths;
+        private readonly HomeScreenSectionService m_homeScreenSectionService;
 
         public HomeScreenController(
             IHomeScreenManager homeScreenManager,
             IDisplayPreferencesManager displayPreferencesManager,
             IServerApplicationHost serverApplicationHost,
-            IApplicationPaths applicationPaths)
+            IApplicationPaths applicationPaths,
+            HomeScreenSectionService homeScreenSectionService)
         {
             m_homeScreenManager = homeScreenManager;
             m_displayPreferencesManager = displayPreferencesManager;
             m_serverApplicationHost = serverApplicationHost;
             m_applicationPaths = applicationPaths;
+            m_homeScreenSectionService = homeScreenSectionService;
         }
 
         /// <summary>
@@ -247,160 +252,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             [FromQuery] Guid? userId,
             [FromQuery] string? language)
         {
-            string displayPreferencesId = "usersettings";
-            Guid itemId = displayPreferencesId.GetMD5();
-
-            DisplayPreferences displayPreferences = m_displayPreferencesManager.GetDisplayPreferences(userId ?? Guid.Empty, itemId, "emby");
-            ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId ?? Guid.Empty);
-
-            List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
-
-            List<IHomeScreenSection> sectionInstances = new List<IHomeScreenSection>();
-
-            List<string> homeSectionOrderTypes = new List<string>();
-            if (HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride)
-            {
-                foreach (HomeSection section in displayPreferences.HomeSections.OrderBy(x => x.Order))
-                {
-                    switch (section.Type)
-                    {
-                        case HomeSectionType.SmallLibraryTiles:
-                            homeSectionOrderTypes.Add("MyMedia");
-                            break;
-                        case HomeSectionType.Resume:
-                            homeSectionOrderTypes.Add("ContinueWatching");
-                            break;
-                        case HomeSectionType.LatestMedia:
-                            homeSectionOrderTypes.Add("LatestMovies");
-                            homeSectionOrderTypes.Add("LatestShows");
-                            break;
-                        case HomeSectionType.NextUp:
-                            homeSectionOrderTypes.Add("NextUp");
-                            break;
-                    }
-                }
-            }
-
-            foreach (string type in homeSectionOrderTypes)
-            {
-                IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
-
-                if (sectionType != null)
-                {
-                    if (sectionType.Limit > 1)
-                    {
-                        SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
-                            x.SectionId == sectionType.Section);
-
-                        Random rnd = new Random();
-                        int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
-
-                        for (int i = 0; i < instanceCount; ++i)
-                        {
-                            sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
-                        }
-                    }
-                    else if (sectionType.Limit == 1)
-                    {
-                        sectionInstances.Add(sectionType.CreateInstance(userId));
-                    }
-                }
-            }
-
-            sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
-
-            IEnumerable<IGrouping<int, SectionSettings>> groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
-                .OrderBy(x => x.OrderIndex)
-                .GroupBy(x => x.OrderIndex);
-
-            foreach (IGrouping<int, SectionSettings> orderedSections in groupedOrderedSections)
-            {
-                List<IHomeScreenSection> tmpPluginSections = new List<IHomeScreenSection>(); // we want these randomly distributed among each other.
-                
-                foreach (SectionSettings sectionSettings in orderedSections)
-                {
-                    IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
-
-                    if (sectionType != null)
-                    {
-                        if (sectionType.Limit > 1)
-                        {
-                            Random rnd = new Random();
-                            int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
-                            
-                            for (int i = 0; i < instanceCount; ++i)
-                            {
-                                IHomeScreenSection[] tmpSectionInstances = tmpPluginSections.Where(x => x?.GetType() == sectionType.GetType())
-                                    .Concat(sectionInstances.Where(x => x.GetType() == sectionType.GetType())).ToArray();
-                            
-                                tmpPluginSections.Add(sectionType.CreateInstance(userId, tmpSectionInstances));
-                            }
-                        }
-                        else if (sectionType.Limit == 1)
-                        {
-                            tmpPluginSections.Add(sectionType.CreateInstance(userId));
-                        }
-                    }
-                }
-                
-                tmpPluginSections.Shuffle();
-                
-                sectionInstances.AddRange(tmpPluginSections);
-            }
-            
-            List<HomeScreenSectionInfo> sections = sectionInstances.Where(x => x != null).Select(x =>
-            {
-                HomeScreenSectionInfo info = x.AsInfo();
-
-                SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(s => s.SectionId == info.Section);
-                info.ViewMode = sectionSettings?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
-                string? displayTextToUse = null;
-
-                if (sectionSettings != null && !string.IsNullOrEmpty(info.Section))
-                {
-                    var tempPayload = new HomeScreenSectionPayload
-                    {
-                        UserId = settings?.UserId ?? Guid.Empty,
-                        UserSettings = settings
-                    };
-                    
-                    string headerDisplay = tempPayload.GetEffectiveStringConfig(info.Section, "SectionHeaderDisplay", "ShowWithNavigation");
-                    
-                    if (headerDisplay == "Hide")
-                    {
-                        info.DisplayText = string.Empty;
-                    }
-                    else
-                    {
-                        displayTextToUse = tempPayload.GetEffectiveStringConfig(info.Section, "CustomDisplayText", "");
-                        if (!string.IsNullOrWhiteSpace(displayTextToUse))
-                        {
-                            info.DisplayText = displayTextToUse;
-                        }
-                    }
-                    
-                    // Handle route button visibility
-                    if (headerDisplay == "ShowWithoutNavigation" || headerDisplay == "Hide")
-                    {
-                        info.Route = null;
-                    }
-                }
-                else if (!string.IsNullOrWhiteSpace(displayTextToUse))
-                {
-                    info.DisplayText = displayTextToUse;
-                }
-
-                if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
-                    info.DisplayText != null)
-                {
-                    string? translatedResult = TranslationHelper.TranslateAsync(info.DisplayText, "en", language.Trim())
-                        .GetAwaiter().GetResult();
-
-                    info.DisplayText = translatedResult;
-                }
-                
-                return info;
-            }).ToList();
+            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.GetSectionsForUser(userId ?? Guid.Empty, language);
 
             return new QueryResult<HomeScreenSectionInfo>(
                 0,
@@ -668,9 +520,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         }
 
         [HttpPost("DiscoverRequest")]
+        [Authorize]
         public async Task<ActionResult> MakeDiscoverRequest([FromServices] IUserManager userManager, [FromBody] DiscoverRequestPayload payload)
         {
-            User? user = userManager.GetUserById(payload.UserId);
+            string? userIdString = User.Claims.FirstOrDefault(x => x.Type.Equals("Jellyfin-UserId", StringComparison.OrdinalIgnoreCase))?.Value;
+            Guid userId = string.IsNullOrEmpty(userIdString) ? Guid.Empty : Guid.Parse(userIdString);
+
+            if (userId == Guid.Empty)
+            {
+                return Forbid();
+            }
+            
+            User? user = userManager.GetUserById(userId);
             string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
 
             if (jellyseerrUrl == null)
@@ -682,18 +543,36 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             client.BaseAddress = new Uri(jellyseerrUrl);
             client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
             
-            HttpResponseMessage usersResponse = await client.GetAsync("/api/v1/user");
-            string userResponseRaw = await usersResponse.Content.ReadAsStringAsync();
-            int jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results").OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username).Value<int>("id");
+            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
+            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
+
+            if (jellyseerrUserId == null)
+            {
+                return BadRequest();
+            }
             
             client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
 
-            HttpResponseMessage requestResponse = await client.PostAsync("/api/v1/request", JsonContent.Create(new JellyseerrRequestPayload()
+            HttpResponseMessage requestResponse;
+            if (payload.MediaType == "tv")
             {
-                MediaType = payload.MediaType,
-                MediaId = payload.MediaId
-            }));
-
+                requestResponse = await client.PostAsync("/api/v1/request", JsonContent.Create(new JellyseerrTvShowRequestPayload
+                {
+                    MediaId = payload.MediaId,
+                    MediaType = payload.MediaType,
+                    Seasons = "all"
+                }));
+            }
+            else
+            {
+                requestResponse = await client.PostAsync("/api/v1/request", JsonContent.Create(new JellyseerrRequestPayload
+                {
+                    MediaId = payload.MediaId,
+                    MediaType = payload.MediaType
+                }));
+            }
+            
             string responseContent = await requestResponse.Content.ReadAsStringAsync();
             
             return Content(responseContent, requestResponse.Content.Headers.ContentType.MediaType);

@@ -13,146 +13,29 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-    
-    
-    
-    public class RecentlyAddedShowsSection : IHomeScreenSection
+    public class RecentlyAddedShowsSection : RecentlyAddedSectionBase
     {
-        
-        public string? Section => "RecentlyAddedShows";
+        public override string? Section => "RecentlyAddedShows";
 
-        
-        public string? DisplayText { get; set; } = "Recently Added Shows";
+        public override string? DisplayText { get; set; } = "Recently Added Shows";
 
-        
-        public int? Limit => 1;
+        public override string? Route => "tvshows";
 
-        
-        public string? Route => "tvshows";
+        public override string? AdditionalData { get; set; } = "tvshows";
 
-        
-        public string? AdditionalData { get; set; } = "tvshows";
+        protected override BaseItemKind SectionItemKind => BaseItemKind.Series;
 
-        public object? OriginalPayload { get; set; } = null;
-        
-        private readonly IUserViewManager m_userViewManager;
-        private readonly IUserManager m_userManager;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly IDtoService m_dtoService;
+        protected override CollectionType CollectionType => CollectionType.tvshows;
 
-        
-        
-        
-        
-        
-        
+        protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultTVShowsLibraryId;
+
+        protected override SectionViewMode DefaultViewMode => SectionViewMode.Landscape;
+
         public RecentlyAddedShowsSection(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
-            IDtoService dtoService)
+            IDtoService dtoService) : base(userViewManager, userManager, libraryManager, dtoService)
         {
-            m_userViewManager = userViewManager;
-            m_userManager = userManager;
-            m_libraryManager = libraryManager;
-            m_dtoService = dtoService;
-        }
-
-        
-        public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
-        {
-            User? user = m_userManager.GetUserById(payload.UserId);
-
-            DtoOptions? dtoOptions = new DtoOptions
-            {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio,
-                    ItemFields.Path
-                }
-            };
-
-            dtoOptions.ImageTypeLimit = 1;
-            dtoOptions.ImageTypes = new List<ImageType>
-            {
-                ImageType.Thumb,
-                ImageType.Backdrop,
-                ImageType.Primary,
-            };
-
-            IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
-            {
-                IncludeItemTypes = new[] { BaseItemKind.Episode },
-                OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
-                DtoOptions = new DtoOptions
-                    { Fields = new[] { ItemFields.ParentId }, EnableImages = false }
-            });
-            
-            List<BaseItem> series = episodes
-                .Where(x => !x.IsUnaired && !x.IsVirtualItem)
-                .Select(x => (x.FindParent<Series>(), (x as Episode)?.DateCreated))
-                .GroupBy(x => x.Item1)
-                .Select(x => (x.Key, x.Max(y => y.DateCreated)))
-                .OrderByDescending(x => x.Item2)
-                .Select(x => x.Key as BaseItem)
-                .Take(16)
-                .ToList();
-
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(series.ToArray(),
-                i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
-        }
-
-        
-        public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
-        {
-            User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
-
-            BaseItemDto? originalPayload = null;
-            
-            // Get only TV show collection folders that the user can access
-            var tvShowFolders = m_libraryManager.GetUserRootFolder()
-                .GetChildren(user, true)
-                .OfType<Folder>()
-                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.tvshows)
-                .ToArray();
-            
-            // Check if there's a configured default library, otherwise use first available
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var folder = !string.IsNullOrEmpty(config?.DefaultTVShowsLibraryId)
-                ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTVShowsLibraryId)
-                : null;
-            
-            // Fall back to first TV shows library if no configured library found
-            folder ??= tvShowFolders.FirstOrDefault();
-            
-            if (folder != null)
-            {
-                DtoOptions dtoOptions = new DtoOptions();
-                dtoOptions.Fields =
-                    [..dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
-
-                originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
-            }
-
-            return new RecentlyAddedShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_dtoService)
-            {
-                AdditionalData = AdditionalData,
-                DisplayText = DisplayText,
-                OriginalPayload = originalPayload
-            };
-        }
-        
-        public HomeScreenSectionInfo GetInfo()
-        {
-            return new HomeScreenSectionInfo
-            {
-                Section = Section,
-                DisplayText = DisplayText,
-                AdditionalData = AdditionalData,
-                Route = Route,
-                Limit = Limit ?? 1,
-                OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Landscape
-            };
         }
     }
 }

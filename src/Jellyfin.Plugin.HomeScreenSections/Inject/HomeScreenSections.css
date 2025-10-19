@@ -65,3 +65,48 @@
         bottom: calc(50% - 60px);
     }
 }
+
+[class*="upcoming-"][class*="-section"] .cardText-tertiary {
+    font-size: 0.9em;
+    color: var(--secondaryTextColor);
+    opacity: 0.8;
+}
+
+.upcomingShowCard .cardImageContainer,
+.upcomingMovieCard .cardImageContainer,
+.upcomingMusicCard .cardImageContainer,
+.upcomingBookCard .cardImageContainer {
+    cursor: default;
+}
+
+[class*="upcoming-"][class*="-section"] {
+    cursor: default;
+}
+
+[class*="upcoming-"][class*="-section"] .textActionButton:hover {
+    background-color: var(--hoverBackgroundColor);
+    color: var(--primaryTextColor);
+    text-decoration: none;
+    cursor: default;
+}
+
+.upcomingShowCard:before,
+.upcomingMovieCard:before,
+.upcomingMusicCard:before,
+.upcomingBookCard:before {
+    position: absolute;
+    content: 'Upcoming';
+    z-index: 1386;
+    cursor: default;
+    color: white;
+    text-transform: uppercase;
+    background-color: rgb(13 108 48 / 0.9);
+    margin-top: 7px;
+    margin-left: 7px;
+    padding: 4px 12px 4px 15px;
+    font-size: 0.8em;
+    letter-spacing: 2px;
+    border-radius: 999px;
+    border-color: rgb(74 222 128);
+    box-shadow: 0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+}

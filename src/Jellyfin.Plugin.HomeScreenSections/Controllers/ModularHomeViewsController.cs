@@ -171,6 +171,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <returns><see cref="ModularHomeUserSettings"/>.</returns>
         [HttpGet("User/Settings")] 
         [Authorize]
+        [Authorize]
         public ActionResult<ModularHomeUserSettings> GetUserSettings([FromQuery] Guid userId)
         {
             IEnumerable<SectionSettings> defaultEnabledSections =
@@ -189,6 +190,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="obj">Instance of <see cref="ModularHomeUserSettings" />.</param>
         /// <returns>Status.</returns>
         [HttpPost("User/Settings")] 
+        [Authorize]
         [Authorize]
         public ActionResult UpdateSettings([FromBody] ModularHomeUserSettings obj)
         {

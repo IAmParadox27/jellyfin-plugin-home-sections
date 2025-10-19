@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -15,6 +15,14 @@ namespace Jellyfin.Plugin.HomeScreenSections
         public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
         {
             serviceCollection.AddSingleton<CollectionManagerProxy>();
+            serviceCollection.AddSingleton<HomeScreenSectionService>();
+            serviceCollection.AddHttpClient();
+            serviceCollection.AddSingleton<HomeScreenSectionService>();
+            serviceCollection.AddSingleton<ArrApiService>(services =>
+            {
+                IHttpClientFactory httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
+                return ActivatorUtilities.CreateInstance<ArrApiService>(services, httpClientFactory.CreateClient());
+            });
             serviceCollection.AddSingleton<IHomeScreenManager, HomeScreenManager>(services =>
             {
                 IApplicationPaths appPaths = services.GetRequiredService<IApplicationPaths>();

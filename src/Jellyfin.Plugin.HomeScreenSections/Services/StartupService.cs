@@ -40,6 +40,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
+            PatchHelpers.SetupPatches();
+            
             // Look through the web path and find the file that contains `",loadSections:`
             List<JObject> payloads = new List<JObject>();
             {

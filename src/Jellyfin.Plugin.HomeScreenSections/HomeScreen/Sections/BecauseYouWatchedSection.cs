@@ -86,11 +86,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				if (user != null)
 				{
 					IEnumerable<BoxSet>? collections = CollectionManagerProxy.GetCollections(user)
-						.Where(y => y.GetChildren(user, true).OfType<Movie>().Contains(x as Movie));
+						.Where(y => y.GetChildren(user, true, null).OfType<Movie>().Contains(x as Movie));
 
 					foreach (BoxSet? collection in collections)
 					{
-						if (collection.GetChildren(user, true).OfType<Movie>().Any(y => otherInstances?.Select(z => z.AdditionalData).Contains(y.Id.ToString()) ?? true))
+						if (collection.GetChildren(user, true, null).OfType<Movie>().Any(y => otherInstances?.Select(z => z.AdditionalData).Contains(y.Id.ToString()) ?? true))
 						{
 							return false;
 						}
@@ -138,6 +138,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			BaseItem? item = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
 
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+			var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
+            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
+
 			IReadOnlyList<BaseItem>? similar = LibraryManager.GetItemList(new InternalItemsQuery(UserManager.GetUserById(payload.UserId))
 			{
 				Limit = 8,
@@ -147,7 +152,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				},
 				IsMovie = true,
 				User = user,
-				IsPlayed = showPlayedItems,
+				IsPlayed = isPlayed,
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
 			}.ApplySimilarSettings(item));
@@ -165,7 +170,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Route = Route,
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape
+				ViewMode = SectionViewMode.Landscape,
+                AllowHideWatched = true
 			};
 		}
 

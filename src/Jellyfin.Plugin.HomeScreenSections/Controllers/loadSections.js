@@ -8,10 +8,10 @@
         const hasHomePageClass = document.querySelector('.page.homePage') !== null;
         const hasSectionsDiv = document.querySelector('.sections') !== null;
         const hasPageRole = document.querySelector('[data-role="page"]') !== null;
-        
+
         return hasIndexPageId && hasHomePageClass && hasSectionsDiv && hasPageRole;
     }
-    
+
     function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
         return function() {
             var __userSettings = _userSettings;
@@ -36,9 +36,31 @@
         }
     }
     
-    function getHomeScreenSectionItemsHtmlFn(useEpisodeImages, enableOverflow, sectionKey, cardBuilder, getShapeFn, additionalSettings) {
+    function getHomeScreenSectionItemsHtmlFn(useEpisodeImages, enableOverflow, sectionKey, cardBuilder, getShapeFn, imageHelper, appRouter, additionalSettings) {
         if (sectionKey === "DiscoverMovies" || sectionKey === "DiscoverTV" || sectionKey === "Discover") {
             return createDiscoverCards;
+        }
+        
+        if (sectionKey.startsWith("Upcoming")) {
+            return createUpcomingCards;
+        }
+        
+        if (additionalSettings.ViewMode === 'Small' && sectionKey === 'MyMedia') {
+            // Currently Small is only supported by MyMedia so lets handle these items here
+            return function (items) {
+                var html = '';
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var icon = imageHelper.getLibraryIcon(item.CollectionType);
+                    html += '<a is="emby-linkbutton" href="' + appRouter.getRouteUrl(item) + '" class="raised homeLibraryButton"><span class="material-icons homeLibraryIcon ' + icon + '" aria-hidden="true"></span><span class="homeLibraryText">' + item.Name + '</span></a>';
+                }
+                return html;
+            }
+        }
+
+        if (additionalSettings.ViewMode === 'Small') {
+            // Currently Small is only supported by MyMedia so we're going to change this to Landscape to avoid any issues
+            additionalSettings.ViewMode = 'Landscape';
         }
         
         return function(items) {
@@ -73,9 +95,9 @@
             html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
             html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
-            html += '           <a target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(' + "'https://image.tmdb.org/t/p/w600_and_h900_bestv2" + item.ProviderIds.JellyseerrPoster + "'" +')"></a>';
+            html += '           <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(' + "'https://image.tmdb.org/t/p/w600_and_h900_bestv2" + item.ProviderIds.JellyseerrPoster + "'" +');color: inherit; text-decoration: none;"></a>';
             html += '           <div class="cardOverlayContainer itemAction" data-action="link">';
-            html += '               <a target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer"></a>';
+            html += '               <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer"  style="color: inherit; text-decoration: none;"></a>';
             html += '               <div class="cardOverlayButton-br flex">';
             html += '                   <button is="discover-requestbutton" type="button" data-action="none" class="discover-requestbutton cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button" data-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
             html += '                       <span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover add" aria-hidden="true"></span>';
@@ -85,7 +107,7 @@
             html += '       </div>';
             html += '       <div class="cardText cardTextCentered cardText-first">';
             html += '           <bdi>';
-            html += '               <a target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + item.Name + '" data-action="link">' + item.Name + '</a>';
+            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + item.Name + '" data-action="link">' + item.Name + '</a>';
             html += '           </bdi>';
             html += '       </div>';
             html += '       <div class="cardText cardTextCentered cardText-secondary">';
@@ -93,9 +115,93 @@
 
             var date = new Date(item.PremiereDate);
             
-            html += '               <a target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + date.getFullYear() + '</a>';
+            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + date.getFullYear() + '</a>';
             html += '           </bdi>';
             html += '       </div>';
+            html += '   </div>';
+            html += '</div>';
+            index++;
+        });
+        
+        return html;
+    }
+    
+    function createUpcomingCards(items) {
+        var html = '';
+        
+        var index = 0;
+        items.forEach(function (item) {
+            var formattedDate = item.ProviderIds.FormattedDate || '';
+            
+            // Determine content type and extract relevant data
+            var contentType, title, secondaryInfo, posterUrl, cardClass, cardScalableClass, cardShapeClass = 'overflowPortraitCard', cardPadderClass = 'cardPadder-overflowPortrait';
+
+            if (item.Type === 'Episode' || item.ProviderIds.SonarrSeriesId) {
+                contentType = 'show';
+                title = item.SeriesName || item.Name || 'Unknown Series';
+                secondaryInfo = item.ProviderIds.EpisodeInfo || '';
+                posterUrl = item.ProviderIds.SonarrPoster || '';
+                cardClass = 'upcoming-show-card';
+                cardScalableClass = 'upcomingShowCard';
+            } else if (item.Type === 'Movie' || item.ProviderIds.RadarrMovieId) {
+                contentType = 'movie';
+                title = item.Name || 'Unknown Movie';
+                posterUrl = item.ProviderIds.RadarrPoster || '';
+                cardClass = 'upcoming-movie-card';
+                cardScalableClass = 'upcomingMovieCard';
+            } else if (item.Type === 'MusicAlbum' || item.ProviderIds.LidarrArtistId) {
+                contentType = 'music';
+                title = item.Name || 'Unknown Album';
+                secondaryInfo = item.Overview || '';
+                posterUrl = item.ProviderIds.LidarrPoster || '';
+                cardClass = 'upcoming-music-card';
+                cardScalableClass = 'upcomingMusicCard';
+                cardShapeClass = 'overflowSquareCard';
+                cardPadderClass = 'cardPadder-square';
+            }
+            else if (item.Type === 'Book' || item.ProviderIds.ReadarrBookId) {
+                contentType = 'book';
+                title = item.Name || 'Unknown Book';
+                secondaryInfo = item.Overview || '';
+                posterUrl = item.ProviderIds.ReadarrPoster || '';
+                cardClass = 'upcoming-book-card';
+                cardScalableClass = 'upcomingBookCard';
+            }
+
+            html += '<div class="card ' + cardShapeClass + ' card-hoverable card-withuserdata ' + cardClass + '" data-index="' + index + '" data-content-type="' + contentType + '">';
+            html += '   <div class="cardBox cardBox-bottompadded">';
+            html += '       <div class="cardScalable ' + cardScalableClass + '">';
+            html += '           <div class="cardPadder ' + cardPadderClass + ' lazy-hidden-children"></div>';
+            
+            if (posterUrl) {
+                html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + posterUrl + '\')"></div>';
+            } else {
+                html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
+            }
+            
+            html += '       </div>';
+            html += '       <div class="cardText cardTextCentered cardText-first">';
+            html += '           <bdi>';
+            html += '               <div class="itemAction textActionButton" title="' + title + '">' + title + '</div>';
+            html += '           </bdi>';
+            html += '       </div>';
+            
+            if (secondaryInfo) {
+                html += '       <div class="cardText cardTextCentered cardText-secondary">';
+                html += '           <bdi>';
+                html += '               <div class="itemAction textActionButton" title="' + secondaryInfo + '">' + secondaryInfo + '</div>';
+                html += '           </bdi>';
+                html += '       </div>';
+            }
+            
+            if (formattedDate) {
+                html += '       <div class="cardText cardTextCentered cardText-tertiary">';
+                html += '           <bdi>';
+                html += '               <div class="itemAction textActionButton" title="' + formattedDate + '">' + formattedDate + '</div>';
+                html += '           </bdi>';
+                html += '       </div>';
+            }
+            
             html += '   </div>';
             html += '</div>';
             index++;
@@ -114,6 +220,7 @@
             var html = "";
             var layoutManager = {{layoutmanager_hook}}.A;
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
+            
             if (!layoutManager.tv && sectionInfo.Route !== undefined) {
                 var route = undefined;
                 if (sectionInfo.OriginalPayload !== undefined) {
@@ -139,10 +246,19 @@
             }
             
             html += "</div>";
-            html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
-            html += '<div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x" data-monitor="videoplayback,markplayed">';
+            
+            if (sectionInfo.ViewMode !== 'Small') {
+                html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
+                html += '<div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x animatedScrollX" data-monitor="videoplayback,markplayed">';
+            } else {
+                html += '<div is="emby-itemscontainer" class="itemsContainer padded-left padded-right vertical-wrap focuscontainer-x" data-monitor="videoplayback,markplayed">';
+            }
+            
             html += "</div>";
-            html += "</div>";
+            
+            if (sectionInfo.ViewMode !== 'Small') {
+                html += "</div>";
+            }
             elem.classList.add("hide");
             elem.innerHTML = html;
             
@@ -176,8 +292,14 @@
                 {
                     getShapeFn = getSquareShape;
                 }
+                else if (cardSettings.ViewMode === 'Backdrop')
+                {
+                    getShapeFn = getBackdropShape;
+                }
                 
-                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, cardSettings);
+                var imageHelper = b.Ay;
+                
+                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, imageHelper, p.appRouter, cardSettings);
                 itemsContainer.parentContainer = elem;
             }
         }
@@ -284,7 +406,7 @@
                             if (var44_ = param120_.sent(), options = {
                                 enableOverflow: !0
                             }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div class="verticalSection ' + var44_6 + '"></div>';
+                                for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
                                 if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
                                     for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                             }

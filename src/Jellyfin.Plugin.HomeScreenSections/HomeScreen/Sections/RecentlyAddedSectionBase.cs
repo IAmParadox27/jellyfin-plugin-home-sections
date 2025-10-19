@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -11,26 +11,34 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-    public class LatestMoviesSection : IHomeScreenSection
+    public abstract class RecentlyAddedSectionBase : IHomeScreenSection
     {
-        public string? Section => "LatestMovies";
-        
-        public string? DisplayText { get; set; } = "Latest Movies";
-        
-        public int? Limit => 1;
+        public abstract string? Section { get; }
 
-        public string? Route => "movies";
-        
-        public string? AdditionalData { get; set; }
-        
-        public object? OriginalPayload { get; set; } = null;
+        public abstract string? DisplayText { get; set; }
+
+        public virtual int? Limit => 1;
+
+        public abstract string? Route { get; }
+
+        public abstract string? AdditionalData { get; set; }
+
+        public virtual object? OriginalPayload { get; set; } = null;
+
+        protected abstract BaseItemKind SectionItemKind { get; }
+
+        protected abstract CollectionType CollectionType { get; }
+
+        protected abstract string? LibraryId { get; }
+
+        protected abstract SectionViewMode DefaultViewMode { get; }
         
         private readonly IUserViewManager m_userViewManager;
         private readonly IUserManager m_userManager;
         private readonly ILibraryManager m_libraryManager;
         private readonly IDtoService m_dtoService;
-        
-        public LatestMoviesSection(IUserViewManager userViewManager,
+
+        protected RecentlyAddedSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
             IDtoService dtoService)
@@ -40,48 +48,42 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             m_libraryManager = libraryManager;
             m_dtoService = dtoService;
         }
-        
+
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            DtoOptions? dtoOptions = new DtoOptions
+            User? user = m_userManager.GetUserById(payload.UserId);
+
+            DtoOptions dtoOptions = new DtoOptions
             {
                 Fields = new List<ItemFields>
                 {
                     ItemFields.PrimaryImageAspectRatio,
                     ItemFields.Path
+                },
+                ImageTypeLimit = 1,
+                ImageTypes = new List<ImageType>
+                {
+                    ImageType.Primary,
+                    ImageType.Thumb,
+                    ImageType.Backdrop,
                 }
             };
 
-            dtoOptions.ImageTypeLimit = 1;
-            dtoOptions.ImageTypes = new List<ImageType>
-            {
-                ImageType.Thumb,
-                ImageType.Backdrop,
-                ImageType.Primary,
-            };
-            
-            User? user = m_userManager.GetUserById(payload.UserId);
-
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
-            IReadOnlyList<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> recentlyAddedItems = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
                 {
-                    BaseItemKind.Movie
+                    SectionItemKind
                 },
                 Limit = 16,
                 OrderBy = new[]
                 {
-                    (ItemSortBy.PremiereDate, SortOrder.Descending)
+                    (ItemSortBy.DateCreated, SortOrder.Descending)
                 },
-                IsPlayed = isPlayed
+                DtoOptions = dtoOptions
             });
 
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(recentlyAddedItems.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
 
@@ -91,37 +93,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             BaseItemDto? originalPayload = null;
             
-            // Get only movie collection folders that the user can access
-            var movieFolders = m_libraryManager.GetUserRootFolder()
+            Folder[] itemFolders = m_libraryManager.GetUserRootFolder()
                 .GetChildren(user, true)
                 .OfType<Folder>()
-                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.movies)
+                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType)
                 .ToArray();
             
-            // Check if there's a configured default library, otherwise use first available
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var folder = !string.IsNullOrEmpty(config?.DefaultMoviesLibraryId)
-                ? movieFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultMoviesLibraryId)
+            Folder? folder = !string.IsNullOrEmpty(LibraryId)
+                ? itemFolders.FirstOrDefault(x => x.Id.ToString() == LibraryId)
                 : null;
             
-            // Fall back to first movies library if no configured library found
-            folder ??= movieFolders.FirstOrDefault();
+            folder ??= itemFolders.FirstOrDefault();
             
             if (folder != null)
             {
                 DtoOptions dtoOptions = new DtoOptions();
                 dtoOptions.Fields =
                     [..dtoOptions.Fields, ItemFields.PrimaryImageAspectRatio, ItemFields.DisplayPreferencesId];
-                
+
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
-            return new LatestMoviesSection(m_userViewManager, m_userManager, m_libraryManager, m_dtoService)
-            {
-                DisplayText = DisplayText,
-                AdditionalData = AdditionalData,
-                OriginalPayload = originalPayload
-            };
+            RecentlyAddedSectionBase instance = (Activator.CreateInstance(GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedSectionBase)!;
+            
+            instance.AdditionalData = AdditionalData;
+            instance.DisplayText = DisplayText;
+            instance.OriginalPayload = originalPayload;
+            
+            return instance;
         }
         
         public HomeScreenSectionInfo GetInfo()
@@ -134,8 +133,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Landscape,
-                AllowHideWatched = true
+                ViewMode = DefaultViewMode
             };
         }
     }

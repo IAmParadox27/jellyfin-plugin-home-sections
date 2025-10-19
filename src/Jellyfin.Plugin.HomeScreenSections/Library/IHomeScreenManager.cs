@@ -74,6 +74,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public object? OriginalPayload { get; set; }
         
         public bool AllowViewModeChange { get; set; } = true;
+
+        public bool AllowHideWatched { get; set; } = false;
         
         public bool? EnableByDefault { get; set; }
         

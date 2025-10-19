@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <JellyfinVersion>10.11.0-rc5</JellyfinVersion>
+        <JellyfinVersion>10.11.0-rc8</JellyfinVersion>
         <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11.0'))">net9.0</TargetFramework>
         <TargetFramework Condition="'$(JellyfinVersion)' == '10.10.7'">net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -16,6 +16,7 @@
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
+      <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
     </ItemGroup>
     
     <!-- 10.10.7 Specific Code from non 10.10.7 builds -->
@@ -25,9 +26,9 @@
     </ItemGroup>
     
     <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
-    <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0-rc5'">
-        <None Include="JellyfinVersionSpecific/10.11.0-rc5/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/10.11.0-rc5/*.cs" />
+    <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0-rc8'">
+        <None Include="JellyfinVersionSpecific/10.11.0-rc8/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/10.11.0-rc8/*.cs" />
     </ItemGroup>
 
     <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
@@ -53,14 +54,17 @@
       <None Remove="Inject\HomeScreenSections.css" />
       <EmbeddedResource Include="Inject\HomeScreenSections.css" />
     </ItemGroup>
-    
+
+    <ItemGroup>
+      <EmbeddedResource Include="$(PkgLib_Harmony)\lib\net8.0\0Harmony.dll" />
+    </ItemGroup>
     <ItemGroup>
         <None Include="..\..\README.md" />
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
     
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections')">
-        <Exec Condition="'$(JellyfinVersion)' == '10.11.0-rc5'" Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
+        <Exec Condition="'$(JellyfinVersion)' == '10.11.0-rc8'" Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
         <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />
     </Target>
 </Project>
