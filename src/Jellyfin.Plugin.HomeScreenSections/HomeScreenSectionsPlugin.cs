@@ -14,7 +14,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
     {
         internal IServerConfigurationManager ServerConfigurationManager { get; private set; }
         
-        public override Guid Id => Guid.Parse("b8298e01-2697-407a-b44d-aa8dc795e850");
+        public override Guid Id => Guid.Parse("074fa1cc-5c7a-4203-bf96-1a33d36b7de7");
 
         public override string Name => "Home Screen Sections";
 
