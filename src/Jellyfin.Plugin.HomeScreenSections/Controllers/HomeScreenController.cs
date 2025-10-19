@@ -323,7 +323,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                         pluginConfig.SectionSettings = sectionSettingsList.ToArray();
                     }
 
-                    currentSectionSettings.SetAdminConfigWithPermission<object?>(key, null, allowUserOverride: false);
+                    if (key == "EnableRewatching")
+                    {
+                        currentSectionSettings.SetAdminConfigWithPermission(key, currentSectionSettings.HideWatchedItems, allowUserOverride: false);
+                    }
+                    else
+                    {
+                        currentSectionSettings.SetAdminConfigWithPermission<object?>(key, null, allowUserOverride: false);
+                    }
+                    
                     perOptionOverrideMap[key] = false;
                     changed = true;
                 }

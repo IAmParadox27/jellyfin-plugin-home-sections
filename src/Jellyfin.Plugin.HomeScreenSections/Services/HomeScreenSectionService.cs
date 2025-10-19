@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Common.Extensions;
@@ -73,7 +74,7 @@ public class HomeScreenSectionService
 
                     for (int i = 0; i < instanceCount; ++i)
                     {
-                        sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetType() == sectionType.GetType())));
+                        sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetSectionType() == sectionType.GetSectionType())));
                     }
                 }
                 else if (sectionType.Limit == 1)
@@ -107,8 +108,8 @@ public class HomeScreenSectionService
                         
                         for (int i = 0; i < instanceCount; ++i)
                         {
-                            IHomeScreenSection[] tmpSectionInstances = tmpPluginSections.Where(x => x?.GetType() == sectionType.GetType())
-                                .Concat(sectionInstances.Where(x => x.GetType() == sectionType.GetType())).ToArray();
+                            IHomeScreenSection[] tmpSectionInstances = tmpPluginSections.Where(x => x?.GetSectionType() == sectionType.GetSectionType())
+                                .Concat(sectionInstances.Where(x => x.GetSectionType() == sectionType.GetSectionType())).ToArray();
                         
                             tmpPluginSections.Add(sectionType.CreateInstance(userId, tmpSectionInstances));
                         }

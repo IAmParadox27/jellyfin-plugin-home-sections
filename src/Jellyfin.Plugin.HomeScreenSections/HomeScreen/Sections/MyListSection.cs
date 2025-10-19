@@ -166,7 +166,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		{
 			string sortOrder = payload.GetEffectiveStringConfig(Section ?? string.Empty, "sortOrder", "Default");
 			string sortDirection = payload.GetEffectiveStringConfig(Section ?? string.Empty, "sortDirection", "Ascending");
-			string watchedItemsHandling = payload.GetEffectiveStringConfig(Section ?? string.Empty, "watchedItemsHandling", "Show");
+			bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
 			bool showPlaceholderWhenEmpty = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "showPlaceholderWhenEmpty", false);
 			int itemLimit = (int)payload.GetEffectiveDoubleConfig(Section ?? string.Empty, "itemLimit", 32.0);
 			
@@ -201,13 +201,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				
 				playlistItems = ApplySortingToItems(playlistItems, sortOrder, sortDirection, user);
 				
-				if (watchedItemsHandling == "Hide")
+				if (!showPlayedItems)
 				{
 					playlistItems = playlistItems.Where(item => !item.IsPlayed(user, null));
-				}
-				else if (watchedItemsHandling == "Remove")
-				{
-					// TODO: Implement automatic removal of watched items
 				}
 				
 				playlistItems = playlistItems.Take(itemLimit);
@@ -283,16 +279,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					userOverridable: true,
 					isAdvanced: false
 				),
-				PluginConfigurationHelper.CreateDropdown(
-					"watchedItemsHandling",
-					"Watched Items Handling",
-					"Choose how to handle items that have been watched.",
-					new[] { "Show", "Hide" },
-					new[] { "Show", "Hide" },
-					"Show",
-					userOverridable: true,
-					isAdvanced: false
-				),
 				PluginConfigurationHelper.CreateCheckbox(
 					"showPlaceholderWhenEmpty",
 					"Experimental: Show Placeholder When Empty",
@@ -311,40 +297,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					minValue: 1,
 					maxValue: 100,
 					step: 1
-				),
-				PluginConfigurationHelper.CreateTextBox(
-					"testTextBox",
-					"Test Text Box Regex",
-					"Text box",
-					defaultValue: "Defaulttextvalue",
-					userOverridable: true,
-					isAdvanced: true,
-					minLength: 16,
-					maxLength: 64,
-					pattern: "^[A-Za-z0-9_-]+$"
-				),
-				PluginConfigurationHelper.CreateTextBox(
-					"testTextBox2",
-					"Test Text Box",
-					"Text box no user override",
-					defaultValue: "Default text value",
-					userOverridable: false,
-					isAdvanced: false,
-					minLength: 16,
-					maxLength: 64
-				),
-				PluginConfigurationHelper.CreateTextBox(
-					"apiKey",
-					"Test API Key",
-					"",
-					defaultValue: "",
-					userOverridable: false,
-					isAdvanced: false,
-					placeholder: "No user override allowed, not shared to user",
-					minLength: 32,
-					maxLength: 32,
-					pattern: "^[a-f0-9]{32}$",
-					validationMessage: "API Key must be a 32-character hexadecimal string."
 				)
 			};
 		}

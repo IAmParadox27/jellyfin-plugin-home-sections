@@ -40,7 +40,7 @@ public class PatchHelpers
         }
     }
 
-    private static void Patch_Streamyfin_Configuration(ref object __result, object __instance)
+    private static void Patch_Streamyfin_Configuration(ref object result, object instance)
     {
         if (!HomeScreenSectionsPlugin.Instance.Configuration.OverrideStreamyfinHome)
         {
@@ -60,8 +60,8 @@ public class PatchHelpers
             }
         };
         
-        if (__result is ContentResult contentResult && contentResult.Content != null &&
-            __instance is ControllerBase controller)
+        if (result is ContentResult contentResult && contentResult.Content != null &&
+            instance is ControllerBase controller)
         {
             JObject parsedOutput = JObject.Parse(contentResult.Content);
             

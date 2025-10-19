@@ -117,7 +117,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
 		{
-			bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "supportsShowPlayedItems", false);
+			bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
 			User user = UserManager.GetUserById(payload.UserId)!;
 			
 			DtoOptions? dtoOptions = new DtoOptions
@@ -137,12 +137,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			};
 
 			BaseItem? item = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
-
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-			var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
+            
 			IReadOnlyList<BaseItem>? similar = LibraryManager.GetItemList(new InternalItemsQuery(UserManager.GetUserById(payload.UserId))
 			{
 				Limit = 8,
@@ -152,7 +147,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				},
 				IsMovie = true,
 				User = user,
-				IsPlayed = isPlayed,
+				IsPlayed = showPlayedItems,
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
 			}.ApplySimilarSettings(item));
@@ -172,25 +167,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				OriginalPayload = OriginalPayload,
 				ViewMode = SectionViewMode.Landscape,
                 AllowHideWatched = true
-			};
-		}
-
-		/// <summary>
-		/// Get configuration options for this section
-		/// </summary>
-		/// <returns>Collection of configuration options</returns>
-		public virtual IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
-		{
-			return new[]
-			{
-				PluginConfigurationHelper.CreateCheckbox(
-					"supportsShowPlayedItems",
-					"Enable Rewatching",
-					"Enable showing already watched episodes",
-					defaultValue: false,
-					userOverridable: true,
-					isAdvanced: false
-				)
 			};
 		}
 	}

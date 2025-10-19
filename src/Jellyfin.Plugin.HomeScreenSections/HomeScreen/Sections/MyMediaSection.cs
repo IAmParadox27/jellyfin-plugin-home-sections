@@ -16,6 +16,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
     /// </summary>
     public class MyMediaSection : IHomeScreenSection
     {
+        public bool SupportsEnableRewatching => false;
+        
         /// <inheritdoc/>
         public string Section => "MyMedia";
 

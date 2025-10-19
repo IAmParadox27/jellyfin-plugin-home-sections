@@ -1,5 +1,6 @@
 ﻿using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -49,6 +50,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
+            bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
             DtoOptions? dtoOptions = new DtoOptions
             {
                 Fields = new List<ItemFields>
@@ -68,18 +70,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
             IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { BaseItemKind.Episode },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
                     { Fields = Array.Empty<ItemFields>(), EnableImages = true },
-                IsPlayed = isPlayed
+                IsPlayed = showPlayedItems
             });
             
             List<BaseItem> series = episodes
@@ -111,8 +108,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             // Check if there's a configured default library, otherwise use first available
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var folder = !string.IsNullOrEmpty(config?.DefaultTVShowsLibraryId)
-                ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTVShowsLibraryId)
+            var folder = !string.IsNullOrEmpty(config?.DefaultTvShowsLibraryId)
+                ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTvShowsLibraryId)
                 : null;
             
             // Fall back to first TV shows library if no configured library found

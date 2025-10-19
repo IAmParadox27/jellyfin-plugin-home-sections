@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -261,34 +262,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// Private nested class that injects synthetic configuration options like CustomDisplayText and Enabled into any section.
         /// This ensures all sections have these standard options available organically at registration time.
         /// </summary>
-        private class SyntheticOptionInjector : IHomeScreenSection
+        internal class SyntheticOptionInjector : IHomeScreenSection
         {
-            private readonly IHomeScreenSection _innerSection;
-            private readonly List<PluginConfigurationOption>? _enhancedConfigurationOptions;
+            private readonly IHomeScreenSection m_innerSection;
+            private readonly List<PluginConfigurationOption>? m_enhancedConfigurationOptions;
 
             public SyntheticOptionInjector(IHomeScreenSection innerSection)
             {
-                _innerSection = innerSection ?? throw new ArgumentNullException(nameof(innerSection));
-                DisplayText = _innerSection.DisplayText;
-                AdditionalData = _innerSection.AdditionalData;
-                _enhancedConfigurationOptions = CreateEnhancedConfigurationOptions();
+                m_innerSection = innerSection ?? throw new ArgumentNullException(nameof(innerSection));
+                DisplayText = m_innerSection.DisplayText;
+                AdditionalData = m_innerSection.AdditionalData;
+                m_enhancedConfigurationOptions = CreateEnhancedConfigurationOptions();
             }
 
-            public string? Section => _innerSection.Section;
+            public string? Section => m_innerSection.Section;
             public string? DisplayText { get; set; }
-            public int? Limit => _innerSection.Limit;
-            public string? Route => _innerSection.Route;
+            public int? Limit => m_innerSection.Limit;
+            public string? Route => m_innerSection.Route;
             public string? AdditionalData { get; set; }
-            public object? OriginalPayload => _innerSection.OriginalPayload;
-
+            public object? OriginalPayload => m_innerSection.OriginalPayload;
+            
             public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
             {
-                return _innerSection.GetResults(payload, queryCollection);
+                return m_innerSection.GetResults(payload, queryCollection);
             }
 
             public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
             {
-                var innerInstance = _innerSection.CreateInstance(userId, otherInstances);
+                var innerInstance = m_innerSection.CreateInstance(userId, otherInstances);
                 if (innerInstance == null)
                 {
                     return null;
@@ -298,7 +299,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
             public HomeScreenSectionInfo GetInfo()
             {
-                return _innerSection.GetInfo();
+                return m_innerSection.GetInfo();
             }
 
             /// <summary>
@@ -307,7 +308,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             /// </summary>
             public IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
             {
-                return _enhancedConfigurationOptions ?? new List<PluginConfigurationOption>();
+                return m_enhancedConfigurationOptions ?? new List<PluginConfigurationOption>();
             }
 
             /// <summary>
@@ -316,22 +317,27 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             /// </summary>
             private List<PluginConfigurationOption> CreateEnhancedConfigurationOptions()
             {
-                var originalOptions = _innerSection.GetConfigurationOptions()?.ToList() ?? new List<PluginConfigurationOption>();
+                var originalOptions = m_innerSection.GetConfigurationOptions()?.ToList() ?? new List<PluginConfigurationOption>();
 
                 bool enabledByDefault = true;
-                var sectionInfo = _innerSection.GetInfo();
+                var sectionInfo = m_innerSection.GetInfo();
                 if (sectionInfo.EnableByDefault.HasValue)
                 {
                     enabledByDefault = sectionInfo.EnableByDefault.Value;
                 }
 
                 // Create synthetic options with section-specific defaults
-                var syntheticOptions = CreateSyntheticOptions(_innerSection.DisplayText, enabledByDefault);
+                var syntheticOptions = CreateSyntheticOptions(m_innerSection.DisplayText, enabledByDefault);
 
                 foreach (var syntheticOption in syntheticOptions)
                 {
                     if (!originalOptions.Any(o => string.Equals(o.Key, syntheticOption.Key, StringComparison.OrdinalIgnoreCase)))
                     {
+                        if (!m_innerSection.SupportsEnableRewatching && string.Equals(syntheticOption.Key, "EnableRewatching", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+                        
                         originalOptions.Insert(0, syntheticOption); // Insert at beginning for consistency
                     }
                 }
@@ -380,9 +386,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                         AllowUserOverride = true,
                         DefaultValue = enabledByDefault,
                         IsAdvanced = false
+                    },
+                    new PluginConfigurationOption
+                    {
+                        Key = "EnableRewatching",
+                        Name = "Enable Rewatching",
+                        Description = "Enable showing already watched episodes",
+                        Type = PluginConfigurationType.Checkbox,
+                        AllowUserOverride = true,
+                        DefaultValue = false,
+                        IsAdvanced = false
                     }
                 };
             }
+
+            public Type GetSectionType() => m_innerSection.GetSectionType();
         }
     }
 }

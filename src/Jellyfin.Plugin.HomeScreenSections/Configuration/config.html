@@ -16,7 +16,6 @@
                 </a>
             </div>
         </div>
-        <hr class="solid" style="margin-bottom: 1.5em;">
         <div style="margin-bottom: 1.5em;">
             <button class="jellyfin-tab-button active" data-tab="global" style="background: none; border: none; color: #fff; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid #fff; padding: 0.5em 1em;"><h3>Global Settings</h3></button>
             <button class="jellyfin-tab-button" data-tab="sections" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Section Settings</h3></button>
@@ -1060,9 +1059,9 @@
                                 return pc && pc.Key === 'Enabled';
                             });
                             if (idxEnabledSynth === -1) {
-                                configurationValues.push({ Key:'Enabled', Value: sec.Enabled, Type:'bool' });
+                                configurationValues.push({ Key:'Enabled', Value: sectionConfig.Enabled, Type:'bool' });
                             } else {
-                                configurationValues[idxEnabledSynth].Value = sec.Enabled;
+                                configurationValues[idxEnabledSynth].Value = sectionConfig.Enabled;
                             }
 
                             const masterCbForSave = row.querySelector('[data-id=chkSectionUserOverrideAllowed]');

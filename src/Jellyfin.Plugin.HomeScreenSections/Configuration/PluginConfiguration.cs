@@ -27,7 +27,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         
         public string? DefaultMoviesLibraryId { get; set; } = "";
         
-        public string? DefaultTVShowsLibraryId { get; set; } = "";
+        public string? DefaultTvShowsLibraryId { get; set; } = "";
         
         public string? DefaultMusicLibraryId { get; set; } = "";
         
@@ -137,6 +137,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         
         public SectionViewMode ViewMode { get; set; } = SectionViewMode.Landscape;
 
+        // Deprecated
         public bool HideWatchedItems { get; set; } = false;
 
         [XmlArray("PluginConfigurations")]
@@ -217,15 +218,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
             }
             
             PluginConfigurations = entries.ToArray();
-            _configLookup = null;
+            m_configLookup = null;
         }
         
         [XmlIgnore]
-        private Dictionary<string, PluginConfigurationEntry>? _configLookup;
+        private Dictionary<string, PluginConfigurationEntry>? m_configLookup;
         
         [XmlIgnore]
         private Dictionary<string, PluginConfigurationEntry> ConfigLookup => 
-            _configLookup ??= PluginConfigurations?.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase) ?? new Dictionary<string, PluginConfigurationEntry>(StringComparer.OrdinalIgnoreCase);
+            m_configLookup ??= PluginConfigurations?.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase) ?? new Dictionary<string, PluginConfigurationEntry>(StringComparer.OrdinalIgnoreCase);
         
         /// <summary>
         /// Gets whether a configuration option allows user override.
@@ -303,7 +304,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
             }
             
             PluginConfigurations = entries.ToArray();
-            _configLookup = null;
+            m_configLookup = null;
         }
 
         /// <summary>

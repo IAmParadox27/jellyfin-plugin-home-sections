@@ -27,7 +27,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected override CollectionType CollectionType => CollectionType.tvshows;
 
-        protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultTVShowsLibraryId;
+        protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultTvShowsLibraryId;
 
         protected override SectionViewMode DefaultViewMode => SectionViewMode.Landscape;
 

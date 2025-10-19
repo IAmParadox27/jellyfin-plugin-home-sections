@@ -58,7 +58,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		private IUserDataManager UserDataManager { get; set; }
 
-		private ITVSeriesManager TVSeriesManager { get; set; }
+		private ITVSeriesManager TvSeriesManager { get; set; }
 
 		private ILibraryManager LibraryManager { get; set; }
 		
@@ -77,7 +77,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			UserManager = userManager;
 			DtoService = dtoService;
 			UserDataManager = userDataManager;
-			TVSeriesManager = tvSeriesManager;
+			TvSeriesManager = tvSeriesManager;
 			LibraryManager = libraryManager;
 			CollectionManagerProxy = collectionManagerProxy;
 		}

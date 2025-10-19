@@ -27,10 +27,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             string? adminNotes = null)
         {
             // All official sections use the home-screen-sections tag
-            const string iamParadoxFeatureRequestTag = "home-screen-sections";
+            const string c_iamParadoxFeatureRequestTag = "home-screen-sections";
             
             // Build the feature request URL from the tag
-            string? featureRequestUrl = BuildFeatureRequestUrl(iamParadoxFeatureRequestTag);
+            string? featureRequestUrl = BuildFeatureRequestUrl(c_iamParadoxFeatureRequestTag);
             
             // Build VCS URLs for official IAmParadox repository
             var (repositoryUrl, issuesUrl) = BuildVcsUrls(GitHub, "IAmParadox27", "jellyfin-plugin-home-sections", true);

@@ -1,3 +1,4 @@
+using System.Data.SqlTypes;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -40,6 +41,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 
         public object? OriginalPayload { get; }
         
+        public bool SupportsEnableRewatching => true;
+        
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection);
 
         public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null);
@@ -47,6 +50,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public HomeScreenSectionInfo GetInfo();
         
         public IEnumerable<PluginConfigurationOption>? GetConfigurationOptions() => null;
+
+        public Type GetSectionType() => GetType();
     }
 
     public class HomeScreenSectionInfo

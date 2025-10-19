@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
         public ModularHomeUserSettings? UserSettings { get; set; }
 
-        private readonly Dictionary<string, object?> _pluginConfigCache = new Dictionary<string, object?>();
+        private readonly Dictionary<string, object?> m_pluginConfigCache = new Dictionary<string, object?>();
 
         /// <summary>
         /// Gets the effective configuration value with user override precedence.
@@ -29,7 +29,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
             var cacheKey = $"{sectionId}:{configurationKey}:{allowUserOverride}";
 
-            if (_pluginConfigCache.TryGetValue(cacheKey, out var cachedValue))
+            if (m_pluginConfigCache.TryGetValue(cacheKey, out var cachedValue))
             {
                 try
                 {
@@ -64,7 +64,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
             effectiveValue ??= defaultValue;
 
-            _pluginConfigCache[cacheKey] = effectiveValue;
+            m_pluginConfigCache[cacheKey] = effectiveValue;
 
             try
             {

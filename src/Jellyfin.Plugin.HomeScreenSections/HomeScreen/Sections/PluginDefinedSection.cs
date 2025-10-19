@@ -25,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public required GetResultsDelegate OnGetResults { get; set; }
         
-        private readonly List<PluginConfigurationOption>? _configurationOptions;
+        private readonly List<PluginConfigurationOption>? m_configurationOptions;
         
         public PluginDefinedSection(string sectionUuid, string displayText, SectionInfo? info = null, string? route = null, string? additionalData = null, List<PluginConfigurationOption>? configurationOptions = null, bool? enableByDefault = null)
         {
@@ -36,7 +36,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             Route = route;
             AdditionalData = additionalData;
             EnableByDefault = enableByDefault;
-            _configurationOptions = configurationOptions;
+            m_configurationOptions = configurationOptions;
         }
         
         public PluginDefinedSection(string sectionUuid, string displayText, SectionInfo? info = null, string? route = null, string? additionalData = null, string? jsonConfigurationOptions = null, bool? enableByDefault = null)
@@ -48,7 +48,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             Route = route;
             AdditionalData = additionalData;
             EnableByDefault = enableByDefault;
-            _configurationOptions = ParseJsonConfigurationOptions(jsonConfigurationOptions);
+            m_configurationOptions = ParseJsonConfigurationOptions(jsonConfigurationOptions);
         }
         
         private static List<PluginConfigurationOption>? ParseJsonConfigurationOptions(string? jsonConfigurationOptions)
@@ -130,7 +130,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         /// <returns>Collection of configuration options</returns>
         public virtual IEnumerable<PluginConfigurationOption>? GetConfigurationOptions()
         {
-            return _configurationOptions ?? Enumerable.Empty<PluginConfigurationOption>();
+            return m_configurationOptions ?? Enumerable.Empty<PluginConfigurationOption>();
         }
     }
 }

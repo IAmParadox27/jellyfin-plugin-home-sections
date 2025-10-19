@@ -1,4 +1,5 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -43,6 +44,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
+            bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
             DtoOptions? dtoOptions = new DtoOptions
             {
                 Fields = new List<ItemFields>
@@ -62,11 +64,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
             IReadOnlyList<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
@@ -78,7 +75,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 {
                     (ItemSortBy.PremiereDate, SortOrder.Descending)
                 },
-                IsPlayed = isPlayed
+                IsPlayed = showPlayedItems
             });
 
             return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
