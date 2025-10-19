@@ -318,7 +318,6 @@
                                 <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
                                 <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
                                 <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
-                                <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Hide Watched</th>
                                 <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
                                 <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
                                 <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
@@ -426,16 +425,6 @@
                 </div>
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
-                <label style="width: 0;" class="emby-checkbox-label">
-                    <input data-id="chkHideWatchedItems" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel"></span>
-                    <span class="checkboxOutline">
-                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
-                    </span>
-                </label>
-            </td>
-            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
                 <input data-id="txtSectionMinLimit" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
@@ -454,7 +443,7 @@
 
     <template id="sectionDetailsTemplate">
         <tr class="section-details-row" data-id="section-details" style="display: none;">
-            <td colspan="8" style="padding-top:6px;">
+            <td colspan="7" style="padding-top:6px;">
                 <div class="details-wrapper-panel">
                     <div class="details-outer-container" data-id="detailsBox">
                         <div class="info-card" style="display: block; padding: .7em .85em .9em; margin: .35em 0 1em; border: 1px solid rgba(255,255,255,.18); border-radius: .55em; background: rgba(0,0,0,.25);">

@@ -5,8 +5,11 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Controllers;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
+using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -30,12 +33,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly IServerApplicationHost m_serverApplicationHost;
         private readonly IApplicationPaths m_applicationPaths;
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
+        private readonly IHomeScreenManager m_homeScreenManager;
 
-        public StartupService(IServerApplicationHost serverApplicationHost, IApplicationPaths applicationPaths, ILogger<HomeScreenSectionsPlugin> logger)
+        public StartupService(IServerApplicationHost serverApplicationHost, IApplicationPaths applicationPaths, ILogger<HomeScreenSectionsPlugin> logger, IHomeScreenManager homeScreenManager)
         {
             m_serverApplicationHost = serverApplicationHost;
             m_applicationPaths = applicationPaths;
             m_logger = logger;
+            m_homeScreenManager = homeScreenManager;
         }
 
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
@@ -88,6 +93,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                         pluginInterfaceType.GetMethod("RegisterTransformation")?.Invoke(null, new object?[] { payload });
                     }
                 }
+            }
+
+            foreach (SectionSettings section in HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings)
+            {
+                // Calling this to perform migration of old configuration options if there are any left
+                HomeScreenController.GetAdminConfigurationOptions(section.SectionId, m_homeScreenManager);
             }
         }
 

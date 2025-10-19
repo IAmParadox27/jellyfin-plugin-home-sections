@@ -265,7 +265,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         public ActionResult<List<PluginConfigurationOption>> GetAdminSectionConfigurationOptions(
             [FromRoute] string sectionType)
         {
-            return GetAdminConfigurationOptions(sectionType);
+            var configOptions = GetAdminConfigurationOptions(sectionType, m_homeScreenManager);
+            
+            return configOptions == null ? NotFound("Unknown section type: " + sectionType) : Ok(configOptions); 
         }
 
         [HttpGet("User/Section/{sectionType}")]
@@ -276,14 +278,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             return GetUserConfigurationOptions(sectionType);
         }
 
-        private ActionResult<List<PluginConfigurationOption>> GetAdminConfigurationOptions(string sectionType)
+        public static List<PluginConfigurationOption>? GetAdminConfigurationOptions(string sectionType, IHomeScreenManager homeScreenManager)
         {
-            var section = m_homeScreenManager.GetSectionTypes()
+            var section = homeScreenManager.GetSectionTypes()
                 .FirstOrDefault(s => s.Section?.Equals(sectionType, StringComparison.OrdinalIgnoreCase) == true);
             
             if (section == null)
             {
-                return NotFound("Unknown section type: " + sectionType);
+                return null;
             }
             
             PluginConfigurationOption[]? intrinsicConfigurationOptions = section.GetConfigurationOptions()?.ToArray();
@@ -325,7 +327,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
                     if (key == "EnableRewatching")
                     {
-                        currentSectionSettings.SetAdminConfigWithPermission(key, currentSectionSettings.HideWatchedItems, allowUserOverride: false);
+                        currentSectionSettings.SetAdminConfigWithPermission(key, !currentSectionSettings.HideWatchedItems, allowUserOverride: false);
                     }
                     else
                     {
@@ -342,7 +344,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 HomeScreenSectionsPlugin.Instance.UpdateConfiguration(pluginConfig);
             }
 
-            return Ok(configOptionsList);
+            return configOptionsList;
         }
 
         private ActionResult<List<PluginConfigurationOption>> GetUserConfigurationOptions(string sectionType)

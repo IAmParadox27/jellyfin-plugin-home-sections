@@ -147,7 +147,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				},
 				IsMovie = true,
 				User = user,
-				IsPlayed = showPlayedItems,
+				IsPlayed = showPlayedItems ? null : showPlayedItems,
 				EnableGroupByMetadataKey = true,
 				DtoOptions = dtoOptions
 			}.ApplySimilarSettings(item));

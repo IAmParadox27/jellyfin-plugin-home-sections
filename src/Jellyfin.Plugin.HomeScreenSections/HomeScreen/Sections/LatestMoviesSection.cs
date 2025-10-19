@@ -75,7 +75,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 {
                     (ItemSortBy.PremiereDate, SortOrder.Descending)
                 },
-                IsPlayed = showPlayedItems
+                IsPlayed = showPlayedItems ? null : showPlayedItems
             });
 
             return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
