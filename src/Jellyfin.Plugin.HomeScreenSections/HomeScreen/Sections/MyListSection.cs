@@ -239,10 +239,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			{
 				Section = Section,
 				DisplayText = DisplayText,
-				Info = SectionInfoHelper.CreateOfficialSectionInfo(
-					description: "Shows items from your 'My List' playlist, similar to Netflix's My List feature.",
-					adminNotes: "Built-in section provided by the Home Screen Sections plugin."
-				),
 				AdditionalData = AdditionalData,
 				Route = Route,
 				Limit = Limit ?? 1,
