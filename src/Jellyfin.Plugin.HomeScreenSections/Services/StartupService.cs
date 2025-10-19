@@ -95,10 +95,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 }
             }
 
+            bool anyHaveIndex0 = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Any(x => x.OrderIndex == 0);
+            
             foreach (SectionSettings section in HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings)
             {
                 // Calling this to perform migration of old configuration options if there are any left
-                HomeScreenController.GetAdminConfigurationOptions(section.SectionId, m_homeScreenManager);
+                HomeScreenController.GetAdminConfigurationOptions(section.SectionId, m_homeScreenManager, anyHaveIndex0 ? 1 : 0);
             }
         }
 

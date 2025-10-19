@@ -278,7 +278,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             return GetUserConfigurationOptions(sectionType);
         }
 
-        public static List<PluginConfigurationOption>? GetAdminConfigurationOptions(string sectionType, IHomeScreenManager homeScreenManager)
+        public static List<PluginConfigurationOption>? GetAdminConfigurationOptions(string sectionType, IHomeScreenManager homeScreenManager, int orderIndexIncrease = 0)
         {
             var section = homeScreenManager.GetSectionTypes()
                 .FirstOrDefault(s => s.Section?.Equals(sectionType, StringComparison.OrdinalIgnoreCase) == true);
@@ -313,6 +313,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             }
 
             bool changed = false;
+            
+            if (currentSectionSettings != null && orderIndexIncrease > 0 && currentSectionSettings.OrderIndex < 999)
+            {
+                currentSectionSettings.OrderIndex += orderIndexIncrease;
+                changed = true;
+            }
+
             foreach (string key in configOptionsList.Select(o => o.Key).Distinct())
             {
                 if (!perOptionOverrideMap.ContainsKey(key))
