@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <JellyfinVersion>10.11.0-rc8</JellyfinVersion>
+        <JellyfinVersion>10.11.0</JellyfinVersion>
         <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11.0'))">net9.0</TargetFramework>
         <TargetFramework Condition="'$(JellyfinVersion)' == '10.10.7'">net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-        <Version>2.3.0.0</Version>
+        <Version>2.4.0.0</Version>
         <RepositoryUrl>https://github.com/IAmParadox27/jellyfin-plugin-home-sections</RepositoryUrl>
         <RepositoryType>GitHub</RepositoryType>
     </PropertyGroup>
@@ -25,12 +25,6 @@
         <Compile Remove="JellyfinVersionSpecific/10.10.7/*.cs" />
     </ItemGroup>
     
-    <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
-    <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0-rc8'">
-        <None Include="JellyfinVersionSpecific/10.11.0-rc8/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/10.11.0-rc8/*.cs" />
-    </ItemGroup>
-
     <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
     <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0'">
         <None Include="JellyfinVersionSpecific/10.11.0/*.cs" />
@@ -64,7 +58,7 @@
     </ItemGroup>
     
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections')">
-        <Exec Condition="'$(JellyfinVersion)' == '10.11.0-rc8'" Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
+        <Exec Condition="'$(JellyfinVersion)' == '10.11.0'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
         <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />
     </Target>
 </Project>
