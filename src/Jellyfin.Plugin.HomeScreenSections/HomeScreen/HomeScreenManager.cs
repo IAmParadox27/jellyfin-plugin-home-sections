@@ -373,7 +373,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                         Description = "Display a custom name for this section",
                         Type = PluginConfigurationType.TextBox,
                         AllowUserOverride = true,
-                        DefaultValue = sectionDisplayText ?? "",
+                        DefaultValue = "", // Empty means use default section display text
                         IsAdvanced = true,
                         MaxLength = 64
                     },
