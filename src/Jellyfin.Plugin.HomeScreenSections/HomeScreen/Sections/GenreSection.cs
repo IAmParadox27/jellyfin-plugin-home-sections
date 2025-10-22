@@ -103,7 +103,7 @@ public class GenreSection : IHomeScreenSection
 
         if (!m_userGenreCache.ContainsKey(userId!.Value))
         {
-            m_userGenreCache.Add(userId!.Value, GetGenresForUser(user));
+            m_userGenreCache.TryAdd(userId!.Value, GetGenresForUser(user));
         }
 
         var userGenreScores = m_userGenreCache[userId!.Value]

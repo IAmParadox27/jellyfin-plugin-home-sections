@@ -1,4 +1,5 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -33,10 +34,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         public override SectionViewMode DefaultViewMode => SectionViewMode.Landscape;
         protected override BaseItemKind SectionItemKind => BaseItemKind.Episode;
         protected override CollectionType CollectionType => CollectionType.tvshows;
-        protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultTVShowsLibraryId;
+        protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultTvShowsLibraryId;
 
         public override QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
+            bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
             DtoOptions? dtoOptions = new DtoOptions
             {
                 Fields = new List<ItemFields>
@@ -56,18 +58,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
             IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { SectionItemKind },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
                     { Fields = Array.Empty<ItemFields>(), EnableImages = true },
-                IsPlayed = isPlayed
+                IsPlayed = showPlayedItems ? null : showPlayedItems
             });
             
             List<BaseItem> series = episodes
