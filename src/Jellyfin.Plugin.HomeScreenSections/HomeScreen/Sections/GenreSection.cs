@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -28,7 +29,8 @@ public class GenreSection : IHomeScreenSection
     private readonly IUserDataManager m_userDataManager;
     private readonly IDtoService m_dtoService;
     
-    private Dictionary<Guid, (string Genre, int Score)[]> m_userGenreCache = new Dictionary<Guid, (string Genre, int Score)[]>();
+    private ConcurrentDictionary<Guid, (string Genre, int Score)[]> m_userGenreCache = new ConcurrentDictionary<Guid, (string Genre, int Score)[]>();
+    private ConcurrentDictionary<Guid, bool> m_usersWithOngoingSearches = new ConcurrentDictionary<Guid, bool>();
     
     public GenreSection(IUserManager userManager, ILibraryManager libraryManager, CollectionManagerProxy collectionManagerProxy,
         IUserDataManager userDataManager, IDtoService dtoService)
@@ -90,10 +92,13 @@ public class GenreSection : IHomeScreenSection
         
         if ((otherInstances?.Count() ?? 0) == 0)
         {
-            // If this is the "first" for this request, lets do the calculation for all of the genres and cache and ordered list to retrieve from
-            m_userGenreCache.Remove(userId!.Value);
+            // Do the heavy lifting before we add into the cache
+            (string Genre, int Score)[] genresToCache = GetGenresForUser(user);
             
-            m_userGenreCache.Add(userId!.Value, GetGenresForUser(user));
+            // If this is the "first" for this request, lets do the calculation for all of the genres and cache and ordered list to retrieve from
+            m_userGenreCache.TryRemove(userId!.Value, out _);
+            
+            m_userGenreCache.TryAdd(userId!.Value, genresToCache);
         }
 
         var userGenreScores = m_userGenreCache[userId!.Value]
@@ -154,6 +159,22 @@ public class GenreSection : IHomeScreenSection
 
     private (string Genre, int Score)[] GetGenresForUser(User user)
     {
+        if (m_usersWithOngoingSearches.ContainsKey(user.Id))
+        {
+            while (m_usersWithOngoingSearches.ContainsKey(user.Id))
+            {
+                // Pause this thread until its done with the current search
+                Thread.Sleep(100);
+            }
+
+            if (m_userGenreCache.TryGetValue(user.Id, out (string Genre, int Score)[]? cachedGenres))
+            {
+                return cachedGenres;
+            }
+        }
+        
+        m_usersWithOngoingSearches.TryAdd(user.Id, true);
+        
         int likedScore = 100;
         int favouriteScore = 150;
         int recentlyWatchedScore = 50;
@@ -282,7 +303,11 @@ public class GenreSection : IHomeScreenSection
             .Select(x => new { Genre = x.Key, Score = x.Sum(y => y.Score) })
             .ToArray();
 
-        return scoredGenres.Select(x => (x.Genre, x.Score)).ToArray();
+        var returnValue = scoredGenres.Select(x => (x.Genre, x.Score)).ToArray();
+        
+        m_usersWithOngoingSearches.TryRemove(user.Id, out _);
+        
+        return returnValue;
     }
 
     public HomeScreenSectionInfo GetInfo()
