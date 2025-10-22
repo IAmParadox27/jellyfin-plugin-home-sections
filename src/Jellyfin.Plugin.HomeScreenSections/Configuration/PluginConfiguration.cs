@@ -25,6 +25,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? DefaultMusicLibraryId { get; set; } = "";
         
         public string? DefaultBooksLibraryId { get; set; } = "";
+        
+        public string? DefaultMusicVideosLibraryId { get; set; } = "";
 
         public ArrConfig Sonarr { get; set; } = new ArrConfig { UpcomingTimeframeValue = 1, UpcomingTimeframeUnit = TimeframeUnit.Weeks };
 

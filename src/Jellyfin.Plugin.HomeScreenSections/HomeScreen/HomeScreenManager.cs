@@ -51,17 +51,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<MyMediaSection>();
             RegisterResultsDelegate<ContinueWatchingSection>();
             RegisterResultsDelegate<NextUpSection>();
+            
             RegisterResultsDelegate<RecentlyAddedMoviesSection>();
             RegisterResultsDelegate<RecentlyAddedShowsSection>();
             RegisterResultsDelegate<RecentlyAddedAlbumsSection>();
             RegisterResultsDelegate<RecentlyAddedArtistsSection>();
             RegisterResultsDelegate<RecentlyAddedBooksSection>();
             RegisterResultsDelegate<RecentlyAddedAudioBooksSection>();
+            RegisterResultsDelegate<RecentlyAddedMusicVideosSection>();
+            
             RegisterResultsDelegate<LatestMoviesSection>();
             RegisterResultsDelegate<LatestShowsSection>();
             RegisterResultsDelegate<LatestAlbumsSection>();
             RegisterResultsDelegate<LatestBooksSection>();
             RegisterResultsDelegate<LatestAudioBooksSection>();
+            RegisterResultsDelegate<LatestMusicVideoSection>();
+            
             RegisterResultsDelegate<BecauseYouWatchedSection>();
             RegisterResultsDelegate<LiveTvSection>();
             RegisterResultsDelegate<MyListSection>();
