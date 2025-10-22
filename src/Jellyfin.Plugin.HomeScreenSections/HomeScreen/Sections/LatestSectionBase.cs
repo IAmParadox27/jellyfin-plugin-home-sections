@@ -1,11 +1,9 @@
-﻿using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.TV;
 using MediaBrowser.Model.Dto;
@@ -15,40 +13,43 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-    public class LatestShowsSection : IHomeScreenSection
+    public abstract class LatestSectionBase : IHomeScreenSection
     {
-        public string? Section => "LatestShows";
+        public abstract string? Section { get; }
+        public abstract string? DisplayText { get; set; }
+        public virtual int? Limit => 1;
+        public virtual string? Route { get; } = null;
+        public virtual string? AdditionalData { get; set; }
+        public virtual object? OriginalPayload { get; set; } = null;
+        public abstract SectionViewMode DefaultViewMode { get; }
         
-        public string? DisplayText { get; set; } = "Latest Shows";
+        protected abstract BaseItemKind SectionItemKind { get; }
         
-        public int? Limit => 1;
+        protected abstract CollectionType CollectionType { get; }
         
-        public string? Route { get; }
+        protected abstract string? LibraryId { get; }
         
-        public string? AdditionalData { get; set; }
-
-        public object? OriginalPayload { get; set; } = null;
+        protected readonly IUserViewManager m_userViewManager;
+        protected readonly IUserManager m_userManager;
+        protected readonly ILibraryManager m_libraryManager;
+        protected readonly IDtoService m_dtoService;
+        protected readonly IServiceProvider m_serviceProvider;
         
-        private readonly IUserViewManager m_userViewManager;
-        private readonly IUserManager m_userManager;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly ITVSeriesManager m_tvSeriesManager;
-        private readonly IDtoService m_dtoService;
-
-        public LatestShowsSection(IUserViewManager userViewManager,
+        public LatestSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
-            ITVSeriesManager tvSeriesManager,
-            IDtoService dtoService)
+            IDtoService dtoService,
+            IServiceProvider serviceProvider)
         {
             m_userViewManager = userViewManager;
             m_userManager = userManager;
             m_libraryManager = libraryManager;
-            m_tvSeriesManager = tvSeriesManager;
             m_dtoService = dtoService;
+            
+            m_serviceProvider = serviceProvider;
         }
-        
-        public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+
+        public virtual QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
             DtoOptions? dtoOptions = new DtoOptions
@@ -57,7 +58,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 {
                     ItemFields.PrimaryImageAspectRatio,
                     ItemFields.Path
-                }
+                },
+                EnableImages = true
             };
 
             dtoOptions.ImageTypeLimit = 1;
@@ -70,26 +72,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             User? user = m_userManager.GetUserById(payload.UserId);
 
-            IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IReadOnlyList<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { BaseItemKind.Episode },
-                OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
-                DtoOptions = new DtoOptions
-                    { Fields = Array.Empty<ItemFields>(), EnableImages = true },
+                IncludeItemTypes = new[]
+                {
+                    SectionItemKind
+                },
+                Limit = 16,
+                OrderBy = new[]
+                {
+                    (ItemSortBy.PremiereDate, SortOrder.Descending)
+                },
                 IsPlayed = showPlayedItems ? null : showPlayedItems
             });
-            
-            List<BaseItem> series = episodes
-                .Where(x => !x.IsUnaired && !x.IsVirtualItem)
-                .Select(x => (x.FindParent<Series>(), (x as Episode)?.PremiereDate))
-                .GroupBy(x => x.Item1)
-                .Select(x => (x.Key, x.Max(y => y.PremiereDate)))
-                .OrderByDescending(x => x.Item2)
-                .Select(x => x.Key as BaseItem)
-                .Take(16)
-                .ToList();
-            
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(series.ToArray(),
+
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
 
@@ -99,21 +96,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             BaseItemDto? originalPayload = null;
             
-            // Get only TV show collection folders that the user can access
-            var tvShowFolders = m_libraryManager.GetUserRootFolder()
+            // Get only collection folders for the section type that the user can access
+            var libraryFolders = m_libraryManager.GetUserRootFolder()
                 .GetChildren(user, true)
                 .OfType<Folder>()
-                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType.tvshows)
+                .Where(x => (x as ICollectionFolder)?.CollectionType == CollectionType)
                 .ToArray();
             
             // Check if there's a configured default library, otherwise use first available
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var folder = !string.IsNullOrEmpty(config?.DefaultTvShowsLibraryId)
-                ? tvShowFolders.FirstOrDefault(x => x.Id.ToString() == config.DefaultTvShowsLibraryId)
+            var folder = !string.IsNullOrEmpty(LibraryId)
+                ? libraryFolders.FirstOrDefault(x => x.Id.ToString() == LibraryId)
                 : null;
             
-            // Fall back to first TV shows library if no configured library found
-            folder ??= tvShowFolders.FirstOrDefault();
+            // Fall back to first movies library if no configured library found
+            folder ??= libraryFolders.FirstOrDefault();
             
             if (folder != null)
             {
@@ -124,14 +120,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
-            return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService)
-            {
-                DisplayText = DisplayText,
-                AdditionalData = AdditionalData,
-                OriginalPayload = originalPayload
-            };
+            LatestSectionBase sectionBase = CreateInstance();
+            sectionBase.DisplayText = DisplayText;
+            sectionBase.AdditionalData = AdditionalData;
+            sectionBase.OriginalPayload = originalPayload;
+
+            return sectionBase;
         }
-        
+
         public HomeScreenSectionInfo GetInfo()
         {
             return new HomeScreenSectionInfo
@@ -142,9 +138,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Landscape,
+                ViewMode = DefaultViewMode,
                 AllowHideWatched = true
             };
         }
+        
+        protected abstract LatestSectionBase CreateInstance();
     }
 }

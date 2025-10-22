@@ -2,6 +2,9 @@ using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Common.Configuration;
@@ -49,17 +52,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<MyMediaSection>();
             RegisterResultsDelegate<ContinueWatchingSection>();
             RegisterResultsDelegate<NextUpSection>();
+            
             RegisterResultsDelegate<RecentlyAddedMoviesSection>();
             RegisterResultsDelegate<RecentlyAddedShowsSection>();
             RegisterResultsDelegate<RecentlyAddedAlbumsSection>();
             RegisterResultsDelegate<RecentlyAddedArtistsSection>();
             RegisterResultsDelegate<RecentlyAddedBooksSection>();
             RegisterResultsDelegate<RecentlyAddedAudioBooksSection>();
+            RegisterResultsDelegate<RecentlyAddedMusicVideosSection>();
+            
             RegisterResultsDelegate<LatestMoviesSection>();
             RegisterResultsDelegate<LatestShowsSection>();
             RegisterResultsDelegate<LatestAlbumsSection>();
             RegisterResultsDelegate<LatestBooksSection>();
             RegisterResultsDelegate<LatestAudioBooksSection>();
+            RegisterResultsDelegate<LatestMusicVideoSection>();
+            
             RegisterResultsDelegate<BecauseYouWatchedSection>();
             RegisterResultsDelegate<LiveTvSection>();
             RegisterResultsDelegate<MyListSection>();

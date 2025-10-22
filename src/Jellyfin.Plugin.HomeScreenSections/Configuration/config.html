@@ -217,6 +217,13 @@
                                     </select>
                                     <div class="fieldDescription">Select the specific books library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
+                                <div class="inputContainer">
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultMusicVideosLibrary">Default Music Videos Library</label>
+                                    <select is="emby-select" id="defaultMusicVideosLibrary" class="emby-select-withcolor emby-select">
+                                        <option value="">Default</option>
+                                    </select>
+                                    <div class="fieldDescription">Select the specific music videos library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
@@ -654,7 +661,8 @@
                             movies: document.querySelector('#defaultMoviesLibrary'),
                             tvshows: document.querySelector('#defaultTVShowsLibrary'),
                             music: document.querySelector('#defaultMusicLibrary'),
-                            books: document.querySelector('#defaultBooksLibrary')
+                            books: document.querySelector('#defaultBooksLibrary'),
+                            musicvideos: document.querySelector('#defaultMusicVideosLibrary')
                         };
 
                         // Clear existing options
@@ -685,6 +693,9 @@
                             }
                             if(f.CollectionType === 'books') {
                                 addOption(selects.books, f);
+                            }
+                            if(f.CollectionType === 'musicvideos') {
+                                addOption(selects.musicvideos, f);
                             }
                         });
                     }).catch(function (error) {
@@ -719,6 +730,7 @@
                             '#defaultTVShowsLibrary': config.DefaultTVShowsLibraryId,
                             '#defaultMusicLibrary': config.DefaultMusicLibraryId,
                             '#defaultBooksLibrary': config.DefaultBooksLibraryId,
+                            '#defaultMusicVideosLibrary': config.DefaultMusicVideosLibraryId,
                             
                             '#dateFormat': config.DateFormat || 'YYYY/MM/DD',
                             '#dateDelimiter': config.DateDelimiter || '/',
@@ -987,7 +999,8 @@
                         DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
                         DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value,
                         DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value,
-                        ...Object.fromEntries(HomeScreenSections.arrServiceConfigs.map(serviceConfig => [
+                        DefaultMusicVideosLibraryId: document.querySelector('#defaultMusicVideosLibrary').value,
+                    ...Object.fromEntries(HomeScreenSections.arrServiceConfigs.map(serviceConfig => [
                             serviceConfig.name,
                             HomeScreenSections.createArrConfig(serviceConfig)
                         ])),

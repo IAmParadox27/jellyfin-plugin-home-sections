@@ -7,84 +7,85 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
+namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 {
-    public class UpcomingBooksSection : UpcomingSectionBase<ReadarrCalendarDto>
+    public class UpcomingMusicSection : UpcomingSectionBase<LidarrCalendarDto>
     {
-        public override string? Section => "UpcomingBooks";
+        public override string? Section => "UpcomingMusic";
         
-        public override string? DisplayText { get; set; } = "Upcoming Books";
+        public override string? DisplayText { get; set; } = "Upcoming Music";
 
-        public UpcomingBooksSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger<UpcomingBooksSection> logger)
+        public UpcomingMusicSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger<UpcomingMusicSection> logger)
             : base(userManager, dtoService, arrApiService, logger)
         {
         }
 
         protected override (string? url, string? apiKey) GetServiceConfiguration(PluginConfiguration config)
         {
-            return (config.Readarr.Url, config.Readarr.ApiKey);
+            return (config.Lidarr.Url, config.Lidarr.ApiKey);
         }
 
         protected override (int value, TimeframeUnit unit) GetTimeframeConfiguration(PluginConfiguration config)
         {
-            return (config.Readarr.UpcomingTimeframeValue, config.Readarr.UpcomingTimeframeUnit);
+            return (config.Lidarr.UpcomingTimeframeValue, config.Lidarr.UpcomingTimeframeUnit);
         }
 
-        protected override ReadarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
+        protected override LidarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return ArrApiService.GetArrCalendarAsync<ReadarrCalendarDto>(ArrServiceType.Readarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
+            return ArrApiService.GetArrCalendarAsync<LidarrCalendarDto>(ArrServiceType.Lidarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
-        protected override IOrderedEnumerable<ReadarrCalendarDto> FilterAndSortItems(ReadarrCalendarDto[] items)
+        protected override IOrderedEnumerable<LidarrCalendarDto> FilterAndSortItems(LidarrCalendarDto[] items)
         {
             return items
                 .Where(item => item.Monitored && !item.HasFile && item.ReleaseDate.HasValue)
                 .OrderBy(item => item.ReleaseDate);
         }
 
-        protected override string GetFallbackCoverUrl(ReadarrCalendarDto missingItem)
+        protected override string GetFallbackCoverUrl(LidarrCalendarDto missingItem)
         {
-            return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\n{missingItem.Author?.AuthorName}\nImage Not Found")}";
+            return $"https://placehold.co/300x300/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\n{missingItem.Artist?.ArtistName}\nImage Not Found")}";
         }
 
-        protected override BaseItemDto CreateDto(ReadarrCalendarDto calendarItem, PluginConfiguration config)
+        protected override BaseItemDto CreateDto(LidarrCalendarDto calendarItem, PluginConfiguration config)
         {
+
             DateTime releaseDate = calendarItem.ReleaseDate ?? DateTime.Now;
             string countdownText = CalculateCountdown(releaseDate, config);
 
-            ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
+            ArrImageDto? albumImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));
 
             Dictionary<string, string> providerIds = new Dictionary<string, string>
             {
-                { "ReadarrBookId", calendarItem.Id.ToString() },
+                { "LidarrAlbumId", calendarItem.Id.ToString() },
                 { "FormattedDate", countdownText },
-                { "ReadarrPoster", posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem) }
+                { "LidarrPoster", albumImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem) }
             };
 
             return new BaseItemDto
             {
                 Id = Guid.NewGuid(),
-                Name = calendarItem.Title ?? "Unknown Book",
-                Overview = (calendarItem.Author?.AuthorName ?? "Unknown Author") + (string.IsNullOrEmpty(calendarItem.SeriesTitle) ? "" : " - " + calendarItem.SeriesTitle),
+                Name = calendarItem.Title ?? "Unknown Album",
+                Overview = $"{calendarItem.Artist?.ArtistName ?? "Unknown Artist"} - {calendarItem.AlbumType}",
                 PremiereDate = calendarItem.ReleaseDate,
-                Type = BaseItemKind.Book,
+                Type = BaseItemKind.MusicAlbum,
                 ProviderIds = providerIds,
                 UserData = new UserItemDataDto
                 {
-                    Key = $"upcoming-book-{calendarItem.Id}",
+                    Key = $"upcoming-album-{calendarItem.Id}",
                     PlaybackPositionTicks = 0,
                     IsFavorite = false,
                 }
             };
         }
 
-        protected override string GetServiceName() => "Readarr";
-        protected override string GetSectionName() => "upcoming books";
+        protected override string GetServiceName() => "Lidarr";
+        protected override string GetSectionName() => "upcoming music";
 
         public override IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
         {
-            return new UpcomingBooksSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingBooksSection>)Logger)
+            return new UpcomingMusicSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingMusicSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
@@ -102,9 +103,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Portrait,
+                ViewMode = SectionViewMode.Square,
                 AllowViewModeChange = false,
-                ContainerClass = "upcoming-books-section"
+                ContainerClass = "upcoming-music-section"
             };
         }
     }

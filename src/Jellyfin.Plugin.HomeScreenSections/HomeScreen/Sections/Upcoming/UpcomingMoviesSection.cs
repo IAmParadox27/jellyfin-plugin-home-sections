@@ -7,7 +7,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
+namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 {
     public class UpcomingMoviesSection : UpcomingSectionBase<RadarrCalendarDto>
     {

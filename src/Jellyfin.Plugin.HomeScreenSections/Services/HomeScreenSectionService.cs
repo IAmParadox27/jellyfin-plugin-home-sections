@@ -24,67 +24,67 @@ public class HomeScreenSectionService
     
     public List<HomeScreenSectionInfo> GetSectionsForUser(Guid userId, string? language)
     {
-        string displayPreferencesId = "usersettings";
-        Guid itemId = displayPreferencesId.GetMD5();
-
-        DisplayPreferences displayPreferences = m_displayPreferencesManager.GetDisplayPreferences(userId, itemId, "emby");
+        // string displayPreferencesId = "usersettings";
+        // Guid itemId = displayPreferencesId.GetMD5();
+        //
+        // DisplayPreferences displayPreferences = m_displayPreferencesManager.GetDisplayPreferences(userId, itemId, "emby");
         ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
 
         List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
 
         List<IHomeScreenSection> sectionInstances = new List<IHomeScreenSection>();
 
-        List<string> homeSectionOrderTypes = new List<string>();
-        if (HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride)
-        {
-            foreach (HomeSection section in displayPreferences.HomeSections.OrderBy(x => x.Order))
-            {
-                switch (section.Type)
-                {
-                    case HomeSectionType.SmallLibraryTiles:
-                        homeSectionOrderTypes.Add("MyMedia");
-                        break;
-                    case HomeSectionType.Resume:
-                        homeSectionOrderTypes.Add("ContinueWatching");
-                        break;
-                    case HomeSectionType.LatestMedia:
-                        homeSectionOrderTypes.Add("LatestMovies");
-                        homeSectionOrderTypes.Add("LatestShows");
-                        break;
-                    case HomeSectionType.NextUp:
-                        homeSectionOrderTypes.Add("NextUp");
-                        break;
-                }
-            }
-        }
+        // List<string> homeSectionOrderTypes = new List<string>();
+        // if (HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride)
+        // {
+        //     foreach (HomeSection section in displayPreferences.HomeSections.OrderBy(x => x.Order))
+        //     {
+        //         switch (section.Type)
+        //         {
+        //             case HomeSectionType.SmallLibraryTiles:
+        //                 homeSectionOrderTypes.Add("MyMedia");
+        //                 break;
+        //             case HomeSectionType.Resume:
+        //                 homeSectionOrderTypes.Add("ContinueWatching");
+        //                 break;
+        //             case HomeSectionType.LatestMedia:
+        //                 homeSectionOrderTypes.Add("LatestMovies");
+        //                 homeSectionOrderTypes.Add("LatestShows");
+        //                 break;
+        //             case HomeSectionType.NextUp:
+        //                 homeSectionOrderTypes.Add("NextUp");
+        //                 break;
+        //         }
+        //     }
+        // }
 
-        foreach (string type in homeSectionOrderTypes)
-        {
-            IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
-
-            if (sectionType != null)
-            {
-                if (sectionType.Limit > 1)
-                {
-                    SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
-                        x.SectionId == sectionType.Section);
-
-                    Random rnd = new Random();
-                    int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
-
-                    for (int i = 0; i < instanceCount; ++i)
-                    {
-                        sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetSectionType() == sectionType.GetSectionType())));
-                    }
-                }
-                else if (sectionType.Limit == 1)
-                {
-                    sectionInstances.Add(sectionType.CreateInstance(userId));
-                }
-            }
-        }
-
-        sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
+        // foreach (string type in homeSectionOrderTypes)
+        // {
+        //     IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == type);
+        //
+        //     if (sectionType != null)
+        //     {
+        //         if (sectionType.Limit > 1)
+        //         {
+        //             SectionSettings? sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x =>
+        //                 x.SectionId == sectionType.Section);
+        //
+        //             Random rnd = new Random();
+        //             int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0, sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
+        //
+        //             for (int i = 0; i < instanceCount; ++i)
+        //             {
+        //                 sectionInstances.Add(sectionType.CreateInstance(userId, sectionInstances.Where(x => x.GetSectionType() == sectionType.GetSectionType())));
+        //             }
+        //         }
+        //         else if (sectionType.Limit == 1)
+        //         {
+        //             sectionInstances.Add(sectionType.CreateInstance(userId));
+        //         }
+        //     }
+        // }
+        //
+        // sectionTypes.RemoveAll(x => homeSectionOrderTypes.Contains(x.Section ?? string.Empty));
 
         IEnumerable<IGrouping<int, SectionSettings>> groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
             .OrderBy(x => x.OrderIndex)

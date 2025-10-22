@@ -81,7 +81,8 @@ namespace Jellyfin.Plugin.HomeScreenSections
             yield return new PluginPageInfo
             {
                 Name = Name,
-                EmbeddedResourcePath = $"{prefix}.Configuration.config.html"
+                EmbeddedResourcePath = $"{prefix}.Configuration.config.html",
+                EnableInMainMenu = true
             };
         }
 
