@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming;
 using Jellyfin.Plugin.HomeScreenSections.Library;

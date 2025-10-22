@@ -1,6 +1,4 @@
-﻿using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.HomeScreenSections.Configuration;
-using Jellyfin.Plugin.HomeScreenSections.Library;
+﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -12,7 +10,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
 
-namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
+namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
 {
     public class LatestShowsSection : LatestSectionBase
     {
