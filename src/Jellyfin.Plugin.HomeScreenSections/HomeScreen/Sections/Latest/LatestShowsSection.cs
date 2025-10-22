@@ -83,5 +83,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             return new QueryResult<BaseItemDto>(Array.ConvertAll(series.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
+        
+        protected override LatestSectionBase CreateInstance()
+        {
+            return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService, m_serviceProvider);
+        }
     }
 }

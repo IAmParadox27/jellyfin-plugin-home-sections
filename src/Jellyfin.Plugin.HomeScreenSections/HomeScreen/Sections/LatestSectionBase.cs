@@ -32,9 +32,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected readonly IUserManager m_userManager;
         protected readonly ILibraryManager m_libraryManager;
         protected readonly IDtoService m_dtoService;
+        protected readonly IServiceProvider m_serviceProvider;
         
-        private readonly IServiceProvider m_serviceProvider;
-
         public LatestSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
@@ -124,7 +123,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
-            LatestSectionBase sectionBase = (Activator.CreateInstance(GetType(), m_serviceProvider) as LatestSectionBase)!;
+            LatestSectionBase sectionBase = CreateInstance();
             sectionBase.DisplayText = DisplayText;
             sectionBase.AdditionalData = AdditionalData;
             sectionBase.OriginalPayload = originalPayload;
@@ -146,5 +145,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 AllowHideWatched = true
             };
         }
+        
+        protected abstract LatestSectionBase CreateInstance();
     }
 }

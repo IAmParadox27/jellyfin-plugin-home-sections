@@ -27,5 +27,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             IServiceProvider serviceProvider) : base(userViewManager, userManager, libraryManager, dtoService, serviceProvider)
         {
         }
+        
+        protected override LatestSectionBase CreateInstance()
+        {
+            return new LatestMoviesSection(m_userViewManager, m_userManager, m_libraryManager, m_dtoService, m_serviceProvider);
+        }
     }
 }
