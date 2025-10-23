@@ -297,7 +297,6 @@ public class GenreSection : IHomeScreenSection
                 BaseItemKind.Movie
             },
             User = user,
-            IsDeadGenre = false,
             EnableTotalRecordCount = false,
             Recursive = true,
             ParentId = Guid.Parse(x.ItemId)
