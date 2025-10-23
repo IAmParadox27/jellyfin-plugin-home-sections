@@ -16,6 +16,7 @@
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
+      <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinVersion)" />
       <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
     </ItemGroup>
     
