@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -68,21 +69,32 @@ public class GenreSection : IHomeScreenSection
             }
         };
         
-        InternalItemsQuery? genreMovies = new InternalItemsQuery(user)
-        {
-            IncludeItemTypes = new[]
-            {
-                BaseItemKind.Movie
-            },
-            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-            Limit = 16,
-            ParentId = Guid.Empty,
-            Recursive = true,
-            DtoOptions = dtoOptions,
-            Genres = new List<string> { genre.Name }
-        };
+        VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+            .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+            .ToArray();
 
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(m_libraryManager.GetItemList(genreMovies), dtoOptions, user));
+        var movies = folders.SelectMany(x =>
+        {
+            InternalItemsQuery? genreMovies = new InternalItemsQuery(user)
+            {
+                IncludeItemTypes = new[]
+                {
+                    BaseItemKind.Movie
+                },
+                OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
+                ParentId = Guid.Parse(x.ItemId),
+                Recursive = true,
+                Limit = 24,
+                DtoOptions = dtoOptions,
+                Genres = new List<string> { genre.Name }
+            };
+
+            return m_libraryManager.GetItemList(genreMovies);
+        }).GroupBy(x => x.Id).Select(x => x.First()).ToList();
+        
+        movies.Shuffle();
+        
+        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(movies.Take(16).ToArray(), dtoOptions, user));
     }
 
     public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
