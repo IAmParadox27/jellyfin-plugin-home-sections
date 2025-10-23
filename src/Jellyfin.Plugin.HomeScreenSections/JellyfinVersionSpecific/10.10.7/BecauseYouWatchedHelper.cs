@@ -10,6 +10,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific
     {
         public static InternalItemsQuery ApplySimilarSettings(this InternalItemsQuery query, BaseItem item)
         {
+            query.IsMovie = true;
+            query.EnableGroupByMetadataKey = true;
             query.SimilarTo = item;
 
             return query;

@@ -164,10 +164,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			            BaseItemKind.Movie
 		            },
 		            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-		            IsMovie = true,
 		            User = user,
 		            IsPlayed = isPlayed,
-		            EnableGroupByMetadataKey = true,
 		            DtoOptions = dtoOptions,
 		            Limit = 24,
 		            Recursive = true,
