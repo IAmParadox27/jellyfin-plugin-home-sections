@@ -1,0 +1,84 @@
+name: Bug report
+title: ""
+description: Open a bug
+projects: []
+labels:
+  - Bug
+body:
+  - type: markdown
+    attributes:
+      value: "## Bug Report"
+  - type: checkboxes
+    id: checkboxes-1
+    attributes:
+      label: Affirmations
+      description: All checkboxes are required
+      options:
+        - label: I have checked there are no existing issues open or closed my issue would
+            duplicate
+        - label: I have read the FAQ section on the readme and confirm my issue doesn’t
+            relate to any steps there or those steps didn’t work
+    validations:
+      required: false
+  - type: input
+    id: input-2
+    attributes:
+      label: Description
+      description: "Please explain the bug you’re experiencing "
+    validations:
+      required: true
+  - type: input
+    id: input-3
+    attributes:
+      label: Reproduction Steps
+      description: Please explain how this can be reproduced
+  - type: input
+    id: input-4
+    attributes:
+      label: Expected Behaviour
+      description: Please describe how you would expect the plugin to behave
+    validations:
+      required: true
+  - type: input
+    id: input-5
+    attributes:
+      label: Server Version
+      description: Please enter the version of your Jellyfin server
+      placeholder: E.g. 10.10.7
+    validations:
+      required: true
+  - type: input
+    id: input-6
+    attributes:
+      label: Server OS
+      description: Please enter the OS your server is running on and any other
+        relevant information such as containerization method
+      placeholder: E.g. Debian docker container
+    validations:
+      required: true
+  - type: input
+    id: input-7
+    attributes:
+      label: Plugin Version
+      description: "Please enter the version of the plugin in use "
+      placeholder: E.g. 2.4.2.0
+    validations:
+      required: true
+  - type: input
+    id: input-8
+    attributes:
+      label: File Transformation Version
+      description: Please enter the version of File Transformation being used
+      placeholder: E.g. 2.4.0.0
+    validations:
+      required: true
+  - type: input
+    id: input-9
+    attributes:
+      label: Additional information
+      description: Any other relevant information
+  - type: input
+    id: input-10
+    attributes:
+      label: Screenshots
+      description: If relevant please upload your screenshots here
