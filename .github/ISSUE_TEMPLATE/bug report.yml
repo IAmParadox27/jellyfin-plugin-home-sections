@@ -20,20 +20,20 @@ body:
             relate to any steps there or those steps didn’t work
     validations:
       required: false
-  - type: input
-    id: input-2
+  - type: textarea
+    id: textarea-2
     attributes:
       label: Description
       description: "Please explain the bug you’re experiencing "
     validations:
       required: true
-  - type: input
-    id: input-3
+  - type: textarea
+    id: textarea-3
     attributes:
       label: Reproduction Steps
       description: Please explain how this can be reproduced
-  - type: input
-    id: input-4
+  - type: textarea
+    id: textarea-4
     attributes:
       label: Expected Behaviour
       description: Please describe how you would expect the plugin to behave
@@ -72,13 +72,13 @@ body:
       placeholder: E.g. 2.4.0.0
     validations:
       required: true
-  - type: input
-    id: input-9
+  - type: textarea
+    id: textarea-9
     attributes:
       label: Additional information
       description: Any other relevant information
-  - type: input
-    id: input-10
+  - type: textarea
+    id: textarea-10
     attributes:
       label: Screenshots
       description: If relevant please upload your screenshots here
