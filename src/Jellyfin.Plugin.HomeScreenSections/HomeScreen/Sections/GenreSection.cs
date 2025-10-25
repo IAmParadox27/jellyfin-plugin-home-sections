@@ -121,6 +121,11 @@ public class GenreSection : IHomeScreenSection
             m_userGenreCache.TryAdd(userId!.Value, genresToCache);
         }
 
+        if (!m_userGenreCache.ContainsKey(userId!.Value))
+        {
+            m_userGenreCache.TryAdd(userId.Value, Array.Empty<(string Genre, int Score)>());
+        }
+
         (string Genre, int Score)[] userGenreScores = m_userGenreCache[userId!.Value]
             .Where(x => !(otherInstancesArray?.Any(y => y.AdditionalData == x.Genre) ?? false))
             .ToArray();
