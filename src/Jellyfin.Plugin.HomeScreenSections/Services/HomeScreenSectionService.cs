@@ -3,7 +3,6 @@ using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
-using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Services;
@@ -91,7 +90,7 @@ public class HomeScreenSectionService
         ConcurrentDictionary<int, List<IHomeScreenSection>> groupedSections = new ConcurrentDictionary<int, List<IHomeScreenSection>>();
         Parallel.ForEach(groupedOrderedSections, orderedSections =>
         {
-            ConcurrentBag<IHomeScreenSection> tmpPluginSections = new ConcurrentBag<IHomeScreenSection>(); // we want these randomly distributed among each other.
+            ConcurrentBag<IHomeScreenSection?> tmpPluginSections = new ConcurrentBag<IHomeScreenSection?>(); // we want these randomly distributed among each other.
 
             Parallel.ForEach(orderedSections, sectionSettings =>
             {
@@ -103,17 +102,16 @@ public class HomeScreenSectionService
                     if (sectionType.Limit > 1)
                     {
                         Random rnd = new Random();
-                        int instanceCount = rnd.Next(sectionSettings?.LowerLimit ?? 0,
-                            sectionSettings?.UpperLimit ?? sectionType.Limit ?? 1);
+                        int instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
 
                         for (int i = 0; i < instanceCount; ++i)
                         {
-                            IHomeScreenSection[] tmpSectionInstances = tmpPluginSections
+                            IHomeScreenSection?[] tmpSectionInstances = tmpPluginSections
                                 .Where(x => x?.GetType() == sectionType.GetType())
                                 .Concat(sectionInstances.Where(x => x.GetType() == sectionType.GetType()))
                                 .ToArray();
 
-                            tmpPluginSections.Add(sectionType.CreateInstance(userId, tmpSectionInstances));
+                            tmpPluginSections.Add(sectionType.CreateInstance(userId, tmpSectionInstances.Where(x => x != null).Select(x => x!)));
                         }
                     }
                     else if (sectionType.Limit == 1)
@@ -123,13 +121,13 @@ public class HomeScreenSectionService
                 }
             });
 
-            var sectionList = tmpPluginSections.ToList();
+            List<IHomeScreenSection> sectionList = tmpPluginSections.Where(x => x != null).Select(x => x!).ToList();
             sectionList.Shuffle();
 
             groupedSections.TryAdd(orderedSections.Key, sectionList);
         });
 
-        foreach (var key in groupedSections.Keys.OrderBy(x => x))
+        foreach (int key in groupedSections.Keys.OrderBy(x => x))
         {
             sectionInstances.AddRange(groupedSections[key]);
         }
@@ -138,7 +136,7 @@ public class HomeScreenSectionService
         {
             HomeScreenSectionInfo info = x.AsInfo();
 
-            info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(x => x.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+            info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => y.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
             
             if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
                 info.DisplayText != null)

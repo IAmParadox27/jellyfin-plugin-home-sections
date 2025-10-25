@@ -97,7 +97,7 @@ public class GenreSection : IHomeScreenSection
         return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(movies.Take(16).ToArray(), dtoOptions, user));
     }
 
-    public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+    public IHomeScreenSection? CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
     {
         User? user = userId is null || userId.Value.Equals(default)
             ? null
@@ -108,7 +108,9 @@ public class GenreSection : IHomeScreenSection
             throw new Exception();
         }
         
-        if ((otherInstances?.Count() ?? 0) == 0)
+        IHomeScreenSection[]? otherInstancesArray = otherInstances?.ToArray();
+        
+        if ((otherInstancesArray?.Length ?? 0) == 0)
         {
             // Do the heavy lifting before we add into the cache
             (string Genre, int Score)[] genresToCache = GetGenresForUser(user);
@@ -119,9 +121,14 @@ public class GenreSection : IHomeScreenSection
             m_userGenreCache.TryAdd(userId!.Value, genresToCache);
         }
 
-        var userGenreScores = m_userGenreCache[userId!.Value]
-            .Where(x => !otherInstances.Any(y => y.AdditionalData == x.Genre))
+        (string Genre, int Score)[] userGenreScores = m_userGenreCache[userId!.Value]
+            .Where(x => !(otherInstancesArray?.Any(y => y.AdditionalData == x.Genre) ?? false))
             .ToArray();
+
+        if (userGenreScores.Length == 0)
+        {
+            return null;
+        }
         
         int totalScore = userGenreScores.Sum(x => x.Score);
         Random rnd = new Random();
@@ -143,7 +150,7 @@ public class GenreSection : IHomeScreenSection
             }
             else
             {
-                foreach (var userGenre in userGenreScores)
+                foreach ((string Genre, int Score) userGenre in userGenreScores)
                 {
                     randomScore -= userGenre.Score;
 
@@ -160,7 +167,7 @@ public class GenreSection : IHomeScreenSection
                 }
             }
 
-            if (!otherInstances.Any(x => x.AdditionalData == selectedGenre))
+            if (!(otherInstancesArray?.Any(x => x.AdditionalData == selectedGenre) ?? false))
             {
                 foundNew = true;
             }
