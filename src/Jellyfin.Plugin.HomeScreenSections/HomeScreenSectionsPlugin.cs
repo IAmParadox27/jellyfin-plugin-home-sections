@@ -1,4 +1,6 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using System.Reflection;
+using System.Runtime.Loader;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
@@ -55,6 +57,11 @@ namespace Jellyfin.Plugin.HomeScreenSections
 
             if (!config.Value<JArray>("pages")!.Any(x => x.Value<string>("Id") == typeof(HomeScreenSectionsPlugin).Namespace))
             {
+                Assembly? pluginPagesAssembly = AssemblyLoadContext.All.SelectMany(x => x.Assemblies).FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.PluginPages") ?? false);
+                
+                Version earliestVersionWithSubUrls = new Version("2.4.1.0");
+                bool supportsSubUrls = pluginPagesAssembly != null && pluginPagesAssembly.GetName().Version >= earliestVersionWithSubUrls;
+                
                 string rootUrl = ServerConfigurationManager.GetNetworkConfiguration().BaseUrl.TrimStart('/').Trim();
                 if (!string.IsNullOrEmpty(rootUrl))
                 {
@@ -64,7 +71,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 config.Value<JArray>("pages")!.Add(new JObject
                 {
                     { "Id", typeof(HomeScreenSectionsPlugin).Namespace },
-                    { "Url", $"{rootUrl}/ModularHomeViews/settings" },
+                    { "Url", $"{(supportsSubUrls ? "" : rootUrl)}/ModularHomeViews/settings" },
                     { "DisplayText", "Modular Home" },
                     { "Icon", "ballot" }
                 });
