@@ -104,50 +104,79 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			List<BaseItem> results = new List<BaseItem>();
 
 			{
-				IEnumerable<BaseItem> collections = CollectionManagerProxy.GetCollections(user)
-					.Where(x => x.IsPlayedVersionSpecific(user))
-					.Select(x =>
+				var boxSets = LibraryManager.GetItemList(new InternalItemsQuery(user)
+				{
+					IncludeItemTypes = new[]
 					{
-						IReadOnlyList<BaseItem>? children = x.GetChildren(user, true, null);
+						BaseItemKind.BoxSet
+					},
+					Recursive = true,
+					IsPlayed = true
+				}).Cast<BoxSet>();
+				
+				var collections = boxSets.Select(x =>
+				{
+					IReadOnlyList<BaseItem>? children = x.GetChildren(user, true, new InternalItemsQuery(user)
+					{
+						Recursive = true,
+						IsPlayed = true,
+					});
 
-						if (children.Count(y => y is Movie) > 1)
-						{
-							return children.OfType<Movie>().OrderBy(y => y.PremiereDate).First();
-						}
-
+					if (!children.All(y => y.IsPlayedVersionSpecific(user)))
+					{
 						return null;
-					})
-					.Where(x => x != null)
-					//.Where(x =>
-					//{
-					//	UserItemData data = UserDataManager.GetUserData(user.Id, x);
-					//
-					//	return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
-					//})
-					.Cast<BaseItem>();
+					}
+					
+					if (children.Count(y => y is Movie) > 1)
+					{
+						return children.OfType<Movie>().OrderBy(y => y.PremiereDate).First();
+					}
+
+					return null;
+				})
+				.Where(x => x != null)
+				.Where(x =>
+				{
+					UserItemData data = UserDataManager.GetUserData(user, x!);
+				
+					return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
+				})
+				.Cast<BaseItem>();
 
 				results.AddRange(collections.ToList());
 			}
 
 			{
-
-				IEnumerable<Series>? series = LibraryManager.GetItemList(new InternalItemsQuery
+				IEnumerable<Series>? series = LibraryManager.GetItemList(new InternalItemsQuery(user)
 				{
-					IncludeItemTypes = new[] { BaseItemKind.Series }
-				}).Cast<Series>().Where(x => x.IsPlayedVersionSpecific(user));
-				EpisodeEqualityComparer? eqComp = new EpisodeEqualityComparer();
+					IncludeItemTypes = new[]
+					{
+						BaseItemKind.Series
+					},
+					IsPlayed = true,
+					Recursive = true
+				}).Cast<Series>();
 
 				IEnumerable<BaseItem?> firstEpisodes = series
-				//.Where(x =>
-				//{
-				//	UserItemData data = UserDataManager.GetUserData(user.Id, x);
-				//
-				//	return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
-				//})
-				.Select(x =>
+				.Where(x =>
 				{
-					return x.GetChildren(user, true, null).Cast<Season>().Where(y => y.IndexNumber == 1).FirstOrDefault()?.GetChildren(user, true, null).Cast<Episode>().Where(y => y.IndexNumber == 1 && !y.IsMissingEpisode).FirstOrDefault();
-				}).Distinct(eqComp);
+					UserItemData data = UserDataManager.GetUserData(user, x);
+				
+					return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
+				})
+				.Select(x => x.GetChildren(user, true, new InternalItemsQuery()
+				{
+					Recursive = true,
+					IndexNumber = 1
+				}).Cast<Season>().FirstOrDefault()?
+				.GetChildren(user, true, new InternalItemsQuery()
+				{
+					Recursive = true,
+					IndexNumber = 1,
+					IsMissing = false
+				}).Cast<Episode>()
+				.FirstOrDefault())
+				.Where(x => x != null).DistinctBy(x => x!.Id);
 
 				results.AddRange(firstEpisodes.Where(x => x != null).Cast<BaseItem>());
 			}
