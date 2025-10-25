@@ -48,6 +48,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public bool OverrideStreamyfinHome { get; set; } = false;
 
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
+
+        public List<NetworkConfig> JellyseerrNetworks { get; set; } = new List<NetworkConfig>
+        {
+            new NetworkConfig { Id = 213, Name = "Netflix", Enabled = false },
+            new NetworkConfig { Id = 2739, Name = "Disney+", Enabled = false },
+            new NetworkConfig { Id = 49, Name = "HBO", Enabled = false },
+            new NetworkConfig { Id = 1024, Name = "Amazon Prime Video", Enabled = false },
+            new NetworkConfig { Id = 174, Name = "AMC", Enabled = false },
+            new NetworkConfig { Id = 453, Name = "Hulu", Enabled = false }
+        };
     }
 
     public enum SectionViewMode
@@ -91,5 +101,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? Url { get; set; } = "";
         public int UpcomingTimeframeValue { get; set; }
         public TimeframeUnit UpcomingTimeframeUnit { get; set; }
-    }   
+    }
+
+    public class NetworkConfig
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool Enabled { get; set; }
+    }
 }
