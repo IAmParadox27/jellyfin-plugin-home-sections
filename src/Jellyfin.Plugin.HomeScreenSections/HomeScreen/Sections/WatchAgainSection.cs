@@ -109,19 +109,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					IncludeItemTypes = new[]
 					{
 						BaseItemKind.BoxSet
-					},
-					Recursive = true,
-					IsPlayed = true
-				}).Cast<BoxSet>();
+					}
+				}).OfType<BoxSet>();
 				
 				var collections = boxSets.Select(x =>
 				{
 					IReadOnlyList<BaseItem>? children = x.GetChildren(user, true, new InternalItemsQuery(user)
 					{
-						Recursive = true,
-						IsPlayed = true,
+						Recursive = true
 					});
-
+					
 					if (!children.All(y => y.IsPlayedVersionSpecific(user)))
 					{
 						return null;
@@ -131,7 +128,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					{
 						return children.OfType<Movie>().OrderBy(y => y.PremiereDate).First();
 					}
-
+				
 					return null;
 				})
 				.Where(x => x != null)
@@ -152,29 +149,27 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					IncludeItemTypes = new[]
 					{
 						BaseItemKind.Series
-					},
-					IsPlayed = true,
-					Recursive = true
-				}).Cast<Series>();
+					}
+				}).Cast<Series>().Where(x =>
+				{
+					var episodes = x.GetEpisodes(user, dtoOptions, false);
 
-				IEnumerable<BaseItem?> firstEpisodes = series
-				.Where(x =>
-				{
-					UserItemData data = UserDataManager.GetUserData(user, x);
+					return episodes.All(y =>
+					{
+						bool isPlayed = y.IsPlayedVersionSpecific(user);
+
+						if (isPlayed)
+						{
+							return UserDataManager.GetUserData(user, x)?.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
+						}
+						
+						return false;
+					});
+				}).ToList();
 				
-					return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
-				})
-				.Select(x => x.GetChildren(user, true, new InternalItemsQuery()
-				{
-					Recursive = true,
-					IndexNumber = 1
-				}).Cast<Season>().FirstOrDefault()?
-				.GetChildren(user, true, new InternalItemsQuery()
-				{
-					Recursive = true,
-					IndexNumber = 1,
-					IsMissing = false
-				}).Cast<Episode>()
+				IEnumerable<BaseItem?> firstEpisodes = series
+				.Select(x => x.GetEpisodes(user, dtoOptions, false).Cast<Episode>()
+					.OrderBy(x => x.PremiereDate)
 				.FirstOrDefault())
 				.Where(x => x != null).DistinctBy(x => x!.Id);
 
