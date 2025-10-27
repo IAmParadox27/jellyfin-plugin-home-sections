@@ -1,8 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <JellyfinVersion>10.11.0</JellyfinVersion>
-        <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11.0'))">net9.0</TargetFramework>
+        <JellyfinVersion>10.11.1</JellyfinVersion>
+        <JellyfinNugetVersion Condition="!$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
+        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11'))">10.11.*-*</JellyfinNugetVersion>
+        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11.0'))">10.11.0</JellyfinNugetVersion>
+        <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11'))">net9.0</TargetFramework>
         <TargetFramework Condition="'$(JellyfinVersion)' == '10.10.7'">net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
@@ -14,9 +17,9 @@
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-      <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
-      <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
-      <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinVersion)" />
+      <PackageReference Include="Jellyfin.Model" Version="$(JellyfinNugetVersion)" />
+      <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinNugetVersion)" />
+      <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
     </ItemGroup>
     
@@ -30,6 +33,10 @@
     <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0'">
         <None Include="JellyfinVersionSpecific/10.11.0/*.cs" />
         <Compile Remove="JellyfinVersionSpecific/10.11.0/*.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="!$(JellyfinVersion.StartsWith('10.11'))">
+        <None Include="JellyfinVersionSpecific/10.11/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/10.11/*.cs" />
     </ItemGroup>
     
     <!-- Add new section here for any major plugin update -->
@@ -58,7 +65,7 @@
     </ItemGroup>
     
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections')">
-        <Exec Condition="'$(JellyfinVersion)' == '10.11.0'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
+        <Exec Condition="'$(JellyfinVersion)' == '10.11.1'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
         <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />
     </Target>
 </Project>
