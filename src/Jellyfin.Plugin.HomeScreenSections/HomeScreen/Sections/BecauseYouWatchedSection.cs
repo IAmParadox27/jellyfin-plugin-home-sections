@@ -1,4 +1,6 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using System.Diagnostics;
+using Jellyfin.Extensions;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -13,6 +15,7 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
@@ -65,22 +68,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				}
 			};
 
-			InternalItemsQuery? query = new InternalItemsQuery(user)
+			VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+				.Where(x => x.CollectionType == CollectionTypeOptions.movies)
+				.ToArray();
+
+			IEnumerable<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
 			{
-				IncludeItemTypes = new[]
+				InternalItemsQuery? query = new InternalItemsQuery(user)
 				{
-					BaseItemKind.Movie
-                },
-				OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending), (ItemSortBy.Random, SortOrder.Descending) },
-				Limit = 7,
-				ParentId = Guid.Empty,
-				Recursive = true,
-				IsPlayed = true,
-				DtoOptions = dtoOptions
-			};
+					IncludeItemTypes = new[]
+					{
+						BaseItemKind.Movie
+					},
+					OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending), (ItemSortBy.Random, SortOrder.Descending) },
+					Limit = 7,
+					ParentId = Guid.Parse(x.ItemId),
+					Recursive = true,
+					IsPlayed = true,
+					DtoOptions = dtoOptions
+				};
 
-			IEnumerable<BaseItem>? recentlyPlayedMovies = LibraryManager.GetItemList(query);
-
+				return LibraryManager.GetItemList(query);
+			});
+			
 			recentlyPlayedMovies = recentlyPlayedMovies.Where(x => !otherInstances?.Select(y => y.AdditionalData).Contains(x.Id.ToString()) ?? true).Where(x =>
 			{
 				if (user != null)
@@ -117,6 +127,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
 		{
+			Stopwatch sw = Stopwatch.StartNew();
 			bool showPlayedItems = payload.GetEffectiveBoolConfig(Section ?? string.Empty, "EnableRewatching", false);
 			User user = UserManager.GetUserById(payload.UserId)!;
 			
@@ -138,21 +149,33 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			BaseItem? item = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
             
-			IReadOnlyList<BaseItem>? similar = LibraryManager.GetItemList(new InternalItemsQuery(UserManager.GetUserById(payload.UserId))
-			{
-				Limit = 8,
-				IncludeItemTypes = new[]
-				{
-					BaseItemKind.Movie
-				},
-				IsMovie = true,
-				User = user,
-				IsPlayed = showPlayedItems ? null : showPlayedItems,
-				EnableGroupByMetadataKey = true,
-				DtoOptions = dtoOptions
-			}.ApplySimilarSettings(item));
+            VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+	            .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+	            .ToArray();
+            
+            IList<BaseItem>? similar = folders.SelectMany(x =>
+            {
+	            var items = LibraryManager.GetItemList(new InternalItemsQuery
+	            {
+		            IncludeItemTypes = new[]
+		            {
+			            BaseItemKind.Movie
+		            },
+		            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
+		            User = user,
+		            IsPlayed = showPlayedItems ? null : showPlayedItems,
+		            DtoOptions = dtoOptions,
+		            Limit = 24,
+		            Recursive = true,
+		            ParentId = Guid.Parse(x.ItemId)
+	            }.ApplySimilarSettings(item));
 
-			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar, dtoOptions, user));
+	            return items;
+            }).ToList();
+            
+            similar.Shuffle();
+            
+			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar.Take(16).ToArray(), dtoOptions, user));
 		}
 		
 		public HomeScreenSectionInfo GetInfo()

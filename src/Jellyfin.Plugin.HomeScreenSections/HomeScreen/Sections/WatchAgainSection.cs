@@ -20,24 +20,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
 	internal class WatchAgainSection : IHomeScreenSection
 	{
-		class EpisodeEqualityComparer : IEqualityComparer<Episode?>
-		{
-			public bool Equals(Episode? x, Episode? y)
-			{
-				if (x == null && y == null)
-				{
-					return false;
-				}
-
-				return x?.Id == y?.Id;
-			}
-
-			public int GetHashCode([DisallowNull] Episode obj)
-			{
-				return obj.GetHashCode();
-			}
-		}
-
 		public string? Section => "WatchAgain";
 
 		public string? DisplayText { get; set; } = "Watch It Again";
@@ -104,50 +86,78 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			List<BaseItem> results = new List<BaseItem>();
 
 			{
-				IEnumerable<BaseItem> collections = CollectionManagerProxy.GetCollections(user)
-					.Where(x => x.IsPlayedVersionSpecific(user))
-					.Select(x =>
+				VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+					.Where(x => x.CollectionType == CollectionTypeOptions.boxsets)
+					.ToArray();
+				
+				var boxSets = folders.SelectMany(x =>
+				{
+					return LibraryManager.GetItemList(new InternalItemsQuery(user)
 					{
-						IReadOnlyList<BaseItem>? children = x.GetChildren(user, true, null);
-
-						if (children.Count(y => y is Movie) > 1)
+						ParentId = Guid.Parse(x.ItemId),
+						Recursive = true,
+						IncludeItemTypes = new []
 						{
-							return children.OfType<Movie>().OrderBy(y => y.PremiereDate).First();
+							BaseItemKind.BoxSet
 						}
+					});
+				}).OfType<BoxSet>().ToArray();
+				
+				var collections = boxSets.Select(x =>
+				{
+					(BaseItem Item, UserItemData? UserData)[] children = x.GetChildren(user, true, new InternalItemsQuery(user)).Select(y => (y, UserDataManager.GetUserData(user, y))).ToArray();
+					
+					if (!children.All(y => y.UserData?.Played ?? false))
+					{
+						return (null, null);
+					}
+					
+					if (children.Count(y => y.Item is Movie) > 1)
+					{
+						return children.OrderBy(y => y.Item.PremiereDate).First(y => y.Item is Movie);
+					}
+				
+					return (null, null);
+				})
+				.Where(x => x.Item != null)
+				.Where(x => x.UserData?.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28))).ToArray();
 
-						return null;
-					})
-					.Where(x => x != null)
-					//.Where(x =>
-					//{
-					//	UserItemData data = UserDataManager.GetUserData(user.Id, x);
-					//
-					//	return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
-					//})
-					.Cast<BaseItem>();
-
-				results.AddRange(collections.ToList());
+				results.AddRange(collections.Select(x => x.Item).ToArray()!);
 			}
 
 			{
+				VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+					.Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
+					.ToArray();
 
-				IEnumerable<Series>? series = LibraryManager.GetItemList(new InternalItemsQuery
+				IEnumerable<Series>? series = folders.SelectMany(x =>
 				{
-					IncludeItemTypes = new[] { BaseItemKind.Series }
-				}).Cast<Series>().Where(x => x.IsPlayedVersionSpecific(user));
-				EpisodeEqualityComparer? eqComp = new EpisodeEqualityComparer();
+					return LibraryManager.GetItemList(new InternalItemsQuery(user)
+					{
+						IncludeItemTypes = new[]
+						{
+							BaseItemKind.Series
+						},
+						ParentId = Guid.Parse(x.ItemId),
+						Recursive = true,
+					}).Cast<Series>();
+				}).Where(x =>
+				{
+					var episodes = x.GetEpisodes(user, dtoOptions, false);
 
+					return episodes.All(y =>
+					{
+						var userData = UserDataManager.GetUserData(user, x);
+						
+						return (userData?.Played ?? false) && userData?.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
+					});
+				}).ToList();
+				
 				IEnumerable<BaseItem?> firstEpisodes = series
-				//.Where(x =>
-				//{
-				//	UserItemData data = UserDataManager.GetUserData(user.Id, x);
-				//
-				//	return data.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
-				//})
-				.Select(x =>
-				{
-					return x.GetChildren(user, true, null).Cast<Season>().Where(y => y.IndexNumber == 1).FirstOrDefault()?.GetChildren(user, true, null).Cast<Episode>().Where(y => y.IndexNumber == 1 && !y.IsMissingEpisode).FirstOrDefault();
-				}).Distinct(eqComp);
+				.Select(x => x.GetEpisodes(user, dtoOptions, false).Cast<Episode>()
+					.OrderBy(x => x.PremiereDate)
+				.FirstOrDefault())
+				.Where(x => x != null).DistinctBy(x => x!.Id).ToArray();
 
 				results.AddRange(firstEpisodes.Where(x => x != null).Cast<BaseItem>());
 			}
@@ -158,7 +168,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			
 				return data.LastPlayedDate;
 			}).Take(16).ToList();
-
+			
 			QueryResult<BaseItemDto>? result = new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(results, dtoOptions, user));
 
 			return result;

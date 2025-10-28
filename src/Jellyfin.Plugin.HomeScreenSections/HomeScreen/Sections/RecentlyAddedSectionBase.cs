@@ -3,6 +3,8 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Audio;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
@@ -28,15 +30,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected abstract BaseItemKind SectionItemKind { get; }
 
         protected abstract CollectionType CollectionType { get; }
+        
+        protected abstract CollectionTypeOptions CollectionTypeOptions { get; }
 
         protected abstract string? LibraryId { get; }
 
         protected abstract SectionViewMode DefaultViewMode { get; }
         
-        private readonly IUserViewManager m_userViewManager;
-        private readonly IUserManager m_userManager;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly IDtoService m_dtoService;
+        protected readonly IUserViewManager m_userViewManager;
+        protected readonly IUserManager m_userManager;
+        protected readonly ILibraryManager m_libraryManager;
+        protected readonly IDtoService m_dtoService;
 
         protected RecentlyAddedSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
@@ -68,21 +72,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     ImageType.Backdrop,
                 }
             };
+            
+            PluginConfiguration? config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            SectionSettings? sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
+            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
+            
+            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions)
+                .ToArray();
 
-            IReadOnlyList<BaseItem> recentlyAddedItems = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IEnumerable<BaseItem> recentlyAddedItems = folders.SelectMany(x =>
             {
-                IncludeItemTypes = new[]
+                return m_libraryManager.GetItemList(new InternalItemsQuery(user)
                 {
-                    SectionItemKind
-                },
-                Limit = 16,
-                OrderBy = new[]
-                {
-                    (ItemSortBy.DateCreated, SortOrder.Descending)
-                },
-                DtoOptions = dtoOptions
-            });
-
+                    IncludeItemTypes = new[]
+                    {
+                        SectionItemKind
+                    },
+                    DtoOptions = dtoOptions,
+                    IsPlayed = isPlayed
+                });
+            }).OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions)).Take(16);
+            
             return new QueryResult<BaseItemDto>(Array.ConvertAll(recentlyAddedItems.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
@@ -133,8 +145,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = DefaultViewMode
+                ViewMode = DefaultViewMode,
+                AllowHideWatched = true
             };
+        }
+        
+        protected virtual DateTime GetSortDateForItem(BaseItem item, User? user, DtoOptions dtoOptions)
+        {
+            return item.DateCreated;
         }
     }
 }

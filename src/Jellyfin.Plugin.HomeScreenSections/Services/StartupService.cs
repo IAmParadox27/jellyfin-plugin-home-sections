@@ -64,17 +64,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 if (File.ReadAllText(jsChunk).Contains(",loadSections:"))
                 {
+                    
                     string fileName = Path.GetFileName(jsChunk);
                     Regex r = new Regex(@"([^.]+)\.([^.]+)\.chunk.js");
                     
+                    Guid guid = Guid.NewGuid();
+                    m_logger.LogInformation($"Found loadSections in `{fileName}` registering transformation for it with ID '{guid}'");
+                    
                     JObject payload = new JObject();
-                    payload.Add("id", "ea4045f3-6604-4ba4-9581-f91f96bbd2ae");
+                    payload.Add("id", guid.ToString());
                     payload.Add("fileNamePattern", r.Match(fileName).Groups[1].Value + "\\.[^.]+\\.chunk\\.js");
                     payload.Add("callbackAssembly", GetType().Assembly.FullName);
                     payload.Add("callbackClass", typeof(TransformationPatches).FullName);
                     payload.Add("callbackMethod", nameof(TransformationPatches.LoadSections));
                     payloads.Add(payload);
-                    break;
                 }
             }
             
