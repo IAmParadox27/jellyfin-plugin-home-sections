@@ -40,7 +40,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
             
             if (item is Series series)
             {
-                dateCreated = series.GetEpisodes(user, dtoOptions, false).Max(x => x.DateCreated);
+                string? seriesKey = series.GetPresentationUniqueKey();
+
+                InternalItemsQuery query = new InternalItemsQuery(user)
+                {
+                    AncestorWithPresentationUniqueKey = null,
+                    SeriesPresentationUniqueKey = seriesKey,
+                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+                    DtoOptions = dtoOptions,
+                    IsMissing = false,
+                    Limit = 1
+                };
+
+                dateCreated = m_libraryManager.GetItemList(query).FirstOrDefault()?.DateCreated;
             }
             else if (item is Season season)
             {
