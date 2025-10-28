@@ -25,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             {
                 replacementText = replacementText.Replace("{{cardbuilder_hook}}", "h");
             }
-            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.11.0") ?? false)
+            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.11") ?? false)
             {
                 replacementText = replacementText.Replace("{{cardbuilder_hook}}", "u");
             }
