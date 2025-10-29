@@ -45,8 +45,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                         SectionItemKind
                     },
                     DtoOptions = dtoOptions,
-                    IsPlayed = isPlayed,
-                    OrderBy = new [] { (ItemSortBy.DateCreated, SortOrder.Descending) }
+                    IsPlayed = isPlayed
                 });
             }).DistinctBy(x => x.Id).OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions)).Take(16);
         }
