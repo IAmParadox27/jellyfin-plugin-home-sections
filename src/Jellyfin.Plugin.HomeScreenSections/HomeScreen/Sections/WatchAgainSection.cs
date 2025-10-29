@@ -94,7 +94,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				{
 					return LibraryManager.GetItemList(new InternalItemsQuery(user)
 					{
-						ParentId = Guid.Parse(x.ItemId),
+						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 						Recursive = true,
 						IncludeItemTypes = new []
 						{
@@ -138,7 +138,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 						{
 							BaseItemKind.Series
 						},
-						ParentId = Guid.Parse(x.ItemId),
+						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 						Recursive = true,
 					}).Cast<Series>();
 				}).Where(x =>

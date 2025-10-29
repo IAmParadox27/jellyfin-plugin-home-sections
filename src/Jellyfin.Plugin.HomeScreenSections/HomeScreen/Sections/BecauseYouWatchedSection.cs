@@ -80,7 +80,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					},
 					OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending), (ItemSortBy.Random, SortOrder.Descending) },
 					Limit = 7,
-					ParentId = Guid.Parse(x.ItemId),
+					ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 					Recursive = true,
 					IsPlayed = true,
 					DtoOptions = dtoOptions
@@ -169,7 +169,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		            DtoOptions = dtoOptions,
 		            Limit = 24,
 		            Recursive = true,
-		            ParentId = Guid.Parse(x.ItemId)
+		            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 	            }.ApplySimilarSettings(item));
 
 	            return items;

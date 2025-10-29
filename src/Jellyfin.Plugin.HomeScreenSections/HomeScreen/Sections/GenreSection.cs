@@ -82,7 +82,7 @@ public class GenreSection : IHomeScreenSection
                     BaseItemKind.Movie
                 },
                 OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-                ParentId = Guid.Parse(x.ItemId),
+                ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 Limit = 24,
                 DtoOptions = dtoOptions,
@@ -240,7 +240,7 @@ public class GenreSection : IHomeScreenSection
                 Recursive = true,
                 IsFavoriteOrLiked = true,
                 User = user,
-                ParentId = Guid.Parse(x.ItemId)
+                ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
             };
 
             return m_libraryManager.GetItemList(favoriteOrLikedQuery);
@@ -269,7 +269,7 @@ public class GenreSection : IHomeScreenSection
                 },
                 OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending) },
                 Limit = 7,
-                ParentId = Guid.Parse(x.ItemId),
+                ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 IsPlayed = true,
                 DtoOptions = dtoOptions
@@ -311,7 +311,7 @@ public class GenreSection : IHomeScreenSection
             User = user,
             EnableTotalRecordCount = false,
             Recursive = true,
-            ParentId = Guid.Parse(x.ItemId)
+            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
         }).Items.Where(y => y.ItemCounts.MovieCount > 0))
             .DistinctBy(x => x.Item.Id)
             .Select(x =>
