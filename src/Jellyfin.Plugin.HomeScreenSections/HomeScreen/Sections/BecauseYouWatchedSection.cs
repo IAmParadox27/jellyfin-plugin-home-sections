@@ -119,6 +119,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					}
 				}
 
+				pickedMovies.Add(elementToConsider);
 				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy)
 				{
 					AdditionalData = elementToConsider.Id.ToString(),
