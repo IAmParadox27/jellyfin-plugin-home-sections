@@ -98,13 +98,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				
 				if (user != null)
 				{
-					IEnumerable<(BoxSet Item, IReadOnlyList<BaseItem> Children)> collections = CollectionManagerProxy.GetCollections(user)
+					var collections = CollectionManagerProxy.GetCollections(user)
 						.Select(y => (y, y.GetChildren(user, true, null)))
 						.Where(y => y.Item2
 							.OfType<Movie>().Contains(elementToConsider as Movie));
 
 					bool isPicked = false;
-					foreach (var collection in collections)
+					foreach ((BoxSet Item, List<BaseItem> Children) collection in collections)
 					{
 						if (collection.Children.OfType<Movie>().Any(y => pickedMovies?.Select(z => z.Id).Contains(y.Id) ?? true))
 						{
