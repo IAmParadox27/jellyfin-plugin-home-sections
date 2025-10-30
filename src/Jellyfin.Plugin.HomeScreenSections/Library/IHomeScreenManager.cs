@@ -41,7 +41,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection);
 
-        public IHomeScreenSection? CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null);
+        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount);
 
         public HomeScreenSectionInfo GetInfo();
     }

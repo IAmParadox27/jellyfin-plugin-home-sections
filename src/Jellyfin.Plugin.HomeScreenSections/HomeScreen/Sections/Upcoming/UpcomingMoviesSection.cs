@@ -87,9 +87,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override string GetSectionName() => "upcoming movies";
 
-        public override IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+        public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            return new UpcomingMoviesSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingMoviesSection>)Logger)
+            yield return new UpcomingMoviesSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingMoviesSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,

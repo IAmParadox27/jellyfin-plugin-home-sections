@@ -131,7 +131,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected abstract string GetServiceName();
         protected abstract string GetSectionName();
 
-        public abstract IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null);
+        public abstract IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount);
         public abstract HomeScreenSectionInfo GetInfo();
     }
 }

@@ -99,24 +99,18 @@ public class HomeScreenSectionService
 
                 if (sectionType != null)
                 {
+                    int instanceCount = 1;
                     if (sectionType.Limit > 1)
                     {
                         Random rnd = new Random();
-                        int instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
-
-                        for (int i = 0; i < instanceCount; ++i)
-                        {
-                            IHomeScreenSection?[] tmpSectionInstances = tmpPluginSections
-                                .Where(x => x?.GetType() == sectionType.GetType())
-                                .Concat(sectionInstances.Where(x => x.GetType() == sectionType.GetType()))
-                                .ToArray();
-
-                            tmpPluginSections.Add(sectionType.CreateInstance(userId, tmpSectionInstances.Where(x => x != null).Select(x => x!)));
-                        }
+                        instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
                     }
-                    else if (sectionType.Limit == 1)
+                    
+                    IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
+
+                    foreach (IHomeScreenSection sectionInstance in instances)
                     {
-                        tmpPluginSections.Add(sectionType.CreateInstance(userId));
+                        tmpPluginSections.Add(sectionInstance);
                     }
                 }
             });

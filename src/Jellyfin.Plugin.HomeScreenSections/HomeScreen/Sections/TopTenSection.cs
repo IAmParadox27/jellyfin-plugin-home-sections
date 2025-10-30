@@ -1,3 +1,4 @@
+using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -77,31 +78,30 @@ public class TopTenSection : IHomeScreenSection
         return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items, dtoOptions, user));
     }
 
-    public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+    public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
-        if (otherInstances == null ||
-            !otherInstances.Any(x => x is TopTenSection { Type: TopTenType.Movies }))
+        List<TopTenSection> sections = new List<TopTenSection>();
+        
+        sections.Add(new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
         {
-            return new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
-            {
-                AdditionalData = TopTenType.Movies.ToString(),
-                DisplayText = $"{DisplayText} Movies",
-                Type = TopTenType.Movies,
-            };
-        }
-        else
+            AdditionalData = TopTenType.Movies.ToString(),
+            DisplayText = $"{DisplayText} Movies",
+            Type = TopTenType.Movies,
+        });
+        
+        sections.Add(new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
         {
-            if (otherInstances!.Any(x => x is TopTenSection { Type: TopTenType.Shows }))
-            {
-                throw new Exception("Ahhhh");
-            }
-            
-            return new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
-            {
-                AdditionalData = TopTenType.Shows.ToString(),
-                DisplayText = $"{DisplayText} Shows",
-                Type = TopTenType.Shows,
-            };
+            AdditionalData = TopTenType.Shows.ToString(),
+            DisplayText = $"{DisplayText} Shows",
+            Type = TopTenType.Shows,
+        });
+
+        sections.Shuffle();
+
+        // Return up to the instance count.
+        for (int i = 0; i < instanceCount && i < sections.Count; i++)
+        {
+            yield return sections[i];
         }
     }
 

@@ -88,7 +88,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
 
-        public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
 
@@ -121,7 +121,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             instance.DisplayText = DisplayText;
             instance.OriginalPayload = originalPayload;
             
-            return instance;
+            yield return instance;
         }
         
         public HomeScreenSectionInfo GetInfo()

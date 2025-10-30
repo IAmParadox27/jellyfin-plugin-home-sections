@@ -49,13 +49,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			CollectionManagerProxy = collectionProxy;
 		}
 
-		public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
 		{
 			User? user = userId is null || userId.Value.Equals(default)
 				? null
 				: UserManager.GetUserById(userId.Value);
-
-			BecauseYouWatchedSection section = new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy);
 
 			DtoOptions? dtoOptions = new DtoOptions 
 			{ 
@@ -70,7 +68,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				.Where(x => x.CollectionType == CollectionTypeOptions.movies)
 				.ToArray();
 
-			IEnumerable<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
+			List<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
 			{
 				InternalItemsQuery? query = new InternalItemsQuery(user)
 				{
@@ -79,7 +77,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 						BaseItemKind.Movie
 					},
 					OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending), (ItemSortBy.Random, SortOrder.Descending) },
-					Limit = 7,
+					Limit = 15,
 					ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 					Recursive = true,
 					IsPlayed = true,
@@ -87,40 +85,46 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				};
 
 				return LibraryManager.GetItemList(query);
-			});
+			}).ToList();
 			
-			recentlyPlayedMovies = recentlyPlayedMovies.Where(x => !otherInstances?.Select(y => y.AdditionalData).Contains(x.Id.ToString()) ?? true).Where(x =>
+			recentlyPlayedMovies.Shuffle();
+			
+			List<BaseItem> pickedMovies = new List<BaseItem>();
+
+			Queue<BaseItem> queue = new Queue<BaseItem>(recentlyPlayedMovies);
+			while (pickedMovies.Count < instanceCount && queue.Count > 0)
 			{
+				BaseItem elementToConsider = queue.Dequeue();
+				
 				if (user != null)
 				{
-					IEnumerable<BoxSet>? collections = CollectionManagerProxy.GetCollections(user)
-						.Where(y => y.GetChildren(user, true, null).OfType<Movie>().Contains(x as Movie));
+					IEnumerable<(BoxSet Item, IReadOnlyList<BaseItem> Children)> collections = CollectionManagerProxy.GetCollections(user)
+						.Select(y => (y, y.GetChildren(user, true, null)))
+						.Where(y => y.Item2
+							.OfType<Movie>().Contains(elementToConsider as Movie));
 
-					foreach (BoxSet? collection in collections)
+					bool isPicked = false;
+					foreach (var collection in collections)
 					{
-						if (collection.GetChildren(user, true, null).OfType<Movie>().Any(y => otherInstances?.Select(z => z.AdditionalData).Contains(y.Id.ToString()) ?? true))
+						if (collection.Children.OfType<Movie>().Any(y => pickedMovies?.Select(z => z.Id).Contains(y.Id) ?? true))
 						{
-							return false;
+							isPicked = true;
+							break;
 						}
+					}
+
+					if (isPicked)
+					{
+						continue;
 					}
 				}
 
-				return true;
-			}).ToList();
-
-			Random rnd = new Random();
-
-			if (recentlyPlayedMovies.Count() == 0)
-			{
-				return null!;
+				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy)
+				{
+					AdditionalData = elementToConsider.Id.ToString(),
+					DisplayText = "Because You Watched " + elementToConsider.Name
+				};
 			}
-
-			BaseItem item = recentlyPlayedMovies.ElementAt(rnd.Next(0, recentlyPlayedMovies.Count()));
-
-			section.AdditionalData = item.Id.ToString();
-			section.DisplayText = "Because You Watched " + item.Name;
-
-			return section;
 		}
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
