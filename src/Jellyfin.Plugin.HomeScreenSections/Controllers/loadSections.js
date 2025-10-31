@@ -307,147 +307,161 @@
     }
     
     async function isUserUsingHomeScreenSections(_userSettings, _apiClient) {
-        var pluginConfig = await _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
         
-        if (pluginConfig.AllowUserOverride === true) {
-            if (_userSettings && _userSettings.getData() && _userSettings.getData().CustomPrefs && _userSettings.getData().CustomPrefs.useModularHome !== undefined) {
-                return _userSettings.getData().CustomPrefs.useModularHome === "true";
+        try {
+            var pluginConfig = await _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
+
+            if (pluginConfig.AllowUserOverride === true) {
+                if (_userSettings && _userSettings.getData() && _userSettings.getData().CustomPrefs && _userSettings.getData().CustomPrefs.useModularHome !== undefined) {
+                    return _userSettings.getData().CustomPrefs.useModularHome === "true";
+                }
             }
+
+            return pluginConfig.Enabled;
+        } catch {
+            return false;
         }
-        
-        return pluginConfig.Enabled;
     }
     
+    var _this = this;
     if (await isUserUsingHomeScreenSections(userSettings, apiClient)) {
-        return function(elem, apiClient, user, userSettings) {
-            var var39_, var39_3, var39_4;
-            return var39_ = this, void 0, var39_4 = function() {
-                var var44_, options, var44_3, var44_4, var44_5, var44_6, var44_7, sectionInfo, var44_9, var44_10, var44_11;
-                return function(param45_, param45_2) {
-                    var var46_, var47_, var48_, var49_ = {
-                            label: 0,
-                            sent: function() {
-                                if (1 & var48_[0]) throw var48_[1];
-                                return var48_[1]
+        var getSectionsData = {
+            UserId: apiClient.getCurrentUserId(),
+            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+        };
+        var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
+        var hssSectionsResponse = await apiClient.getJSON(getSectionsUrl).then(function(response) {
+            return function(elem, apiClient, user, userSettings) {
+                var var39_, var39_3, var39_4;
+                return var39_ = this, void 0, var39_4 = function() {
+                    var var44_, options, var44_3, var44_4, var44_5, var44_6, var44_7, sectionInfo, var44_9, var44_10, var44_11;
+                    return function(param45_, param45_2) {
+                        var var46_, var47_, var48_, var49_ = {
+                                label: 0,
+                                sent: function() {
+                                    if (1 & var48_[0]) throw var48_[1];
+                                    return var48_[1]
+                                },
+                                trys: [],
+                                ops: []
                             },
-                            trys: [],
-                            ops: []
-                        },
-                        var58_ = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
-                    return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function() {
-                        return this
-                    }), var58_;
+                            var58_ = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
+                        return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function() {
+                            return this
+                        }), var58_;
 
-                    function fn69_(param69_) {
-                        return function(param70_) {
-                            return function(param71_) {
-                                if (var46_) throw TypeError("Generator is already executing.");
-                                for (; var58_ && (var58_ = 0, param71_[0] && (var49_ = 0)), var49_;) try {
-                                    if (var46_ = 1, var47_ && (var48_ = 2 & param71_[0] ? var47_.return : param71_[0] ? var47_.throw || ((var48_ = var47_.return) && var48_.call(var47_), 0) : var47_.next) && !(var48_ = var48_.call(var47_, param71_[1])).done) return var48_;
-                                    switch (var47_ = 0, var48_ && (param71_ = [2 & param71_[0], var48_.value]), param71_[0]) {
-                                        case 0:
-                                        case 1:
-                                            var48_ = param71_;
-                                            break;
-                                        case 4:
-                                            return var49_.label++, {
-                                                value: param71_[1],
-                                                done: !1
-                                            };
-                                        case 5:
-                                            var49_.label++, var47_ = param71_[1], param71_ = [0];
-                                            continue;
-                                        case 7:
-                                            param71_ = var49_.ops.pop(), var49_.trys.pop();
-                                            continue;
-                                        default:
-                                            if (!((var48_ = (var48_ = var49_.trys).length > 0 && var48_[var48_.length - 1]) || 6 !== param71_[0] && 2 !== param71_[0])) {
-                                                var49_ = 0;
+                        function fn69_(param69_) {
+                            return function(param70_) {
+                                return function(param71_) {
+                                    if (var46_) throw TypeError("Generator is already executing.");
+                                    for (; var58_ && (var58_ = 0, param71_[0] && (var49_ = 0)), var49_;) try {
+                                        if (var46_ = 1, var47_ && (var48_ = 2 & param71_[0] ? var47_.return : param71_[0] ? var47_.throw || ((var48_ = var47_.return) && var48_.call(var47_), 0) : var47_.next) && !(var48_ = var48_.call(var47_, param71_[1])).done) return var48_;
+                                        switch (var47_ = 0, var48_ && (param71_ = [2 & param71_[0], var48_.value]), param71_[0]) {
+                                            case 0:
+                                            case 1:
+                                                var48_ = param71_;
+                                                break;
+                                            case 4:
+                                                return var49_.label++, {
+                                                    value: param71_[1],
+                                                    done: !1
+                                                };
+                                            case 5:
+                                                var49_.label++, var47_ = param71_[1], param71_ = [0];
+                                                continue;
+                                            case 7:
+                                                param71_ = var49_.ops.pop(), var49_.trys.pop();
+                                                continue;
+                                            default:
+                                                if (!((var48_ = (var48_ = var49_.trys).length > 0 && var48_[var48_.length - 1]) || 6 !== param71_[0] && 2 !== param71_[0])) {
+                                                    var49_ = 0;
+                                                    continue
+                                                }
+                                                if (3 === param71_[0] && (!var48_ || param71_[1] > var48_[0] && param71_[1] < var48_[3])) {
+                                                    var49_.label = param71_[1];
+                                                    break
+                                                }
+                                                if (6 === param71_[0] && var49_.label < var48_[1]) {
+                                                    var49_.label = var48_[1], var48_ = param71_;
+                                                    break
+                                                }
+                                                if (var48_ && var49_.label < var48_[2]) {
+                                                    var49_.label = var48_[2], var49_.ops.push(param71_);
+                                                    break
+                                                }
+                                                var48_[2] && var49_.ops.pop(), var49_.trys.pop();
                                                 continue
-                                            }
-                                            if (3 === param71_[0] && (!var48_ || param71_[1] > var48_[0] && param71_[1] < var48_[3])) {
-                                                var49_.label = param71_[1];
-                                                break
-                                            }
-                                            if (6 === param71_[0] && var49_.label < var48_[1]) {
-                                                var49_.label = var48_[1], var48_ = param71_;
-                                                break
-                                            }
-                                            if (var48_ && var49_.label < var48_[2]) {
-                                                var49_.label = var48_[2], var49_.ops.push(param71_);
-                                                break
-                                            }
-                                            var48_[2] && var49_.ops.pop(), var49_.trys.pop();
-                                            continue
+                                        }
+                                        param71_ = param45_2.call(param45_, var49_)
+                                    } catch (let110_) {
+                                        param71_ = [6, let110_], var47_ = 0
+                                    } finally {
+                                        var46_ = var48_ = 0
                                     }
-                                    param71_ = param45_2.call(param45_, var49_)
-                                } catch (let110_) {
-                                    param71_ = [6, let110_], var47_ = 0
-                                } finally {
-                                    var46_ = var48_ = 0
+                                    if (5 & param71_[0]) throw param71_[1];
+                                    return {
+                                        value: param71_[0] ? param71_[1] : void 0,
+                                        done: !0
+                                    }
+                                }([param69_, param70_])
+                            }
+                        }
+                    }(this, (function(param120_) {
+                        switch (param120_.label) {
+                            case 0:
+                                return [4, (apiClient, getSectionsData, getSectionsUrl, response)];
+                            case 1:
+                                if (var44_ = param120_.sent(), options = {
+                                    enableOverflow: !0
+                                }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
+                                    if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
+                                        for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                                 }
-                                if (5 & param71_[0]) throw param71_[1];
-                                return {
-                                    value: param71_[0] ? param71_[1] : void 0,
-                                    done: !0
-                                }
-                            }([param69_, param70_])
+                                return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function() {
+                                    var var134_2, var134_3, var134_4;
+                                    return var134_2 = {
+                                        refresh: !0
+                                    }, var134_3 = elem.querySelectorAll(".itemsContainer"), var134_4 = [], Array.prototype.forEach.call(var134_3, (function(param139_) {
+                                        param139_.resume && var134_4.push(param139_.resume(var134_2))
+                                    })), Promise.all(var134_4)
+                                }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function() {
+                                    l.default.navigate("dashboard/libraries")
+                                })), [2])
+                        }
+                    }))
+                }, new(var39_3 = void 0, var39_3 = Promise)((function(param160_, param160_2) {
+                    function fn161_(param161_) {
+                        try {
+                            fn175_(var39_4.next(param161_))
+                        } catch (let164_) {
+                            param160_2(let164_)
                         }
                     }
-                }(this, (function(param120_) {
-                    switch (param120_.label) {
-                        case 0:
-                            var var123_, var123_2, var123_3;
-                            return [4, (var123_ = apiClient, var123_2 = {
-                                UserId: apiClient.getCurrentUserId(),
-                                Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
-                            }, var123_3 = var123_.getUrl("HomeScreen/Sections", var123_2), var123_.getJSON(var123_3))];
-                        case 1:
-                            if (var44_ = param120_.sent(), options = {
-                                enableOverflow: !0
-                            }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
-                                if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
-                                    for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
-                            }
-                            return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function() {
-                                var var134_2, var134_3, var134_4;
-                                return var134_2 = {
-                                    refresh: !0
-                                }, var134_3 = elem.querySelectorAll(".itemsContainer"), var134_4 = [], Array.prototype.forEach.call(var134_3, (function(param139_) {
-                                    param139_.resume && var134_4.push(param139_.resume(var134_2))
-                                })), Promise.all(var134_4)
-                            }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function() {
-                                l.default.navigate("dashboard/libraries")
-                            })), [2])
+
+                    function fn168_(param168_) {
+                        try {
+                            fn175_(var39_4.throw(param168_))
+                        } catch (let171_) {
+                            param160_2(let171_)
+                        }
                     }
+
+                    function fn175_(param175_) {
+                        var var176_;
+                        param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function(param181_) {
+                            param181_(var176_)
+                        }))).then(fn161_, fn168_)
+                    }
+                    fn175_((var39_4 = var39_4.apply(var39_, [])).next())
                 }))
-            }, new(var39_3 = void 0, var39_3 = Promise)((function(param160_, param160_2) {
-                function fn161_(param161_) {
-                    try {
-                        fn175_(var39_4.next(param161_))
-                    } catch (let164_) {
-                        param160_2(let164_)
-                    }
-                }
-
-                function fn168_(param168_) {
-                    try {
-                        fn175_(var39_4.throw(param168_))
-                    } catch (let171_) {
-                        param160_2(let171_)
-                    }
-                }
-
-                function fn175_(param175_) {
-                    var var176_;
-                    param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function(param181_) {
-                        param181_(var176_)
-                    }))).then(fn161_, fn168_)
-                }
-                fn175_((var39_4 = var39_4.apply(var39_, [])).next())
-            }))
-        }(elem, apiClient, user, userSettings);
+            }(elem, apiClient, user, userSettings);
+        }, function (error) {
+            console.error("Error fetching sections with HSS, defaulting back to Jellyfin:", error);
+            return _this.originalLoadSections(elem, apiClient, user, userSettings);
+        });
+        
+        return hssSectionsResponse;
     } else {
         return this.originalLoadSections(elem, apiClient, user, userSettings);
     }
