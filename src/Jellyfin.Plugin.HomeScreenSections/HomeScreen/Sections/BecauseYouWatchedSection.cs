@@ -104,7 +104,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 							.OfType<Movie>().Contains(elementToConsider as Movie));
 
 					bool isPicked = false;
-					foreach ((BoxSet Item, List<BaseItem> Children) collection in collections)
+					foreach ((BoxSet Item, IEnumerable<BaseItem> Children) collection in collections)
 					{
 						if (collection.Children.OfType<Movie>().Any(y => pickedMovies?.Select(z => z.Id).Contains(y.Id) ?? true))
 						{

@@ -4,6 +4,7 @@ using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Controller;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Services;
 
@@ -11,12 +12,14 @@ public class HomeScreenSectionService
 {
     private readonly IDisplayPreferencesManager m_displayPreferencesManager;
     private readonly IHomeScreenManager m_homeScreenManager;
+    private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
 
     public HomeScreenSectionService(IDisplayPreferencesManager displayPreferencesManager,
-        IHomeScreenManager homeScreenManager)
+        IHomeScreenManager homeScreenManager, ILogger<HomeScreenSectionsPlugin> logger)
     {
         m_displayPreferencesManager = displayPreferencesManager;
         m_homeScreenManager = homeScreenManager;
+        m_logger = logger;
     }
     
     public List<HomeScreenSectionInfo> GetSectionsForUser(Guid userId, string? language)
@@ -105,12 +108,21 @@ public class HomeScreenSectionService
                         Random rnd = new Random();
                         instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
                     }
-                    
-                    IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
 
-                    foreach (IHomeScreenSection sectionInstance in instances)
+                    try
                     {
-                        tmpPluginSections.Add(sectionInstance);
+                        IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
+
+                        foreach (IHomeScreenSection sectionInstance in instances)
+                        {
+                            tmpPluginSections.Add(sectionInstance);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        // Adding an error log here to stop issues like #128 from completely breaking the home screen.
+                        // Whatever this section is won't work, but the rest of the home screen will still work.
+                        m_logger.LogError(e, $"An error occurred while creating section instances for user '{userId}' and section '{sectionType.Section}'.");
                     }
                 }
             });
