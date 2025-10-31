@@ -7,6 +7,7 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -14,19 +15,54 @@ namespace Jellyfin.Plugin.HomeScreenSections
 {
     public class HomeScreenSectionsPlugin : BasePlugin<PluginConfiguration>, IPlugin, IHasPluginConfiguration, IHasWebPages
     {
-        internal IServerConfigurationManager ServerConfigurationManager { get; private set; }
-        
         public override Guid Id => Guid.Parse("b8298e01-2697-407a-b44d-aa8dc795e850");
 
         public override string Name => "Home Screen Sections";
 
         public static HomeScreenSectionsPlugin Instance { get; private set; } = null!;
-        
+
+        internal IServerConfigurationManager ServerConfigurationManager { get; private set; }
+
         internal IServiceProvider ServiceProvider { get; set; }
-    
-        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider) : base(applicationPaths, xmlSerializer)
+
+        private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
+
+        /// <summary>
+        /// Override Configuration property to deduplicate networks on load.
+        /// </summary>
+        public new PluginConfiguration Configuration
+        {
+            get
+            {
+                var config = base.Configuration;
+
+                if (config.JellyseerrNetworks != null && config.JellyseerrNetworks.Count > 0)
+                {
+                    var uniqueNetworks = config.JellyseerrNetworks
+                        .GroupBy(n => n.Id)
+                        .Select(g =>
+                        {
+                            var enabled = g.FirstOrDefault(n => n.Enabled);
+                            return enabled ?? g.First();
+                        })
+                        .ToList();
+
+                    if (uniqueNetworks.Count != config.JellyseerrNetworks.Count)
+                    {
+                        m_logger.LogWarning($"Deduplicating networks on load: {config.JellyseerrNetworks.Count} -> {uniqueNetworks.Count}");
+                        config.JellyseerrNetworks = uniqueNetworks;
+                        base.UpdateConfiguration(config);
+                    }
+                }
+
+                return config;
+            }
+        }
+
+        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, ILogger<HomeScreenSectionsPlugin> logger) : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
+            m_logger = logger;
             
             ServerConfigurationManager = serverConfigurationManager;
             ServiceProvider = serviceProvider;
@@ -109,16 +145,15 @@ namespace Jellyfin.Plugin.HomeScreenSections
         }
 
         /// <summary>
-        /// Override UpdateConfiguration to preserve cache bust counter and config version.
+        /// Override UpdateConfiguration to preserve cache bust counter.
         /// </summary>
-        /// <param name="configuration">The new configuration to save</param>
+        /// <param name="configuration">The new configuration to save.</param>
         public override void UpdateConfiguration(BasePluginConfiguration configuration)
         {
             if (configuration is PluginConfiguration pluginConfig)
             {
                 var currentConfig = base.Configuration;
 
-                // Handle cache busting when developer mode is turned ON
                 if (!currentConfig.DeveloperMode && pluginConfig.DeveloperMode)
                 {
                     pluginConfig.CacheBustCounter = currentConfig.CacheBustCounter + 1;
@@ -126,6 +161,24 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 else
                 {
                     pluginConfig.CacheBustCounter = currentConfig.CacheBustCounter;
+                }
+
+                if (pluginConfig.JellyseerrNetworks != null && pluginConfig.JellyseerrNetworks.Count > 0)
+                {
+                    var uniqueNetworks = pluginConfig.JellyseerrNetworks
+                        .GroupBy(n => n.Id)
+                        .Select(g =>
+                        {
+                            var enabled = g.FirstOrDefault(n => n.Enabled);
+                            return enabled ?? g.First();
+                        })
+                        .ToList();
+
+                    if (uniqueNetworks.Count != pluginConfig.JellyseerrNetworks.Count)
+                    {
+                        m_logger.LogWarning($"Deduplicating networks: {pluginConfig.JellyseerrNetworks.Count} -> {uniqueNetworks.Count}");
+                        pluginConfig.JellyseerrNetworks = uniqueNetworks;
+                    }
                 }
             }
 

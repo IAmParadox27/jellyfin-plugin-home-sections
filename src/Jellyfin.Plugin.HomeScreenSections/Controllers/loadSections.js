@@ -37,7 +37,7 @@
     }
     
     function getHomeScreenSectionItemsHtmlFn(useEpisodeImages, enableOverflow, sectionKey, cardBuilder, getShapeFn, imageHelper, appRouter, additionalSettings) {
-        if (sectionKey === "DiscoverMovies" || sectionKey === "DiscoverTV" || sectionKey === "Discover") {
+        if (sectionKey === "DiscoverMovies" || sectionKey === "DiscoverTV" || sectionKey === "Discover" || sectionKey === "DiscoverNetwork") {
             return createDiscoverCards;
         }
         
