@@ -10,6 +10,7 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
@@ -41,16 +42,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected readonly IUserManager m_userManager;
         protected readonly ILibraryManager m_libraryManager;
         protected readonly IDtoService m_dtoService;
+        private readonly IServiceProvider m_serviceProvider;
 
         protected RecentlyAddedSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
-            IDtoService dtoService)
+            IDtoService dtoService,
+            IServiceProvider serviceProvider)
         {
             m_userViewManager = userViewManager;
             m_userManager = userManager;
             m_libraryManager = libraryManager;
             m_dtoService = dtoService;
+            m_serviceProvider = serviceProvider;
         }
 
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -115,7 +119,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
-            RecentlyAddedSectionBase instance = (Activator.CreateInstance(GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedSectionBase)!;
+            RecentlyAddedSectionBase instance = (ActivatorUtilities.CreateInstance(m_serviceProvider, GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedSectionBase)!;
             
             instance.AdditionalData = AdditionalData;
             instance.DisplayText = DisplayText;

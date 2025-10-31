@@ -33,7 +33,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         public RecentlyAddedShowsSection(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
-            IDtoService dtoService, ILogger<RecentlyAddedShowsSection> logger) : base(userViewManager, userManager, libraryManager, dtoService)
+            IDtoService dtoService,
+            IServiceProvider serviceProvider,
+            ILogger<RecentlyAddedShowsSection> logger) : base(userViewManager, userManager, libraryManager, dtoService, serviceProvider)
         {
             m_logger = logger;
         }
