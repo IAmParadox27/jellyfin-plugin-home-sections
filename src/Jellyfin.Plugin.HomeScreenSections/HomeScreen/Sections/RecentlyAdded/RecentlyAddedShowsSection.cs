@@ -51,7 +51,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                         SectionItemKind
                     },
                     DtoOptions = dtoOptions,
-                    IsPlayed = isPlayed
+                    IsPlayed = isPlayed,
+                    EnableTotalRecordCount = false
                 });
             }).DistinctBy(x => x.Id).OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions)).Take(16);
         }
@@ -72,32 +73,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                     OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
                     DtoOptions = dtoOptions,
                     IsMissing = false,
+                    IsVirtualItem = false,
+                    EnableTotalRecordCount = false,
                     Limit = 1
                 };
 
                 BaseItem? latestItemAddedForShow = m_libraryManager.GetItemList(query).FirstOrDefault();
 
                 dateCreated = latestItemAddedForShow?.DateCreated;
-                
-                m_logger.LogInformation($"Show '{series.Name}' has been sorted based on episode '{latestItemAddedForShow?.Name}' which has date created of: {dateCreated}.");
-                
-                // This is debug code to help with testing the issue.
-                // It is slow, so it should only be used when debugging.
-                InternalItemsQuery debugQuery = new InternalItemsQuery(user)
-                {
-                    AncestorWithPresentationUniqueKey = null,
-                    SeriesPresentationUniqueKey = seriesKey,
-                    IncludeItemTypes = new[] { BaseItemKind.Episode },
-                    OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
-                    DtoOptions = dtoOptions,
-                    IsMissing = false
-                };
-                IReadOnlyList<BaseItem> allEpisodesInShow = m_libraryManager.GetItemList(debugQuery);
-
-                if (allEpisodesInShow.Max(x => x.DateCreated) != latestItemAddedForShow?.DateCreated)
-                {
-                    m_logger.LogWarning($"After getting all episodes for the show and getting the largest DateCreated value, the value is not the same as the one found using the quicker query. This is a bug.");
-                }
             }
             else if (item is Season season)
             {

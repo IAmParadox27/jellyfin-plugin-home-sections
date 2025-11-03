@@ -66,7 +66,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Fields = new List<ItemFields>
                 {
                     ItemFields.PrimaryImageAspectRatio,
-                    ItemFields.Path
+                    ItemFields.Path,
+                    ItemFields.DateCreated
                 },
                 ImageTypeLimit = 1,
                 ImageTypes = new List<ImageType>
