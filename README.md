@@ -77,6 +77,10 @@ If you find an issue with any of the sections or usage of the plugin, please ope
 
 ### FAQ
 
+#### I've updated Jellyfin to latest version but I can't see the plugin available in the catalogue
+
+The likelihood is the plugin hasn't been updated for that version of Jellyfin and the plugins are strictly 1 version compatible. Please wait until an update has been pushed. If you can see the version number in the release assets then please make an issue, but if its not in the assets, please wait. I know Jellyfin has updated, I'll update when I can.
+
 #### I've installed the plugins and don't get any options or changes. How do I fix?
 This is common, particularly on a fresh install. The first thing you should try is the following
 1. Launch your browsers developer tools
