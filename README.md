@@ -65,7 +65,11 @@ The sections that are new for this plugin (and most likely the reason you would 
 - Upcoming
  	- The upcoming sections are integrated into the *arrs to bring their calendars as sections in Jellyfin.
 
-<i>Insert screenshot here before merging to main</i>
+<details>
+	<summary><strong>Expand for screenshot of what the home screen can turn into.</strong></summary>
+	<i>Please note: Images have been blurred</i>
+	<img src="https://raw.githubusercontent.com/IAmParadox27/jellyfin-plugin-home-sections/refs/heads/main/screenshots/HSS_Showcase.png" alt="Home Screen Sections Showcase" />
+</details>
 
 ## Installation
 
