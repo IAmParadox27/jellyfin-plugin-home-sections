@@ -50,17 +50,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public QueryResult<HomeScreenSectionInfo> GetSectionTypes()
         {
-            // Todo add reading whether the section is enabled or disabled by the user.
             List<HomeScreenSectionInfo> items = new List<HomeScreenSectionInfo>();
 
             IEnumerable<IHomeScreenSection> sections = m_homeScreenManager.GetSectionTypes();
+            var sectionSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings;
 
             foreach (IHomeScreenSection section in sections)
             {
-                HomeScreenSectionInfo item = section.GetInfo();
+                // Network sections (DiscoverNetwork) are controlled by JellyseerrNetworks config, not user settings
+                if (section.Section == "DiscoverNetwork")
+                {
+                    continue; // Skip network sections in user settings
+                }
 
+                var settings = sectionSettings.FirstOrDefault(s => s.SectionId == section.Section);
+
+                if (settings != null && !settings.Enabled)
+                {
+                    continue;
+                }
+
+                HomeScreenSectionInfo item = section.GetInfo();
                 item.ViewMode ??= SectionViewMode.Landscape;
-                
+
                 items.Add(item);
             }
 
