@@ -55,11 +55,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));
 
+            string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
+            string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
+
             Dictionary<string, string> providerIds = new Dictionary<string, string>
             {
                 { "ReadarrBookId", calendarItem.Id.ToString() },
                 { "FormattedDate", countdownText },
-                { "ReadarrPoster", posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem) }
+                { "ReadarrPoster", cachedImageUrl }
             };
 
             return new BaseItemDto

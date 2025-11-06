@@ -57,13 +57,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "poster", StringComparison.OrdinalIgnoreCase));
 
+            string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
+            string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
+
             // Create provider IDs to store external image URL and metadata
             Dictionary<string, string> providerIds = new Dictionary<string, string>
             {
                 { "RadarrMovieId", calendarItem.Id.ToString() },
                 { "YearInfo", yearInfo },
                 { "FormattedDate", countdownText },
-                { "RadarrPoster", posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem) }
+                { "RadarrPoster", cachedImageUrl }
             };
 
             return new BaseItemDto
