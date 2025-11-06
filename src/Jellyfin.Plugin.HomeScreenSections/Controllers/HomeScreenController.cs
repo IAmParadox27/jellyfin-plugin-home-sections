@@ -39,19 +39,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private readonly IServerApplicationHost m_serverApplicationHost;
         private readonly IApplicationPaths m_applicationPaths;
         private readonly HomeScreenSectionService m_homeScreenSectionService;
+        private readonly ImageCacheService m_imageCacheService;
 
         public HomeScreenController(
             IHomeScreenManager homeScreenManager,
             IDisplayPreferencesManager displayPreferencesManager,
             IServerApplicationHost serverApplicationHost, 
             IApplicationPaths applicationPaths,
-            HomeScreenSectionService homeScreenSectionService)
+            HomeScreenSectionService homeScreenSectionService,
+            ImageCacheService imageCacheService)
         {
             m_homeScreenManager = homeScreenManager;
             m_displayPreferencesManager = displayPreferencesManager;
             m_serverApplicationHost = serverApplicationHost;
             m_applicationPaths = applicationPaths;
             m_homeScreenSectionService = homeScreenSectionService;
+            m_imageCacheService = imageCacheService;
         }
 
         /// <summary>
@@ -135,6 +138,53 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             catch (Exception ex)
             {
                 return BadRequest($"Error busting cache: {ex.Message}");
+            }
+        }
+
+        [HttpGet("CachedImage/{cacheKey}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult GetCachedImage([FromRoute] string cacheKey)
+        {
+            (byte[]? data, string? contentType) = m_imageCacheService.GetCachedImage(cacheKey);
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
+
+            if (data == null || contentType == null)
+            {
+                return NotFound();
+            }
+            if (config.DeveloperMode)
+            {
+                Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+            }
+            else
+            {
+                Response.Headers.CacheControl = $"public, max-age={config.CacheTimeoutSeconds}";
+            }
+            return File(data, contentType);
+        }
+
+        [HttpPost("ClearImageCache")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult ClearImageCache([FromQuery] bool clearAll = false)
+        {
+            try
+            {
+                if (clearAll)
+                {
+                    m_imageCacheService.ClearAllCache();
+                    return Ok(new { message = "All cached images cleared" });
+                }
+                else
+                {
+                    m_imageCacheService.ClearExpiredCache();
+                    return Ok(new { message = "Expired cached images cleared" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error clearing image cache: {ex.Message}");
             }
         }
 
