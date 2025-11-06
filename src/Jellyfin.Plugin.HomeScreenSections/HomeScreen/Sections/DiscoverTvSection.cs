@@ -2,6 +2,7 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
@@ -18,7 +19,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         protected override string JellyseerEndpoint => "/api/v1/discover/tv";
         
-        public DiscoverTvSection(IUserManager userManager) : base(userManager)
+        public DiscoverTvSection(IUserManager userManager, ImageCacheService imageCacheService) 
+            : base(userManager, imageCacheService)
         {
         }
     }

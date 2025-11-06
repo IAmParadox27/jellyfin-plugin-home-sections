@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Books";
 
-        public UpcomingBooksSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger<UpcomingBooksSection> logger)
-            : base(userManager, dtoService, arrApiService, logger)
+        public UpcomingBooksSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingBooksSection> logger)
+            : base(userManager, dtoService, arrApiService, imageCacheService, logger)
         {
         }
 
@@ -55,11 +55,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));
 
+            string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
+            string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
+
             Dictionary<string, string> providerIds = new Dictionary<string, string>
             {
                 { "ReadarrBookId", calendarItem.Id.ToString() },
                 { "FormattedDate", countdownText },
-                { "ReadarrPoster", posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem) }
+                { "ReadarrPoster", cachedImageUrl }
             };
 
             return new BaseItemDto
@@ -84,7 +87,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingBooksSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingBooksSection>)Logger)
+            yield return new UpcomingBooksSection(UserManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingBooksSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,

@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using Jellyfin.Plugin.HomeScreenSections.Services;
@@ -23,13 +24,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected IUserManager UserManager { get; }
         protected IDtoService DtoService { get; }
         protected ArrApiService ArrApiService { get; }
+        protected ImageCacheService ImageCacheService { get; }
         protected ILogger Logger { get; }
 
-        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger logger)
+        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger logger)
         {
             UserManager = userManager;
             DtoService = dtoService;
             ArrApiService = arrApiService;
+            ImageCacheService = imageCacheService;
             Logger = logger;
         }
 
@@ -120,6 +123,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected virtual string GetFallbackCoverUrl(T missingItem)
         {
             return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString("Unknown Item\nImage Not Found")}";
+        }
+        
+        protected string GetCachedImageUrl(string? sourceUrl)
+        {
+            return ImageCacheHelper.GetCachedImageUrl(ImageCacheService, sourceUrl, Logger);
         }
 
         // Abstract methods that subclasses must implement

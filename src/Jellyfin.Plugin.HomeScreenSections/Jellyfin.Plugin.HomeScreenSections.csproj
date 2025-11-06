@@ -22,6 +22,7 @@
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
+      <PackageReference Include="SkiaSharp" Version="3.116.1" />
     </ItemGroup>
     
     <!-- 10.10.7 Specific Code from non 10.10.7 builds -->

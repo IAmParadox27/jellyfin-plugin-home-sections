@@ -47,6 +47,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 
         public bool OverrideStreamyfinHome { get; set; } = false;
 
+        public int MaxImageCacheEntries { get; set; } = 10000;
+
+        public int MaxImageWidth { get; set; } = 600;
+
+        public int ImageJpegQuality { get; set; } = 85;
+
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
     }
 
