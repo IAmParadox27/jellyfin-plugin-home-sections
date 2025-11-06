@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Shows";
 
-        public UpcomingShowsSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger<UpcomingShowsSection> logger)
-            : base(userManager, dtoService, arrApiService, logger)
+        public UpcomingShowsSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingShowsSection> logger)
+            : base(userManager, dtoService, arrApiService, imageCacheService, logger)
         {
         }
 
@@ -92,7 +92,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingShowsSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingShowsSection>)Logger)
+            yield return new UpcomingShowsSection(UserManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingShowsSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,

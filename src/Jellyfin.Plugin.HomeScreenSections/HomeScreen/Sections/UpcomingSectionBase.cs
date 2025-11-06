@@ -23,13 +23,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected IUserManager UserManager { get; }
         protected IDtoService DtoService { get; }
         protected ArrApiService ArrApiService { get; }
+        protected ImageCacheService ImageCacheService { get; }
         protected ILogger Logger { get; }
 
-        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger logger)
+        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger logger)
         {
             UserManager = userManager;
             DtoService = dtoService;
             ArrApiService = arrApiService;
+            ImageCacheService = imageCacheService;
             Logger = logger;
         }
 
