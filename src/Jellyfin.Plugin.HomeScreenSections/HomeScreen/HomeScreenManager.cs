@@ -296,14 +296,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 return m_innerSection.GetResults(payload, queryCollection);
             }
 
-            public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+            public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
             {
-                var innerInstance = m_innerSection.CreateInstance(userId, otherInstances);
-                if (innerInstance == null)
-                {
-                    return null;
-                }
-                return new SyntheticOptionInjector(innerInstance);
+                return m_innerSection.CreateInstances(userId, instanceCount)
+                    .Select(x => new SyntheticOptionInjector(x));
             }
 
             public HomeScreenSectionInfo GetInfo()

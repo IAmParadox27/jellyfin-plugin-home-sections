@@ -57,7 +57,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			// If user has a playlist, route to the specific playlist details
 			if (!string.IsNullOrEmpty(playlistId))
 			{
-				return new MyListSection(UserManager, DtoService, PlaylistManager, UserDataManager)
+				yield return new MyListSection(UserManager, DtoService, PlaylistManager, UserDataManager)
 				{
 					DisplayText = displayText,
 					Route = "details",
