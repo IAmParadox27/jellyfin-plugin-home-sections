@@ -81,7 +81,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 					Recursive = true,
 					IsPlayed = true,
-					DtoOptions = dtoOptions
+					DtoOptions = dtoOptions,
+					EnableTotalRecordCount = false
 				};
 
 				return LibraryManager.GetItemList(query);
@@ -175,6 +176,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		            Limit = 24,
 		            Recursive = true,
 		            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+		            EnableTotalRecordCount = false
 	            }.ApplySimilarSettings(item));
 
 	            return items;

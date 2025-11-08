@@ -72,7 +72,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			{
 				results.AddRange(myListPlaylist.GetChildren(user, true, new InternalItemsQuery(user)
 				{
-					IsAiring = true
+					IsAiring = true,
+					EnableTotalRecordCount = false
 				}));
 			}
 

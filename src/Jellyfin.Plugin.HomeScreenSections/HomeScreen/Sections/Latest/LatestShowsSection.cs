@@ -67,7 +67,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 DtoOptions = new DtoOptions
                     { Fields = Array.Empty<ItemFields>(), EnableImages = true },
-                IsPlayed = isPlayed
+                IsPlayed = isPlayed,
+                EnableTotalRecordCount = false
             });
             
             List<BaseItem> series = episodes

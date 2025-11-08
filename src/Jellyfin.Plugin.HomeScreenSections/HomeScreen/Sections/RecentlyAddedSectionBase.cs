@@ -158,7 +158,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 IsPlayed = isPlayed,
                 OrderBy = new [] { (ItemSortBy.DateCreated, SortOrder.Descending) },
                 Limit = 16,
-                IsMissing = false
+                IsMissing = false,
+                EnableTotalRecordCount = false
             })).DistinctBy(x => x.Id)
             .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
             .Take(16);

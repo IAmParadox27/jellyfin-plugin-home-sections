@@ -99,13 +99,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 						IncludeItemTypes = new []
 						{
 							BaseItemKind.BoxSet
-						}
+						},
+						EnableTotalRecordCount = false
 					});
 				}).OfType<BoxSet>().ToArray();
 				
 				var collections = boxSets.Select(x =>
 				{
-					(BaseItem Item, UserItemData? UserData)[] children = x.GetChildren(user, true, new InternalItemsQuery(user)).Select(y => (y, UserDataManager.GetUserData(user, y))).ToArray();
+					(BaseItem Item, UserItemData? UserData)[] children = x.GetChildren(user, true, new InternalItemsQuery(user)
+					{
+						EnableTotalRecordCount = false
+					}).Select(y => (y, UserDataManager.GetUserData(user, y))).ToArray();
 					
 					if (!children.All(y => y.UserData?.Played ?? false))
 					{
@@ -140,6 +144,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 						},
 						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 						Recursive = true,
+						EnableTotalRecordCount = false
 					}).Cast<Series>();
 				}).Where(x =>
 				{

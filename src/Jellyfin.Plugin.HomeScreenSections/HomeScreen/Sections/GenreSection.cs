@@ -84,7 +84,8 @@ public class GenreSection : IHomeScreenSection
                 Recursive = true,
                 Limit = 24,
                 DtoOptions = dtoOptions,
-                Genres = new List<string> { genre.Name }
+                Genres = new List<string> { genre.Name },
+                EnableTotalRecordCount = false
             };
 
             return m_libraryManager.GetItemList(genreMovies);
@@ -213,6 +214,7 @@ public class GenreSection : IHomeScreenSection
                 IsFavoriteOrLiked = true,
                 User = user,
                 ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                EnableTotalRecordCount = false
             };
 
             return m_libraryManager.GetItemList(favoriteOrLikedQuery);
@@ -244,7 +246,8 @@ public class GenreSection : IHomeScreenSection
                 ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 IsPlayed = true,
-                DtoOptions = dtoOptions
+                DtoOptions = dtoOptions,
+                EnableTotalRecordCount = false
             };
 
             return m_libraryManager.GetItemList(recentlyWatchedQuery);
@@ -262,7 +265,8 @@ public class GenreSection : IHomeScreenSection
 
             return m_libraryManager.GetGenres(new InternalItemsQuery()
             {
-                ItemIds = new[] { x.Id }
+                ItemIds = new[] { x.Id },
+                EnableTotalRecordCount = false
             }).Items.Select(genre => new
             {
                 Genre = genre.Item.Name,
@@ -294,7 +298,8 @@ public class GenreSection : IHomeScreenSection
                     {
                         BaseItemKind.Movie
                     },
-                    GenreIds = new[] { x.Item.Id }
+                    GenreIds = new[] { x.Item.Id },
+                    EnableTotalRecordCount = false
                 });
 
                 int playCount = items.Sum(y =>
