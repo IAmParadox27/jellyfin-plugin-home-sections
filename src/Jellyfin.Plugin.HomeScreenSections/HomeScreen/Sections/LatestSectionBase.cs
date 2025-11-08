@@ -89,8 +89,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
-
-        public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+        
+        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
 
@@ -125,7 +125,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             sectionBase.AdditionalData = AdditionalData;
             sectionBase.OriginalPayload = originalPayload;
 
-            return sectionBase;
+            yield return sectionBase;
         }
 
         public HomeScreenSectionInfo GetInfo()

@@ -83,9 +83,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         protected override string GetServiceName() => "Lidarr";
         protected override string GetSectionName() => "upcoming music";
 
-        public override IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+        public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            return new UpcomingMusicSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingMusicSection>)Logger)
+            yield return new UpcomingMusicSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingMusicSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,

@@ -47,7 +47,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			PlaylistManager = playlistManager;
 			UserDataManager = userDataManager;
 		}	
-		public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
 		{
 			string playlistId = GetPlaylistId(userId, "My List");
 			
@@ -66,7 +66,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			}
 			
 			// If no playlist, use simple list route to playlists library
-			return new MyListSection(UserManager, DtoService, PlaylistManager, UserDataManager)
+			yield return new MyListSection(UserManager, DtoService, PlaylistManager, UserDataManager)
 			{
 				DisplayText = displayText,
 				Route = "list"

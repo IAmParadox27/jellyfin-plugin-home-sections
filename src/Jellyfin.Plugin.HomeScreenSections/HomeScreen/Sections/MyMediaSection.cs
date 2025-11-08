@@ -88,9 +88,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         }
 
         /// <inheritdoc/>
-        public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            return this;
+            yield return this;
         }
         
         public HomeScreenSectionInfo GetInfo()

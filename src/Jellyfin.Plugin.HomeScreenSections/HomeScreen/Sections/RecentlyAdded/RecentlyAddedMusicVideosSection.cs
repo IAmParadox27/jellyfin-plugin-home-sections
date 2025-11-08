@@ -26,7 +26,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         
         protected override SectionViewMode DefaultViewMode => SectionViewMode.Landscape;
         
-        public RecentlyAddedMusicVideosSection(IUserViewManager userViewManager, IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService) : base(userViewManager, userManager, libraryManager, dtoService)
+        public RecentlyAddedMusicVideosSection(IUserViewManager userViewManager, 
+            IUserManager userManager, 
+            ILibraryManager libraryManager, 
+            IDtoService dtoService,
+            IServiceProvider serviceProvider) : base(userViewManager, userManager, libraryManager, dtoService, serviceProvider)
         {
         }
     }

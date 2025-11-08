@@ -94,7 +94,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				{
 					return LibraryManager.GetItemList(new InternalItemsQuery(user)
 					{
-						ParentId = Guid.Parse(x.ItemId),
+						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 						Recursive = true,
 						IncludeItemTypes = new []
 						{
@@ -138,7 +138,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 						{
 							BaseItemKind.Series
 						},
-						ParentId = Guid.Parse(x.ItemId),
+						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
 						Recursive = true,
 					}).Cast<Series>();
 				}).Where(x =>
@@ -174,9 +174,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			return result;
 		}
 
-		public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
 		{
-			return this;
+			yield return this;
 		}
 		
 		public HomeScreenSectionInfo GetInfo()

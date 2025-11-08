@@ -34,8 +34,6 @@ public class GenreSection : IHomeScreenSection
     private readonly IUserDataManager m_userDataManager;
     private readonly IDtoService m_dtoService;
     
-    private ConcurrentDictionary<Guid, (string Genre, int Score)[]> m_userGenreCache = new ConcurrentDictionary<Guid, (string Genre, int Score)[]>();
-    private ConcurrentDictionary<Guid, bool> m_usersWithOngoingSearches = new ConcurrentDictionary<Guid, bool>();
     private readonly IUserViewManager m_userViewManager;
 
     public GenreSection(IUserManager userManager, ILibraryManager libraryManager, CollectionManagerProxy collectionManagerProxy,
@@ -82,7 +80,7 @@ public class GenreSection : IHomeScreenSection
                     BaseItemKind.Movie
                 },
                 OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-                ParentId = Guid.Parse(x.ItemId),
+                ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 Limit = 24,
                 DtoOptions = dtoOptions,
@@ -97,7 +95,7 @@ public class GenreSection : IHomeScreenSection
         return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(movies.Take(16).ToArray(), dtoOptions, user));
     }
 
-    public IHomeScreenSection? CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+    public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
         User? user = userId is null || userId.Value.Equals(default)
             ? null
@@ -108,52 +106,44 @@ public class GenreSection : IHomeScreenSection
             throw new Exception();
         }
         
-        IHomeScreenSection[]? otherInstancesArray = otherInstances?.ToArray();
+        // Do the heavy lifting before we add into the cache
+        (string Genre, int Score)[] userGenreScores = GetGenresForUser(user);
         
-        if ((otherInstancesArray?.Length ?? 0) == 0)
-        {
-            // Do the heavy lifting before we add into the cache
-            (string Genre, int Score)[] genresToCache = GetGenresForUser(user);
-            
-            // If this is the "first" for this request, lets do the calculation for all of the genres and cache and ordered list to retrieve from
-            m_userGenreCache.TryRemove(userId!.Value, out _);
-            
-            m_userGenreCache.TryAdd(userId!.Value, genresToCache);
-        }
-
-        if (!m_userGenreCache.ContainsKey(userId!.Value))
-        {
-            m_userGenreCache.TryAdd(userId.Value, Array.Empty<(string Genre, int Score)>());
-        }
-
-        (string Genre, int Score)[] userGenreScores = m_userGenreCache[userId!.Value]
-            .Where(x => !(otherInstancesArray?.Any(y => y.AdditionalData == x.Genre) ?? false))
-            .ToArray();
-
         if (userGenreScores.Length == 0)
         {
-            return null;
+            yield break;
         }
         
-        int totalScore = userGenreScores.Sum(x => x.Score);
         Random rnd = new Random();
 
-        string? selectedGenre = null;
-        bool foundNew = false;
-        do
+        List<string> pickedGenres = new List<string>();
+
+        (string Genre, int Score)[] availableGenres = userGenreScores.ToArray();
+        while (pickedGenres.Count < instanceCount && availableGenres.Length > 0)
         {
+            string? selectedGenre = null;
+            
+            availableGenres = userGenreScores.Where(x => !pickedGenres.Contains(x.Genre)).ToArray();
+
+            if (availableGenres.Length == 0)
+            {
+                break;
+            }
+            
+            int totalScore = availableGenres.Sum(x => x.Score);
+            
             int randomScore = 0;
-            if (totalScore != 0)
+            if (totalScore > 0)
             {
                 randomScore = rnd.Next(0, totalScore);
             }
-
-            if (totalScore == 0)
+            else
             {
                 randomScore = rnd.Next(0, userGenreScores.Length);
                 selectedGenre = userGenreScores[randomScore].Genre;
             }
-            else
+
+            if (totalScore > 0)
             {
                 foreach ((string Genre, int Score) userGenre in userGenreScores)
                 {
@@ -171,40 +161,22 @@ public class GenreSection : IHomeScreenSection
                     selectedGenre = userGenreScores.Last().Genre;
                 }
             }
-
-            if (!(otherInstancesArray?.Any(x => x.AdditionalData == selectedGenre) ?? false))
+            
+            if (selectedGenre != null)
             {
-                foundNew = true;
+                pickedGenres.Add(selectedGenre);
+                
+                yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
+                {
+                    AdditionalData = selectedGenre,
+                    DisplayText = $"{selectedGenre} Movies"
+                };
             }
-        } while (!foundNew);
-
-        GenreSection section = new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
-        {
-            AdditionalData = selectedGenre,
-            DisplayText = $"{selectedGenre} Movies"
-        };
-        
-        return section;
+        }
     }
 
     private (string Genre, int Score)[] GetGenresForUser(User user)
     {
-        if (m_usersWithOngoingSearches.ContainsKey(user.Id))
-        {
-            while (m_usersWithOngoingSearches.ContainsKey(user.Id))
-            {
-                // Pause this thread until its done with the current search
-                Thread.Sleep(100);
-            }
-
-            if (m_userGenreCache.TryGetValue(user.Id, out (string Genre, int Score)[]? cachedGenres))
-            {
-                return cachedGenres;
-            }
-        }
-        
-        m_usersWithOngoingSearches.TryAdd(user.Id, true);
-        
         int likedOrFavouriteScore = 125;
         int recentlyWatchedScore = 50;
         int scorePerPlay = 1;
@@ -240,7 +212,7 @@ public class GenreSection : IHomeScreenSection
                 Recursive = true,
                 IsFavoriteOrLiked = true,
                 User = user,
-                ParentId = Guid.Parse(x.ItemId)
+                ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
             };
 
             return m_libraryManager.GetItemList(favoriteOrLikedQuery);
@@ -269,7 +241,7 @@ public class GenreSection : IHomeScreenSection
                 },
                 OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending) },
                 Limit = 7,
-                ParentId = Guid.Parse(x.ItemId),
+                ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 IsPlayed = true,
                 DtoOptions = dtoOptions
@@ -311,7 +283,7 @@ public class GenreSection : IHomeScreenSection
             User = user,
             EnableTotalRecordCount = false,
             Recursive = true,
-            ParentId = Guid.Parse(x.ItemId)
+            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
         }).Items.Where(y => y.ItemCounts.MovieCount > 0))
             .DistinctBy(x => x.Item.Id)
             .Select(x =>
@@ -348,8 +320,6 @@ public class GenreSection : IHomeScreenSection
             .ToArray();
 
         var returnValue = scoredGenres.Select(x => (x.Genre, x.Score)).ToArray();
-        
-        m_usersWithOngoingSearches.TryRemove(user.Id, out _);
         
         return returnValue;
     }

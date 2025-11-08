@@ -28,7 +28,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         public RecentlyAddedAlbumsSection(IUserViewManager userViewManager,
             IUserManager userManager,
             ILibraryManager libraryManager,
-            IDtoService dtoService) : base(userViewManager, userManager, libraryManager, dtoService)
+            IDtoService dtoService,
+            IServiceProvider serviceProvider) : base(userViewManager, userManager, libraryManager, dtoService, serviceProvider)
         {
         }
     }
