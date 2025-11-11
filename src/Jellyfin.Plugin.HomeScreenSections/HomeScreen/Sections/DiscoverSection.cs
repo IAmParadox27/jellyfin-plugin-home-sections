@@ -82,6 +82,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                             
                             if (item.Value<JObject>("mediaInfo") == null)
                             {
+                                string dateTimeString = item.Value<string>("firstAirDate") ??
+                                                        item.Value<string>("releaseDate") ?? "1970-01-01";
+                                
+                                if (string.IsNullOrWhiteSpace(dateTimeString))
+                                {
+                                    dateTimeString = "1970-01-01";
+                                }
+                                
                                 returnItems.Add(new BaseItemDto()
                                 {
                                     Name = item.Value<string>("title") ?? item.Value<string>("name"),
@@ -93,7 +101,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                         { "Jellyseerr", item.Value<int>("id").ToString() },
                                         { "JellyseerrPoster", item.Value<string>("posterPath") ?? "404" }
                                     },
-                                    PremiereDate = DateTime.Parse(item.Value<string>("firstAirDate") ?? item.Value<string>("releaseDate") ?? "1970-01-01")
+                                    PremiereDate = DateTime.Parse(dateTimeString)
                                 });
                             }
                         }
