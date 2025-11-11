@@ -414,7 +414,7 @@
                                 if (var44_ = param120_.sent(), options = {
                                     enableOverflow: !0
                                 }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div style="order:' + var44_.Items[var44_5].OrderIndex + ';" class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
                                     if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
                                         for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                                 }

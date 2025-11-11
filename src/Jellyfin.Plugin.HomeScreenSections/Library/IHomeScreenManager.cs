@@ -71,6 +71,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public bool AllowViewModeChange { get; set; } = true;
 
         public bool AllowHideWatched { get; set; } = false;
+        
+        public int OrderIndex { get; set; }
     }
 
     public class ModularHomeUserSettings

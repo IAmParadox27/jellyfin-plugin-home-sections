@@ -32,7 +32,7 @@ public class HomeScreenSectionService
 
         List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
 
-        List<IHomeScreenSection> sectionInstances = new List<IHomeScreenSection>();
+        List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionInstances = new List<(IHomeScreenSection, int)>();
 
         // List<string> homeSectionOrderTypes = new List<string>();
         // if (HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride)
@@ -135,13 +135,14 @@ public class HomeScreenSectionService
 
         foreach (int key in groupedSections.Keys.OrderBy(x => x))
         {
-            sectionInstances.AddRange(groupedSections[key]);
+            sectionInstances.AddRange(groupedSections[key].Select(x => (x, key)));
         }
         
-        return sectionInstances.Where(x => x != null).Select(x =>
+        return sectionInstances.Where(x => x.Section != null).Select(x =>
         {
-            HomeScreenSectionInfo info = x.AsInfo();
+            HomeScreenSectionInfo info = x.Section.AsInfo();
 
+            info.OrderIndex = x.ConfiguredOrder;
             info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => y.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
             
             if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
