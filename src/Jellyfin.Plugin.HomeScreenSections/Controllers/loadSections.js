@@ -174,6 +174,9 @@
             html += '           <div class="cardPadder ' + cardPadderClass + ' lazy-hidden-children"></div>';
             
             if (posterUrl) {
+                if (!posterUrl.startsWith('http')) {
+                    posterUrl = window.ApiClient.getUrl(posterUrl);
+                }
                 html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + posterUrl + '\')"></div>';
             } else {
                 html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
