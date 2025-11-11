@@ -22,95 +22,124 @@
 </form>
 <script defer>
 
-    const config = {
-        setup: function () {
-            ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
-                document.querySelector('#modularHomeEnabled').checked = userSettings.CustomPrefs['useModularHome'] === 'true';
-            });
-
-            let urlStart = window.location.protocol + '//' + window.location.host;
-
-            ApiClient.fetch({
-                url: ApiClient.getUrl('ModularHomeViews/UserSettings?userId=' + ApiClient.getCurrentUserId()),
-                type: 'GET',
-                dataType: 'json',
-                headers: {
-                    accept: 'application/json'
-                }
-            }).then(function (settings) {
+    if (window.HomeScreenSectionsUserSettings === undefined) {
+        
+        window.HomeScreenSectionsUserSettings = {
+            setup: function () {
                 ApiClient.fetch({
-                    url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                    url: ApiClient.getUrl('HomeScreen/Meta'),
                     type: 'GET',
                     dataType: 'json',
                     headers: {
                         accept: 'application/json'
                     }
-                }).then(function (response) {
-                    if (response.TotalRecordCount > 0) {
-
-                        let html = '';
-                        for (let i = 0; i < response.TotalRecordCount; ++i) {
-                            let section = response.Items[i];
-
-                            let checked = false;
-                            if (settings.EnabledSections.includes(section.Section)) {
-                                checked = true;
-                            }
-
-                            html += '<label class="checkboxContainer">';
-                            html += '<input is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
-                            html += '<span>' + section.DisplayText + '</span>';
-                            html += '</label>';
-                        }
-
-                        let elem = document.querySelector('#enabledSections');
-                        elem.innerHTML = html;
-                    }
-                });
-            });
-
-            document.querySelector('.configForm')
-                .addEventListener('submit', function (e) {
+                }).then(function (hssMeta) {
                     ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
-                        userSettings.CustomPrefs['useModularHome'] = document.querySelector('#modularHomeEnabled').checked ? 'true' : 'false';
-
-                        ApiClient.updateDisplayPreferences('usersettings', userSettings, ApiClient.getCurrentUserId(), 'emby');
+                        document.querySelector('#modularHomeEnabled').checked = userSettings.CustomPrefs['useModularHome'] === 'true';
                     });
-
-                    let data = {
-                        UserId: ApiClient.getCurrentUserId(),
-                        EnabledSections: []
-                    };
-
-                    let checkboxes = document.querySelectorAll('.sectionEnabledCheckbox');
-
-                    checkboxes.forEach(function (checkbox) {
-                        let sectionId = checkbox.getAttribute('data-section');
-
-                        if (checkbox.checked) {
-                            data.EnabledSections.push(sectionId);
+                    
+                    if (!document.querySelector('#modularHomeEnabled').checked) {
+                        document.querySelector('#modularHomeEnabled').checked = hssMeta;
+                    }
+                    
+                    if (hssMeta.AllowUserOverride !== true) {
+                        document.querySelector('#modularHomeEnabled').disabled = true;
+                        document.querySelector('#modularHomeEnabled').parentElement.style.opacity = "0.5";
+                    }
+    
+                    ApiClient.fetch({
+                        url: ApiClient.getUrl('ModularHomeViews/UserSettings?userId=' + ApiClient.getCurrentUserId()),
+                        type: 'GET',
+                        dataType: 'json',
+                        headers: {
+                            accept: 'application/json'
                         }
+                    }).then(function (settings) {
+                        ApiClient.fetch({
+                            url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                            type: 'GET',
+                            dataType: 'json',
+                            headers: {
+                                accept: 'application/json'
+                            }
+                        }).then(function (response) {
+                            if (response.TotalRecordCount > 0) {
+    
+                                let html = '';
+                                for (let i = 0; i < response.TotalRecordCount; ++i) {
+                                    let section = response.Items[i];
+    
+                                    let disabled = !hssMeta.AllowUserOverride;
+                                    let checked = false;
+                                    if (settings.EnabledSections.includes(section.Section)) {
+                                        checked = true;
+                                    }
+                                    
+                                    if (!disabled) {
+                                        if (settings.LockedSections.includes(section.Section)) {
+                                            disabled = true;
+                                        }
+                                    }
+                                    
+                                    if (disabled) {
+                                        checked = settings.DefaultEnabledSections.includes(section.Section);
+                                    }
+    
+                                    html += '<label class="checkboxContainer" style="' + (disabled ? 'opacity: 0.5;' : '') + '">';
+                                    html += '<input ' + (disabled ? 'disabled="true"' : '') + ' is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
+                                    html += '<span>' + section.DisplayText + '</span>';
+                                    html += '</label>';
+                                }
+    
+                                let elem = document.querySelector('#enabledSections');
+                                elem.innerHTML = html;
+                            }
+                        });
                     });
-
-                    ApiClient.ajax({
-                        url: ApiClient.getUrl('ModularHomeViews/UserSettings'),
-                        type: 'POST',
-                        data: JSON.stringify(data),
-                        contentType: 'application/json'
-                    }).then(function () {
-                        Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
-
-                        setTimeout(function () {
-                            location.reload(true);
-                        }, 2000);
-                    })
-
-                    e.preventDefault();
-                    return false;
                 });
+                
+                document.querySelector('.configForm')
+                    .addEventListener('submit', function (e) {
+                        ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
+                            userSettings.CustomPrefs['useModularHome'] = document.querySelector('#modularHomeEnabled').checked ? 'true' : 'false';
+    
+                            ApiClient.updateDisplayPreferences('usersettings', userSettings, ApiClient.getCurrentUserId(), 'emby');
+                        });
+    
+                        let data = {
+                            UserId: ApiClient.getCurrentUserId(),
+                            EnabledSections: []
+                        };
+    
+                        let checkboxes = document.querySelectorAll('.sectionEnabledCheckbox');
+    
+                        checkboxes.forEach(function (checkbox) {
+                            let sectionId = checkbox.getAttribute('data-section');
+    
+                            if (checkbox.checked) {
+                                data.EnabledSections.push(sectionId);
+                            }
+                        });
+    
+                        ApiClient.ajax({
+                            url: ApiClient.getUrl('ModularHomeViews/UserSettings'),
+                            type: 'POST',
+                            data: JSON.stringify(data),
+                            contentType: 'application/json'
+                        }).then(function () {
+                            Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
+    
+                            setTimeout(function () {
+                                location.reload(true);
+                            }, 2000);
+                        })
+    
+                        e.preventDefault();
+                        return false;
+                    });
+            }
         }
     }
-
-    config.setup();
-
+    
+    window.HomeScreenSectionsUserSettings.setup();
 </script>
