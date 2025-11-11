@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -66,7 +67,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
 				.Where(x => x.CollectionType == CollectionTypeOptions.movies)
-				.ToArray();
+				.FilterToUserPermitted(LibraryManager, user);
 
 			List<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
 			{
@@ -158,7 +159,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
 	            .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-	            .ToArray();
+	            .FilterToUserPermitted(LibraryManager, user);
             
             IList<BaseItem>? similar = folders.SelectMany(x =>
             {

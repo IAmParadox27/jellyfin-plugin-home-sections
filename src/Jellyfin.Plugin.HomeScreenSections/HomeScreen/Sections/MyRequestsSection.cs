@@ -1,4 +1,5 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -79,9 +80,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 IEnumerable<JObject>? presentRequestedMedia = jsonResponse.Value<JArray>("results")?.OfType<JObject>()
                     .Where(x => x.Value<JObject>("media")?.Value<string>("jellyfinMediaId") != null)
                     .Select(x => x.Value<JObject>("media")!);
-                
+
                 VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                    .ToArray();
+                    .FilterToUserPermitted(m_libraryManager, user);
 
                 IEnumerable<string?>? jellyfinItemIds = presentRequestedMedia?.Select(x => x.Value<string>("jellyfinMediaId"));
                 
