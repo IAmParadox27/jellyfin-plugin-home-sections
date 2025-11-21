@@ -14,6 +14,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         
         public string? JellyseerrUrl { get; set; } = "";
 
+        public string? JellyseerrExternalUrl { get; set; } = "";
+
         public string? JellyseerrApiKey { get; set; } = "";
         
         public string? JellyseerrPreferredLanguages { get; set; } = "en";
