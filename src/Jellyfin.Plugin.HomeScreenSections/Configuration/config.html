@@ -172,8 +172,12 @@
                             <summary style="cursor: pointer; font-weight: bold;">Jellyseerr</summary>
                              <div style="padding-top: 1em;">
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtJellyseerrUrl" label="Jellyseerr URL" />
-                                    <div class="fieldDescription">URL for Jellyseerr to use for Discover sections.</div>
+                                    <input is="emby-input" type="text" data-id="txtJellyseerrUrl" label="Jellyseerr URL (Internal)" />
+                                    <div class="fieldDescription">Internal URL for Jellyseerr to use for API requests from the plugin backend.</div>
+                                </div>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="text" data-id="txtJellyseerrExternalUrl" label="Jellyseerr URL (External)" />
+                                    <div class="fieldDescription">External URL for Jellyseerr links in the frontend. Leave empty to use the internal URL.</div>
                                 </div>
                                 <div class="inputContainer">
                                     <input is="emby-input" type="password" data-id="txtJellyseerrApiKey" required="required" label="Jellyseerr API Key" />
@@ -510,6 +514,7 @@
                     LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                     LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
                     JellyseerrUrl: document.querySelector('[data-id=txtJellyseerrUrl]').value,
+                    JellyseerrExternalUrl: document.querySelector('[data-id=txtJellyseerrExternalUrl]').value,
                     JellyseerrApiKey: document.querySelector('[data-id=txtJellyseerrApiKey]').value,
                     JellyseerrPreferredLanguages: document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value,
                     DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
@@ -558,6 +563,7 @@
                         document.querySelector('[data-id=txtLibreTranslateUrl]').value = config.LibreTranslateUrl;
                         document.querySelector('[data-id=txtLibreTranslateApiKey]').value = config.LibreTranslateApiKey;
                         document.querySelector('[data-id=txtJellyseerrUrl]').value = config.JellyseerrUrl;
+                        document.querySelector('[data-id=txtJellyseerrExternalUrl]').value = config.JellyseerrExternalUrl;
                         document.querySelector('[data-id=txtJellyseerrApiKey]').value = config.JellyseerrApiKey;
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
                         

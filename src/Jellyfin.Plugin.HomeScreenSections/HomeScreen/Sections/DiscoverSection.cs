@@ -35,6 +35,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             // TODO: Get Jellyseerr Url
             string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
+            string? jellyseerrExternalUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl;
+            
+            // Use external URL for frontend links if configured, otherwise fall back to internal URL
+            string? jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl) ? jellyseerrExternalUrl : jellyseerrUrl;
 
             if (string.IsNullOrEmpty(jellyseerrUrl))
             {
@@ -97,7 +101,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                     SourceType = item.Value<string>("mediaType"),
                                     ProviderIds = new Dictionary<string, string>()
                                     {
-                                        { "JellyseerrRoot", jellyseerrUrl },
+                                        { "JellyseerrRoot", jellyseerrDisplayUrl },
                                         { "Jellyseerr", item.Value<int>("id").ToString() },
                                         { "JellyseerrPoster", item.Value<string>("posterPath") ?? "404" }
                                     },
