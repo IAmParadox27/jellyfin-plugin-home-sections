@@ -93,10 +93,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                         ItemIds = jellyfinItemIds?.Select(y => Guid.Parse(y ?? Guid.Empty.ToString()))?.ToArray() ?? Array.Empty<Guid>(),
                         Recursive = true,
                         EnableTotalRecordCount = false,
-                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                        OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) }
+                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString())
                     });
-                });
+                }).OrderByDescending(item => item.DateCreated);
                 
                 return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
             }
