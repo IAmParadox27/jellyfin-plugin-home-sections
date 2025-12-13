@@ -270,11 +270,17 @@ public class GenreSection : IHomeScreenSection
         {
             int score = 0;
             if (playCountByGenre.TryGetValue(genre, out var playScore))
+            {
                 score += playScore;
+            }
             if (recentlyWatchedByGenre.TryGetValue(genre, out var recentScore))
+            {
                 score += recentScore;
+            }
             if (likedByGenre.TryGetValue(genre, out var likedScore))
+            {
                 score += likedScore;
+            }
 
             return (Genre: genre, Score: score);
         }).ToArray();

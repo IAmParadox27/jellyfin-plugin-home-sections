@@ -65,7 +65,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             // Fetch more episodes to account for multiple episodes per series
             var recentEpisodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                IncludeItemTypes = new[] { SectionItemKind },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
                 Limit = 200, // Enough to find 16 unique series even with multi-episode releases
                 IsVirtualItem = false,
@@ -90,15 +90,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 .ToList();
 
             // Fetch the full series objects with proper DtoOptions for images
-            var seriesIds = seriesWithLatestEpisode.Select(x => x.Series.Id).ToArray();
+            var seriesIds = seriesWithLatestEpisode.Select(x => x.Series.Id);
+            var seriesIdArray = seriesIds.ToArray();
             var seriesItems = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                ItemIds = seriesIds,
+                ItemIds = seriesIdArray,
                 DtoOptions = dtoOptions
             });
 
             // Maintain the order from our sorted list
-            var orderedSeries = seriesIds
+            var orderedSeries = seriesIdArray
                 .Select(id => seriesItems.FirstOrDefault(s => s.Id == id))
                 .Where(s => s != null)
                 .ToList();
