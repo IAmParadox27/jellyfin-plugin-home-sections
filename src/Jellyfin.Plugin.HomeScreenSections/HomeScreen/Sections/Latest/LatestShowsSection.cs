@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -15,9 +15,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
     public class LatestShowsSection : LatestSectionBase
     {
         public override string? Section => "LatestShows";
-        
+
         public override string? DisplayText { get; set; } = "Latest Shows";
-        
+
         private readonly ITVSeriesManager m_tvSeriesManager;
 
         public LatestShowsSection(IUserViewManager userViewManager,
@@ -53,7 +53,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 ImageType.Backdrop,
                 ImageType.Primary,
             };
-            
+
             User? user = m_userManager.GetUserById(payload.UserId);
 
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
@@ -61,29 +61,52 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
-            IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            // Single query: Get recent episodes, limited but enough to find 16 unique series
+            // Fetch more episodes to account for multiple episodes per series
+            var recentEpisodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { SectionItemKind },
+                IncludeItemTypes = new[] { BaseItemKind.Episode },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
-                DtoOptions = new DtoOptions
-                    { Fields = Array.Empty<ItemFields>(), EnableImages = true },
-                IsPlayed = isPlayed
-            });
-            
-            List<BaseItem> series = episodes
-                .Where(x => !x.IsUnaired && !x.IsVirtualItem)
-                .Select(x => (x.FindParent<Series>(), (x as Episode)?.PremiereDate))
-                .GroupBy(x => x.Item1)
-                .Select(x => (x.Key, x.Max(y => y.PremiereDate)))
-                .OrderByDescending(x => x.Item2)
-                .Select(x => x.Key as BaseItem)
+                Limit = 200, // Enough to find 16 unique series even with multi-episode releases
+                IsVirtualItem = false,
+                IsPlayed = isPlayed,
+                Recursive = true,
+                DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+            }).OfType<Episode>()
+            .Where(x => !x.IsUnaired)
+            .ToList();
+
+            // Group by series and get the one with the latest premiere date per series
+            var seriesWithLatestEpisode = recentEpisodes
+                .Select(ep => (Episode: ep, Series: ep.Series))
+                .Where(x => x.Series != null)
+                .GroupBy(x => x.Series!.Id)
+                .Select(g => (
+                    Series: g.First().Series!,
+                    LatestPremiereDate: g.Max(x => x.Episode.PremiereDate)
+                ))
+                .OrderByDescending(x => x.LatestPremiereDate)
                 .Take(16)
                 .ToList();
-            
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(series.ToArray(),
-                i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
+
+            // Fetch the full series objects with proper DtoOptions for images
+            var seriesIds = seriesWithLatestEpisode.Select(x => x.Series.Id).ToArray();
+            var seriesItems = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            {
+                ItemIds = seriesIds,
+                DtoOptions = dtoOptions
+            });
+
+            // Maintain the order from our sorted list
+            var orderedSeries = seriesIds
+                .Select(id => seriesItems.FirstOrDefault(s => s.Id == id))
+                .Where(s => s != null)
+                .ToList();
+
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(orderedSeries.ToArray(),
+                i => m_dtoService.GetBaseItemDto(i!, dtoOptions, user)));
         }
-        
+
         protected override LatestSectionBase CreateInstance()
         {
             return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService, m_serviceProvider);
