@@ -103,8 +103,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                         ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                         Recursive = true,
                         IncludeItemTypes = new[] { BaseItemKind.BoxSet },
-                        OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-                        Limit = 50,
                         DtoOptions = dtoOptions
                     });
                 }).OfType<BoxSet>().ToArray();
