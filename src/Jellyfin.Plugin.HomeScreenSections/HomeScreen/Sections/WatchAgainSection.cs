@@ -109,20 +109,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 foreach (var boxSet in boxSets)
                 {
-                    var boxSetUserData = UserDataManager.GetUserData(user, boxSet);
-
-                    if (boxSetUserData?.Played != true)
-                        continue;
-                    if (boxSetUserData?.LastPlayedDate >= cutoffDate)
-                        continue;
-
                     var children = boxSet.GetChildren(user, true, new InternalItemsQuery(user)).ToList();
                     var movies = children.OfType<Movie>().ToList();
 
                     if (movies.Count <= 1)
+                    {
                         continue;
+                    }
 
-                    results.Add((boxSet, boxSetUserData?.LastPlayedDate));
+                    // Check if all movies in the box set are played
+                    var movieUserData = movies
+                        .Select(m => UserDataManager.GetUserData(user, m))
+                        .Where(ud => ud != null)
+                        .ToList();
+
+                    var allPlayed = movieUserData.Count == movies.Count && movieUserData.All(ud => ud!.Played);
+                    if (!allPlayed)
+                    {
+                        continue;
+                    }
+
+                    // Get the most recent LastPlayedDate from any movie in the box set
+                    var lastPlayedDate = movieUserData.Max(ud => ud?.LastPlayedDate);
+                    if (lastPlayedDate >= cutoffDate)
+                    {
+                        continue;
+                    }
+
+                    results.Add((boxSet, lastPlayedDate));
                 }
             }
 
