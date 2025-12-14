@@ -412,12 +412,20 @@
 
             function createArrConfig(serviceConfig) {
                 const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
-                return {
+                const config = {
                     Url: document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value,
                     ApiKey: document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value,
                     UpcomingTimeframeValue: parseInt(document.querySelector(timeframeValueSelector).value) || serviceConfig.defaultValue,
                     UpcomingTimeframeUnit: document.querySelector('#' + serviceConfig.timeframePrefix + 'TimeframeUnit').value
                 };
+
+                if (serviceConfig.name === 'Radarr') {
+                    config.ConsiderCinemaRelease = document.querySelector('#radarrConsiderCinemaRelease').checked;
+                    config.ConsiderPhysicalRelease = document.querySelector('#radarrConsiderPhysicalRelease').checked;
+                    config.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
+                }
+                
+                return config;
             }
 
             function loadArrConfig(serviceConfig, config) {
@@ -429,6 +437,12 @@
                 document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value = arrConfig?.ApiKey || '';
                 document.querySelector(timeframeValueSelector).value = arrConfig?.UpcomingTimeframeValue || serviceConfig.defaultValue;
                 document.querySelector(timeframeUnitSelector).value = arrConfig?.UpcomingTimeframeUnit || serviceConfig.defaultUnit;
+                
+                if (serviceConfig.name === 'Radarr') {
+                    document.querySelector('#radarrConsiderCinemaRelease').checked = arrConfig?.ConsiderCinemaRelease ?? false;
+                    document.querySelector('#radarrConsiderPhysicalRelease').checked = arrConfig?.ConsiderPhysicalRelease ?? false;
+                    document.querySelector('#radarrConsiderDigitalRelease').checked = arrConfig?.ConsiderDigitalRelease ?? true; // Default
+                }
             }
 
             function setupTabs() {
