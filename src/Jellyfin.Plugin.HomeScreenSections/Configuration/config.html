@@ -539,6 +539,17 @@
 
             function saveConfig(e) {
                 e.preventDefault();
+
+                const hasReleaseCheck = 
+                    document.querySelector('#radarrConsiderCinemaRelease').checked ||
+                    document.querySelector('#radarrConsiderPhysicalRelease').checked ||
+                    document.querySelector('#radarrConsiderDigitalRelease').checked;
+                    
+                if (!hasReleaseCheck) {
+                    Dashboard.alert('At least one release type must be selected for upcoming movies.');
+                    return;
+                }
+                
                 Dashboard.showLoadingMsg();
                 const config = {
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
