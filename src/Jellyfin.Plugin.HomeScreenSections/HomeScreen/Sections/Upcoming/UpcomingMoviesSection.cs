@@ -35,11 +35,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return ArrApiService.GetArrCalendarAsync<RadarrCalendarDto>(ArrServiceType.Radarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
+        private DateTime GetEarliestReleaseDate(RadarrCalendarDto item, PluginConfiguration config)
+        {
+            var candidates = new[]
+            {
+                config.Radarr.ConsiderCinemaRelease ? item.InCinemas : null,
+                config.Radarr.ConsiderPhysicalRelease ? item.PhysicalRelease : null,
+                config.Radarr.ConsiderDigitalRelease ? item.DigitalRelease : null
+            };
+            return candidates.Where(date => date.HasValue).Select(date => date!.Value).Min();
+        }
+
         protected override IOrderedEnumerable<RadarrCalendarDto> FilterAndSortItems(RadarrCalendarDto[] items)
         {
+            var config = HomeScreenSectionsPlugin.Instance.Configuration;
             return items
-                .Where(item => item.Monitored && !item.HasFile && item.DigitalRelease.HasValue)
-                .OrderBy(item => item.DigitalRelease);
+                .Where(item => 
+                {
+                    if (!item.Monitored || item.HasFile)
+                        return false;
+                    
+                    bool hasValidRelease = 
+                        (config.Radarr.ConsiderCinemaRelease && item.InCinemas.HasValue) ||
+                        (config.Radarr.ConsiderPhysicalRelease && item.PhysicalRelease.HasValue) ||
+                        (config.Radarr.ConsiderDigitalRelease && item.DigitalRelease.HasValue);
+                    
+                    return hasValidRelease;
+                })
+                .OrderBy(item => GetEarliestReleaseDate(item, config));
         }
 
         protected override string GetFallbackCoverUrl(RadarrCalendarDto missingItem)
@@ -49,7 +72,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override BaseItemDto CreateDto(RadarrCalendarDto calendarItem, PluginConfiguration config)
         {
-            DateTime releaseDate = calendarItem.DigitalRelease ?? DateTime.Now;
+            DateTime releaseDate = GetEarliestReleaseDate(calendarItem, config);
             string countdownText = CalculateCountdown(releaseDate, config);
 
             string yearInfo = calendarItem.Year > 0 ? $" ({calendarItem.Year})" : "";
@@ -71,7 +94,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 Id = Guid.NewGuid(),
                 Name = calendarItem.Title ?? "Unknown Movie",
                 Type = BaseItemKind.Movie,
-                PremiereDate = calendarItem.DigitalRelease,
+                PremiereDate = releaseDate,
                 ProductionYear = calendarItem.Year > 0 ? calendarItem.Year : null,
                 ProviderIds = providerIds,
                 UserData = new UserItemDataDto
