@@ -93,5 +93,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? Url { get; set; } = "";
         public int UpcomingTimeframeValue { get; set; }
         public TimeframeUnit UpcomingTimeframeUnit { get; set; }
+        public bool ConsiderCinemaRelease { get; set; } = false;
+        public bool ConsiderPhysicalRelease { get; set; } = false;
+        public bool ConsiderDigitalRelease { get; set; } = true;
     }   
 }
