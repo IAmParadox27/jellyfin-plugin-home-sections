@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -69,7 +70,7 @@ public class GenreSection : IHomeScreenSection
         
         VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
             .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-            .ToArray();
+            .FilterToUserPermitted(m_libraryManager, user);
 
         var movies = folders.SelectMany(x =>
         {
@@ -189,7 +190,7 @@ public class GenreSection : IHomeScreenSection
 
         VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
             .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-            .ToArray();
+            .FilterToUserPermitted(m_libraryManager, user);
         
         DtoOptions? dtoOptions = new DtoOptions 
         { 

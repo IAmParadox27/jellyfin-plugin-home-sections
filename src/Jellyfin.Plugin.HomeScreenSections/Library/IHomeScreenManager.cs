@@ -71,6 +71,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public bool AllowViewModeChange { get; set; } = true;
 
         public bool AllowHideWatched { get; set; } = false;
+        
+        public int OrderIndex { get; set; }
     }
 
     public class ModularHomeUserSettings
@@ -78,6 +80,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public Guid UserId { get; set; }
 
         public List<string> EnabledSections { get; set; } = new List<string>();
+        
+        public List<string> LockedSections { get; set; } = new List<string>();
+        
+        public List<string> DefaultEnabledSections { get; set; } = new List<string>();
     }
 
     public static class HomeScreenSectionExtensions

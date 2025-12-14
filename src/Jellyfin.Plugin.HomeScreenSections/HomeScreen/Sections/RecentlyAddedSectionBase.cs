@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -85,7 +86,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
                 .Where(x => x.CollectionType == CollectionTypeOptions)
-                .ToArray();
+                .FilterToUserPermitted(m_libraryManager, user);
 
             IEnumerable<BaseItem> recentlyAddedItems = GetItems(user, dtoOptions, folders, isPlayed);
             

@@ -1,4 +1,5 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -61,9 +62,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             client.BaseAddress = new Uri(jellyseerrUrl);
             client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
             
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
+            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(user.Username)}").GetAwaiter().GetResult();
             string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
+            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")?.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
 
             if (jellyseerrUserId == null)
             {
@@ -79,9 +80,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 IEnumerable<JObject>? presentRequestedMedia = jsonResponse.Value<JArray>("results")?.OfType<JObject>()
                     .Where(x => x.Value<JObject>("media")?.Value<string>("jellyfinMediaId") != null)
                     .Select(x => x.Value<JObject>("media")!);
-                
+
                 VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                    .ToArray();
+                    .FilterToUserPermitted(m_libraryManager, user);
 
                 IEnumerable<string?>? jellyfinItemIds = presentRequestedMedia?.Select(x => x.Value<string>("jellyfinMediaId"));
                 
@@ -92,10 +93,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                         ItemIds = jellyfinItemIds?.Select(y => Guid.Parse(y ?? Guid.Empty.ToString()))?.ToArray() ?? Array.Empty<Guid>(),
                         Recursive = true,
                         EnableTotalRecordCount = false,
-                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                        OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) }
+                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString())
                     });
-                });
+                }).OrderByDescending(item => item.DateCreated);
                 
                 return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
             }

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Jellyfin.Plugin.HomeScreenSections.Attributes;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -88,7 +89,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			{
 				VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
 					.Where(x => x.CollectionType == CollectionTypeOptions.boxsets)
-					.ToArray();
+					.FilterToUserPermitted(LibraryManager, user);
 				
 				var boxSets = folders.SelectMany(x =>
 				{
@@ -128,7 +129,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			{
 				VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
 					.Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
-					.ToArray();
+					.FilterToUserPermitted(LibraryManager, user);
 
 				IEnumerable<Series>? series = folders.SelectMany(x =>
 				{
