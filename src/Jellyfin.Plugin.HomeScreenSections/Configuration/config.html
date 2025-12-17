@@ -137,6 +137,24 @@
                                     <input is="emby-input" type="password" data-id="txtRadarrApiKey" label="Radarr API Key" />
                                     <div class="fieldDescription">API Key for Radarr instance.</div>
                                 </div>
+                                <div class="inputContainer" style="padding-left: 1em;">
+                                    <label class="inputLabel inputLabelUnfocused">Radarr Release Types</label>
+                                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                                        <label class="emby-checkbox-label">
+                                            <input id="radarrConsiderCinemaRelease" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                            <span>Consider Cinema Release</span>
+                                        </label>
+                                        <label class="emby-checkbox-label">
+                                            <input id="radarrConsiderPhysicalRelease" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                            <span>Consider Physical Release</span>
+                                        </label>
+                                        <label class="emby-checkbox-label">
+                                            <input id="radarrConsiderDigitalRelease" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                            <span>Consider Digital Release</span>
+                                        </label>
+                                    </div>
+                                    <div class="fieldDescription">Which release types should be considered for upcoming movies? At least one must be selected.</div>
+                                </div>
                                 <div class="inputContainer">
                                     <input is="emby-input" type="text" data-id="txtLidarrUrl" label="Lidarr URL" />
                                     <div class="fieldDescription">Complete URL for Lidarr to use for upcoming music sections.</div>
@@ -394,12 +412,20 @@
 
             function createArrConfig(serviceConfig) {
                 const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
-                return {
+                const config = {
                     Url: document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value,
                     ApiKey: document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value,
                     UpcomingTimeframeValue: parseInt(document.querySelector(timeframeValueSelector).value) || serviceConfig.defaultValue,
                     UpcomingTimeframeUnit: document.querySelector('#' + serviceConfig.timeframePrefix + 'TimeframeUnit').value
                 };
+
+                if (serviceConfig.name === 'Radarr') {
+                    config.ConsiderCinemaRelease = document.querySelector('#radarrConsiderCinemaRelease').checked;
+                    config.ConsiderPhysicalRelease = document.querySelector('#radarrConsiderPhysicalRelease').checked;
+                    config.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
+                }
+                
+                return config;
             }
 
             function loadArrConfig(serviceConfig, config) {
@@ -411,6 +437,12 @@
                 document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value = arrConfig?.ApiKey || '';
                 document.querySelector(timeframeValueSelector).value = arrConfig?.UpcomingTimeframeValue || serviceConfig.defaultValue;
                 document.querySelector(timeframeUnitSelector).value = arrConfig?.UpcomingTimeframeUnit || serviceConfig.defaultUnit;
+                
+                if (serviceConfig.name === 'Radarr') {
+                    document.querySelector('#radarrConsiderCinemaRelease').checked = arrConfig?.ConsiderCinemaRelease ?? false;
+                    document.querySelector('#radarrConsiderPhysicalRelease').checked = arrConfig?.ConsiderPhysicalRelease ?? false;
+                    document.querySelector('#radarrConsiderDigitalRelease').checked = arrConfig?.ConsiderDigitalRelease ?? true; // Default
+                }
             }
 
             function setupTabs() {
@@ -507,6 +539,17 @@
 
             function saveConfig(e) {
                 e.preventDefault();
+
+                const hasReleaseCheck = 
+                    document.querySelector('#radarrConsiderCinemaRelease').checked ||
+                    document.querySelector('#radarrConsiderPhysicalRelease').checked ||
+                    document.querySelector('#radarrConsiderDigitalRelease').checked;
+                    
+                if (!hasReleaseCheck) {
+                    Dashboard.alert('At least one release type must be selected for upcoming movies.');
+                    return;
+                }
+                
                 Dashboard.showLoadingMsg();
                 const config = {
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
