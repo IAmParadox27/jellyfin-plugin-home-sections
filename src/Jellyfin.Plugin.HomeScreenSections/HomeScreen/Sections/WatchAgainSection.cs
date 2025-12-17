@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Jellyfin.Plugin.HomeScreenSections.Attributes;
+using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
@@ -19,179 +18,270 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-	internal class WatchAgainSection : IHomeScreenSection
-	{
-		public string? Section => "WatchAgain";
+    internal class WatchAgainSection : IHomeScreenSection
+    {
+        public string? Section => "WatchAgain";
 
-		public string? DisplayText { get; set; } = "Watch It Again";
+        public string? DisplayText { get; set; } = "Watch It Again";
 
-		public int? Limit => 1;
+        public int? Limit => 1;
 
-		public string? Route => null;
+        public string? Route => null;
 
-		public string? AdditionalData { get; set; }
+        public string? AdditionalData { get; set; }
 
-		public object? OriginalPayload => null;
-		
-		private ICollectionManager CollectionManager { get; set; }
+        public object? OriginalPayload => null;
 
-		private IUserManager UserManager { get; set; }
+        private ICollectionManager CollectionManager { get; set; }
 
-		private IDtoService DtoService { get; set; }
+        private IUserManager UserManager { get; set; }
 
-		private IUserDataManager UserDataManager { get; set; }
+        private IDtoService DtoService { get; set; }
 
-		private ITVSeriesManager TVSeriesManager { get; set; }
+        private IUserDataManager UserDataManager { get; set; }
 
-		private ILibraryManager LibraryManager { get; set; }
-		
-		private CollectionManagerProxy CollectionManagerProxy { get; set; }
+        private ITVSeriesManager TVSeriesManager { get; set; }
 
-		public WatchAgainSection(
-			ICollectionManager collectionManager, 
-			IUserManager userManager, 
-			IDtoService dtoService, 
-			IUserDataManager userDataManager, 
-			ITVSeriesManager tvSeriesManager, 
-			ILibraryManager libraryManager,
-			CollectionManagerProxy collectionManagerProxy)
-		{
-			CollectionManager = collectionManager;
-			UserManager = userManager;
-			DtoService = dtoService;
-			UserDataManager = userDataManager;
-			TVSeriesManager = tvSeriesManager;
-			LibraryManager = libraryManager;
-			CollectionManagerProxy = collectionManagerProxy;
-		}
+        private ILibraryManager LibraryManager { get; set; }
 
-		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
-		{
-			DtoOptions? dtoOptions = new DtoOptions
-			{
-				Fields = new List<ItemFields>
-				{
-					ItemFields.PrimaryImageAspectRatio
-				},
-				ImageTypeLimit = 1,
-				ImageTypes = new List<ImageType>
-				{
-					ImageType.Thumb,
-					ImageType.Backdrop,
-					ImageType.Primary,
-				}
-			};
+        private CollectionManagerProxy CollectionManagerProxy { get; set; }
 
-			User user = UserManager.GetUserById(payload.UserId)!;
-			
-			List<BaseItem> results = new List<BaseItem>();
+        private IUserViewManager UserViewManager { get; set; }
 
-			{
-				VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
-					.Where(x => x.CollectionType == CollectionTypeOptions.boxsets)
-					.FilterToUserPermitted(LibraryManager, user);
-				
-				var boxSets = folders.SelectMany(x =>
-				{
-					return LibraryManager.GetItemList(new InternalItemsQuery(user)
-					{
-						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-						Recursive = true,
-						IncludeItemTypes = new []
-						{
-							BaseItemKind.BoxSet
-						}
-					});
-				}).OfType<BoxSet>().ToArray();
-				
-				var collections = boxSets.Select(x =>
-				{
-					(BaseItem Item, UserItemData? UserData)[] children = x.GetChildren(user, true, new InternalItemsQuery(user)).Select(y => (y, UserDataManager.GetUserData(user, y))).ToArray();
-					
-					if (!children.All(y => y.UserData?.Played ?? false))
-					{
-						return (null, null);
-					}
-					
-					if (children.Count(y => y.Item is Movie) > 1)
-					{
-						return children.OrderBy(y => y.Item.PremiereDate).First(y => y.Item is Movie);
-					}
-				
-					return (null, null);
-				})
-				.Where(x => x.Item != null)
-				.Where(x => x.UserData?.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28))).ToArray();
+        public WatchAgainSection(
+            ICollectionManager collectionManager,
+            IUserManager userManager,
+            IDtoService dtoService,
+            IUserDataManager userDataManager,
+            ITVSeriesManager tvSeriesManager,
+            ILibraryManager libraryManager,
+            CollectionManagerProxy collectionManagerProxy,
+            IUserViewManager userViewManager)
+        {
+            CollectionManager = collectionManager;
+            UserManager = userManager;
+            DtoService = dtoService;
+            UserDataManager = userDataManager;
+            TVSeriesManager = tvSeriesManager;
+            LibraryManager = libraryManager;
+            CollectionManagerProxy = collectionManagerProxy;
+            UserViewManager = userViewManager;
+        }
 
-				results.AddRange(collections.Select(x => x.Item).ToArray()!);
-			}
+        public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+        {
+            DtoOptions? dtoOptions = new DtoOptions
+            {
+                Fields = new List<ItemFields>
+                {
+                    ItemFields.PrimaryImageAspectRatio
+                },
+                ImageTypeLimit = 1,
+                ImageTypes = new List<ImageType>
+                {
+                    ImageType.Thumb,
+                    ImageType.Backdrop,
+                    ImageType.Primary,
+                }
+            };
 
-			{
-				VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
-					.Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
-					.FilterToUserPermitted(LibraryManager, user);
+            User user = UserManager.GetUserById(payload.UserId)!;
+            var cutoffDate = DateTime.Now.Subtract(TimeSpan.FromDays(28));
 
-				IEnumerable<Series>? series = folders.SelectMany(x =>
-				{
-					return LibraryManager.GetItemList(new InternalItemsQuery(user)
-					{
-						IncludeItemTypes = new[]
-						{
-							BaseItemKind.Series
-						},
-						ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-						Recursive = true,
-					}).Cast<Series>();
-				}).Where(x =>
-				{
-					var episodes = x.GetEpisodes(user, dtoOptions, false);
+            List<(BaseItem Item, DateTime? LastPlayed)> results = new List<(BaseItem, DateTime?)>();
 
-					return episodes.All(y =>
-					{
-						var userData = UserDataManager.GetUserData(user, x);
-						
-						return (userData?.Played ?? false) && userData?.LastPlayedDate < DateTime.Now.Subtract(TimeSpan.FromDays(28));
-					});
-				}).ToList();
-				
-				IEnumerable<BaseItem?> firstEpisodes = series
-				.Select(x => x.GetEpisodes(user, dtoOptions, false).Cast<Episode>()
-					.OrderBy(x => x.PremiereDate)
-				.FirstOrDefault())
-				.Where(x => x != null).DistinctBy(x => x!.Id).ToArray();
+            // === Process Box Sets ===
+            {
+                VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+                    .Where(x => x.CollectionType == CollectionTypeOptions.boxsets)
+                    .FilterToUserPermitted(LibraryManager, user);
 
-				results.AddRange(firstEpisodes.Where(x => x != null).Cast<BaseItem>());
-			}
-			
-			results = results.OrderBy(x =>
-			{
-				UserItemData data = UserDataManager.GetUserData(user, x);
-			
-				return data.LastPlayedDate;
-			}).Take(16).ToList();
-			
-			QueryResult<BaseItemDto>? result = new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(results, dtoOptions, user));
+                var boxSets = folders.SelectMany(x =>
+                {
+                    return LibraryManager.GetItemList(new InternalItemsQuery(user)
+                    {
+                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                        Recursive = true,
+                        IncludeItemTypes = new[] { BaseItemKind.BoxSet },
+                        DtoOptions = dtoOptions
+                    });
+                }).OfType<BoxSet>().ToArray();
 
-			return result;
-		}
+                foreach (var boxSet in boxSets)
+                {
+                    var children = boxSet.GetChildren(user, true, new InternalItemsQuery(user)).ToList();
+                    var movies = children.OfType<Movie>().ToList();
 
-		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
-		{
-			yield return this;
-		}
-		
-		public HomeScreenSectionInfo GetInfo()
-		{
-			return new HomeScreenSectionInfo
-			{
-				Section = Section,
-				DisplayText = DisplayText,
-				AdditionalData = AdditionalData,
-				Route = Route,
-				Limit = Limit ?? 1,
-				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape
-			};
-		}
-	}
+                    if (movies.Count <= 1)
+                    {
+                        continue;
+                    }
+
+                    // Check if all movies in the box set are played
+                    var movieUserData = movies
+                        .Select(m => UserDataManager.GetUserData(user, m))
+                        .Where(ud => ud != null)
+                        .ToList();
+
+                    var allPlayed = movieUserData.Count == movies.Count && movieUserData.All(ud => ud!.Played);
+                    if (!allPlayed)
+                    {
+                        continue;
+                    }
+
+                    // Get the most recent LastPlayedDate from any movie in the box set
+                    var lastPlayedDate = movieUserData.Max(ud => ud?.LastPlayedDate);
+                    if (lastPlayedDate >= cutoffDate)
+                    {
+                        continue;
+                    }
+
+                    results.Add((boxSet, lastPlayedDate));
+                }
+            }
+
+            // === Process Movies ===
+            {
+                VirtualFolderInfo[] movieFolders = LibraryManager.GetVirtualFolders()
+                    .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+                    .FilterToUserPermitted(LibraryManager, user);
+
+                var playedMovies = movieFolders.SelectMany(x =>
+                {
+                    return LibraryManager.GetItemList(new InternalItemsQuery(user)
+                    {
+                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                        IncludeItemTypes = new[] { BaseItemKind.Movie },
+                        IsPlayed = true,
+                        Recursive = true,
+                        DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                    });
+                }).OfType<Movie>().ToList();
+
+                foreach (var movie in playedMovies)
+                {
+                    var userData = UserDataManager.GetUserData(user, movie);
+                    if (userData?.LastPlayedDate != null && userData.LastPlayedDate < cutoffDate)
+                    {
+                        results.Add((movie, userData.LastPlayedDate));
+                    }
+                }
+            }
+
+            // === Process TV Series ===
+            // Phase 1: Get candidates from played episodes
+            {
+                VirtualFolderInfo[] tvFolders = LibraryManager.GetVirtualFolders()
+                    .Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
+                    .FilterToUserPermitted(LibraryManager, user);
+
+                var playedEpisodes = tvFolders.SelectMany(x =>
+                {
+                    return LibraryManager.GetItemList(new InternalItemsQuery(user)
+                    {
+                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                        IncludeItemTypes = new[] { BaseItemKind.Episode },
+                        IsPlayed = true,
+                        OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Ascending) },
+                        Limit = 1000,
+                        IsVirtualItem = false,
+                        Recursive = true,
+                        DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                    });
+                }).OfType<Episode>().ToList();
+
+                // Group by series and get candidates
+                var candidates = playedEpisodes
+                    .Where(ep => ep.Series != null)
+                    .GroupBy(ep => ep.Series!.Id)
+                    .Select(g => new
+                    {
+                        Series = g.First().Series!,
+                        PlayedCount = g.Count(),
+                        LastPlayedDate = g.Max(ep =>
+                        {
+                            var ud = UserDataManager.GetUserData(user, ep);
+                            return ud?.LastPlayedDate;
+                        })
+                    })
+                    .Where(x => x.LastPlayedDate < cutoffDate)
+                    .Where(x => x.PlayedCount >= 3)
+                    .OrderBy(x => x.LastPlayedDate)
+                    .Take(50)
+                    .ToList();
+
+                // Phase 2: Single batch query for unplayed episodes across all candidates
+                var candidateSeriesIds = candidates.Select(c => c.Series.Id).ToArray();
+
+                var unplayedEpisodes = LibraryManager.GetItemList(new InternalItemsQuery(user)
+                {
+                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    AncestorIds = candidateSeriesIds,
+                    IsPlayed = false,
+                    IsVirtualItem = false,
+                    DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                }).OfType<Episode>().ToList();
+
+                // Get set of series IDs that have unplayed episodes
+                var seriesWithUnplayed = unplayedEpisodes
+                    .Where(ep => ep.Series != null)
+                    .Select(ep => ep.Series!.Id)
+                    .ToHashSet();
+
+                // Filter candidates to only fully-played series
+                foreach (var candidate in candidates)
+                {
+                    if (!seriesWithUnplayed.Contains(candidate.Series.Id))
+                    {
+                        results.Add((candidate.Series, candidate.LastPlayedDate));
+                    }
+
+                    if (results.Count >= 16)
+                        break;
+                }
+            }
+
+            // Shuffle results for variety, then take top 16
+            var random = new Random();
+            var shuffledResults = results
+                .OrderBy(x => random.Next())
+                .Take(16)
+                .ToList();
+
+            // Fetch full items with images
+            var itemIds = shuffledResults.Select(r => r.Item.Id).ToArray();
+            var fullItems = LibraryManager.GetItemList(new InternalItemsQuery(user)
+            {
+                ItemIds = itemIds,
+                DtoOptions = dtoOptions
+            });
+
+            // Maintain order
+            var orderedItems = itemIds
+                .Select(id => fullItems.FirstOrDefault(i => i.Id == id))
+                .Where(i => i != null)
+                .ToList();
+
+            return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(orderedItems!, dtoOptions, user));
+        }
+
+        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
+        {
+            yield return this;
+        }
+
+        public HomeScreenSectionInfo GetInfo()
+        {
+            return new HomeScreenSectionInfo
+            {
+                Section = Section,
+                DisplayText = DisplayText,
+                AdditionalData = AdditionalData,
+                Route = Route,
+                Limit = Limit ?? 1,
+                OriginalPayload = OriginalPayload,
+                ViewMode = SectionViewMode.Landscape
+            };
+        }
+    }
 }
