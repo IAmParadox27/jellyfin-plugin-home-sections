@@ -55,6 +55,8 @@
       <EmbeddedResource Include="Inject\HomeScreenSections.js" />
       <None Remove="Inject\HomeScreenSections.css" />
       <EmbeddedResource Include="Inject\HomeScreenSections.css" />
+      <None Remove="_Localization\en.json" />
+      <EmbeddedResource Include="_Localization\en.json" />
     </ItemGroup>
 
     <ItemGroup>

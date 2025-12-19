@@ -31,6 +31,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		public string? AdditionalData { get; set; }
 
 		public object? OriginalPayload => null;
+
+		public TranslationMetadata? TranslationMetadata { get; private set; }
 		
 		private IUserDataManager UserDataManager { get; set; }
 		private IUserManager UserManager { get; set; }
@@ -124,7 +126,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy)
 				{
 					AdditionalData = elementToConsider.Id.ToString(),
-					DisplayText = "Because You Watched " + elementToConsider.Name
+					DisplayText = "Because You Watched " + elementToConsider.Name,
+					TranslationMetadata = new TranslationMetadata()
+					{
+						Type = TranslationType.Pattern,
+						AdditionalContent = elementToConsider.Name
+					}
 				};
 			}
 		}
