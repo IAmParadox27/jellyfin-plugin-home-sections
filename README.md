@@ -131,7 +131,7 @@ The plugin is setup to support language codes and language + region codes. Pleas
 
 > [!NOTE]
 >
-> The initial translations where generated using AI and may not be perfect. If you find any issues with the translations, please feel free to open a PR to resolve them; I am unfortunately very monolingual, so I won't be able to spot any issues myself.
+> The initial translations were generated using AI and may not be perfect. If you find any issues with the translations, please feel free to open a PR to resolve them; I am unfortunately very monolingual, so I won't be able to spot any issues myself.
 
 1. Fork this repository
 2. Create a new branch called `translations/<language code>`
