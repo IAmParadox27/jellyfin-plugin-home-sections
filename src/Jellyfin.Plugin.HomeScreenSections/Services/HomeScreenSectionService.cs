@@ -151,7 +151,7 @@ public class HomeScreenSectionService
             if (info.DisplayText != null)
             {
                 // Always fallback to "en" if there's no language provided.
-                string? translatedResult = m_translationManager.Translate(info.Section!, language?.Trim() ?? "en", info.DisplayText);
+                string? translatedResult = m_translationManager.Translate(info.Section!, language?.Trim() ?? "en", info.DisplayText, x.Section.TranslationMetadata);
 
                 info.DisplayText = translatedResult;
             }
