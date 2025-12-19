@@ -127,7 +127,7 @@ This is common, particularly on a fresh install. The first thing you should try 
 
 If you would like to help translate this plugin into your language, follow the below steps:
 
-The plugin is setup to support language codes and language + region codes. Please use the ISO 639 language codes for file names.
+The plugin is setup to support language codes and language + region codes. Please use the [ISO 639-1](https://www.loc.gov/standards/iso639-2/php/code_list.php) language codes for file names. If you're including region code as well please format as `en-GB` where region codes are from [ISO 3166](https://www.iso.org/obp/ui/#search)
 
 > [!NOTE]
 >
