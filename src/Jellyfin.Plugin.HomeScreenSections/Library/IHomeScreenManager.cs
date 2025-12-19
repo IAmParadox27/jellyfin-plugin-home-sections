@@ -65,6 +65,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public TranslationType Type { get; set; } = TranslationType.FullText;
 
         public string? AdditionalContent { get; set; } = null;
+        
+        public bool TranslateAdditionalContent { get; set; } = false;
     }
 
     public class HomeScreenSectionInfo
