@@ -33,7 +33,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 {
                     using TextReader reader = new StreamReader(locStream);
 
-                    string key = locFile.Replace(".json", "");
+                    string key = locFile.Replace(".json", "").Split('.').Last();
                     m_translationPacks.Add(key, JObject.Parse(reader.ReadToEnd()));
                     
                     m_logger.LogInformation($"Loaded translation file: {locFile} with {m_translationPacks[key].Count} keys");
