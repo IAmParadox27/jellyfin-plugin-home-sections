@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Helpers;
 
-public static class TranslationHelper
+public static class LibreTranslateHelper
 {
     public static async Task<string?> TranslateAsync(string text, string srcLanguage, string destLanguage)
     {
@@ -34,6 +34,6 @@ public static class TranslationHelper
             }
         }
 
-        return text;
+        return null;
     }
 }
