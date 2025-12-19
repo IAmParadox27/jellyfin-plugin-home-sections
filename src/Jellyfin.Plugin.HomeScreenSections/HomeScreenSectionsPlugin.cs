@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.Loader;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
@@ -24,13 +25,15 @@ namespace Jellyfin.Plugin.HomeScreenSections
         
         internal IServiceProvider ServiceProvider { get; set; }
     
-        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider) : base(applicationPaths, xmlSerializer)
+        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, IHomeScreenManager homeScreenManager) : base(applicationPaths, xmlSerializer)
         {
             int pluginPageConfigVersion = 1;
             Instance = this;
             
             ServerConfigurationManager = serverConfigurationManager;
             ServiceProvider = serviceProvider;
+            
+            homeScreenManager.RegisterBuiltInResultsDelegates();
         
             string homeScreenSectionsConfigDir = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.HomeScreenSections");
             if (!Directory.Exists(homeScreenSectionsConfigDir))
