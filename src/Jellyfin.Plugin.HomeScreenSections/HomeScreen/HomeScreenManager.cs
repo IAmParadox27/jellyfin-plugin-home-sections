@@ -47,7 +47,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             {
                 m_userFeatureEnabledStates = JsonConvert.DeserializeObject<Dictionary<Guid, bool>>(File.ReadAllText(userFeatureEnabledPath)) ?? new Dictionary<Guid, bool>();
             }
-
+        }
+        
+        public void RegisterBuiltInResultsDelegates()
+        {
             RegisterResultsDelegate<MyMediaSection>();
             
             RegisterResultsDelegate<ContinueWatchingSection>();

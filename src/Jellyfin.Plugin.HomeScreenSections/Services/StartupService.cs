@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
+using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;

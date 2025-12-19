@@ -8,6 +8,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 {
     public interface IHomeScreenManager
     {
+        void RegisterBuiltInResultsDelegates();
+        
         void RegisterResultsDelegate<T>() where T : IHomeScreenSection;
 
         void RegisterResultsDelegate<T>(T handler) where T : IHomeScreenSection;
