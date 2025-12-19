@@ -56,8 +56,28 @@
       <EmbeddedResource Include="Inject\HomeScreenSections.js" />
       <None Remove="Inject\HomeScreenSections.css" />
       <EmbeddedResource Include="Inject\HomeScreenSections.css" />
+    </ItemGroup>
+
+    <!-- Translation Files -->
+    <ItemGroup>
       <None Remove="_Localization\en.json" />
       <EmbeddedResource Include="_Localization\en.json" />
+      <None Remove="_Localization\fr.json" />
+      <EmbeddedResource Include="_Localization\fr.json" />
+      <None Remove="_Localization\de.json" />
+      <EmbeddedResource Include="_Localization\de.json" />
+      <None Remove="_Localization\es.json" />
+      <EmbeddedResource Include="_Localization\es.json" />
+      <None Remove="_Localization\it.json" />
+      <EmbeddedResource Include="_Localization\it.json" />
+      <None Remove="_Localization\nl.json" />
+      <EmbeddedResource Include="_Localization\nl.json" />
+      <None Remove="_Localization\pt.json" />
+      <EmbeddedResource Include="_Localization\pt.json" />
+      <None Remove="_Localization\pt-BR.json" />
+      <EmbeddedResource Include="_Localization\pt-BR.json" />
+      <None Remove="_Localization\sv.json" />
+      <EmbeddedResource Include="_Localization\sv.json" />
     </ItemGroup>
 
     <ItemGroup>
