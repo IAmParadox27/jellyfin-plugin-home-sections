@@ -170,7 +170,8 @@ public class GenreSection : IHomeScreenSection
                     TranslationMetadata = new TranslationMetadata()
                     {
                         Type = TranslationType.Pattern,
-                        AdditionalContent = selectedGenre
+                        AdditionalContent = selectedGenre,
+                        TranslateAdditionalContent = true
                     }
                 };
             }
