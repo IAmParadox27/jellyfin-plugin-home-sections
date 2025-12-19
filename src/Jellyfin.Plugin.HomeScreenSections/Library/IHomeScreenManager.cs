@@ -13,6 +13,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         void RegisterResultsDelegate<T>(T handler) where T : IHomeScreenSection;
         
         IEnumerable<IHomeScreenSection> GetSectionTypes();
+        
+        IHomeScreenSection? GetSection(string sectionName);
 
         QueryResult<BaseItemDto> InvokeResultsDelegate(string key, HomeScreenSectionPayload payload, IQueryCollection queryCollection);
 

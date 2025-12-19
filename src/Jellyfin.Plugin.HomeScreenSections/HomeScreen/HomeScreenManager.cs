@@ -49,8 +49,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             }
 
             RegisterResultsDelegate<MyMediaSection>();
+            
             RegisterResultsDelegate<ContinueWatchingSection>();
             RegisterResultsDelegate<NextUpSection>();
+            RegisterResultsDelegate<ContinueWatchingNextUpSection>();
             
             RegisterResultsDelegate<RecentlyAddedMoviesSection>();
             RegisterResultsDelegate<RecentlyAddedShowsSection>();
@@ -91,6 +93,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         public IEnumerable<IHomeScreenSection> GetSectionTypes()
         {
             return m_delegates.Values;
+        }
+
+        public IHomeScreenSection? GetSection(string sectionName)
+        {
+            return m_delegates.GetValueOrDefault(sectionName);
         }
 
         /// <inheritdoc/>
