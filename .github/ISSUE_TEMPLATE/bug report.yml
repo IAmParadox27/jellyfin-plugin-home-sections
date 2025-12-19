@@ -8,6 +8,11 @@ body:
   - type: markdown
     attributes:
       value: "## Bug Report"
+  - type: markdown
+    attributes:
+      value: >-
+        > [!Important]
+        > If you are opening an issue to report the plugin not being installable on [insert new Jellyfin Version here] please **first** confirm in the releases whether there is a `Release-x.y.z.zip` asset on the latest release. If there is not, please **do not** open an issue as per the instructions on the README regarding new versions.
   - type: checkboxes
     id: checkboxes-1
     attributes:
