@@ -80,11 +80,25 @@
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
 
-    <Target Name="GenerateAssemblyMetadata" BeforeTargets="BeforeCompile">
+    <Target Name="GenerateAssemblyMetadata_GitBranch" BeforeTargets="BeforeCompile">
         <ItemGroup>
             <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
                 <_Parameter1>GitBranch</_Parameter1>
                 <_Parameter2>$(GitBranch)</_Parameter2>
+            </AssemblyAttribute>
+        </ItemGroup>
+        <WriteCodeFragment
+                Language="C#"
+                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.g.cs"
+                AssemblyAttributes="@(AssemblyAttribute)" />
+        <ItemGroup>
+            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.g.cs" />
+        </ItemGroup>
+    </Target>
+    <Target Name="GenerateAssemblyMetadata_JellyfinVersion" BeforeTargets="BeforeCompile">
+        <ItemGroup>
+            <AssemblyAttribute Include="Jellyfin.Plugin.HomeScreenSections.Attributes.JellyfinVersionAttribute">
+                <_Parameter1>$(JellyfinVersion)</_Parameter1>
             </AssemblyAttribute>
         </ItemGroup>
         <WriteCodeFragment
