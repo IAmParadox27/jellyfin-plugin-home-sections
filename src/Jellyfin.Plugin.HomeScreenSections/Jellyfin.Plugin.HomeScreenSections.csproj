@@ -15,7 +15,15 @@
         <RepositoryUrl>https://github.com/IAmParadox27/jellyfin-plugin-home-sections</RepositoryUrl>
         <RepositoryType>GitHub</RepositoryType>
     </PropertyGroup>
-
+    
+    <PropertyGroup>
+        <GitBranch Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git\HEAD'))">$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git'))">
+        <GitHeadLocation>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git').Replace('gitdir: ', '').Trim())</GitHeadLocation>
+        <GitBranch>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\$(GitHeadLocation)\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+    </PropertyGroup>
+    
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinNugetVersion)" />
@@ -59,24 +67,8 @@
 
     <!-- Translation Files -->
     <ItemGroup>
-      <None Remove="_Localization\en.json" />
-      <EmbeddedResource Include="_Localization\en.json" />
-      <None Remove="_Localization\fr.json" />
-      <EmbeddedResource Include="_Localization\fr.json" />
-      <None Remove="_Localization\de.json" />
-      <EmbeddedResource Include="_Localization\de.json" />
-      <None Remove="_Localization\es.json" />
-      <EmbeddedResource Include="_Localization\es.json" />
-      <None Remove="_Localization\it.json" />
-      <EmbeddedResource Include="_Localization\it.json" />
-      <None Remove="_Localization\nl.json" />
-      <EmbeddedResource Include="_Localization\nl.json" />
-      <None Remove="_Localization\pt.json" />
-      <EmbeddedResource Include="_Localization\pt.json" />
-      <None Remove="_Localization\pt-BR.json" />
-      <EmbeddedResource Include="_Localization\pt-BR.json" />
-      <None Remove="_Localization\sv.json" />
-      <EmbeddedResource Include="_Localization\sv.json" />
+      <None Remove="_Localization\**" />
+      <EmbeddedResource Include="_Localization\**" />
     </ItemGroup>
 
     <ItemGroup>
@@ -86,6 +78,22 @@
         <None Include="..\..\README.md" />
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
+
+    <Target Name="GenerateAssemblyMetadata" BeforeTargets="BeforeCompile">
+        <ItemGroup>
+            <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+                <_Parameter1>GitBranch</_Parameter1>
+                <_Parameter2>$(GitBranch)</_Parameter2>
+            </AssemblyAttribute>
+        </ItemGroup>
+        <WriteCodeFragment
+                Language="C#"
+                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.g.cs"
+                AssemblyAttributes="@(AssemblyAttribute)" />
+        <ItemGroup>
+            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.g.cs" />
+        </ItemGroup>
+    </Target>
     
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections')">
         <Exec Condition="'$(JellyfinVersion)' == '10.11.1'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections&quot; /y" />

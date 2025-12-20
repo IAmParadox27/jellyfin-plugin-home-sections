@@ -135,8 +135,7 @@ The plugin is setup to support language codes and language + region codes. Pleas
 
 1. Fork this repository
 2. Add/Edit the translation file in `src/Jellyfin.Plugin.HomeScreenSections/_Localization`
-3. If you added the file, edit `src/Jellyfin.Plugin.HomeScreenSections/Jellyfin.Plugin.HomeScreenSections.csproj` and add the new file to the `ItemGroup` with the translation comment above it; just duplicate another language and replace with your language.
-4. Create a pull request
+3. Create a pull request
 
 ### Code Contributions
 
