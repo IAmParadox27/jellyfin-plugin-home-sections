@@ -95,6 +95,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetDefaultTriggers();
+        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetStartupTrigger();
     }
 }

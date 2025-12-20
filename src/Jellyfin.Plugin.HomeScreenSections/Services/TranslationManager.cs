@@ -34,9 +34,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     using TextReader reader = new StreamReader(locStream);
 
                     string key = locFile.Replace(".json", "").Split('.').Last();
-                    m_translationPacks.Add(key, JObject.Parse(reader.ReadToEnd()));
-                    
-                    m_logger.LogTrace($"Loaded translation file: {locFile} with {m_translationPacks[key].Count} keys");
+
+                    if (!m_translationPacks.ContainsKey(key))
+                    {
+                        m_translationPacks.Add(key, JObject.Parse(reader.ReadToEnd()));
+                        m_logger.LogTrace($"Loaded translation file: {locFile} with {m_translationPacks[key].Count} keys");
+                    }
+                    else
+                    {
+                        m_logger.LogTrace($"Translation file '{locFile}' already loaded, ignoring");
+                    }
                 }
             }
         }
@@ -115,6 +122,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             
             return translatedText;
+        }
+
+        public void UpdateTranslationPack(string language, JObject translationPack)
+        {
+            m_translationPacks[language] = translationPack;
         }
     }
 }

@@ -4,11 +4,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific
 {
     public static class StartupServiceHelper
     {
-        public static IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
+        public static IEnumerable<TaskTriggerInfo> GetStartupTrigger()
         {
             yield return new TaskTriggerInfo()
             {
                 Type = TaskTriggerInfoType.StartupTrigger
+            };
+        }
+
+        public static IEnumerable<TaskTriggerInfo> GetDailyTrigger(TimeSpan timeOfDay)
+        {
+            yield return new TaskTriggerInfo()
+            {
+                Type = TaskTriggerInfoType.DailyTrigger,
+                TimeOfDayTicks = timeOfDay.Ticks
             };
         }
     }
