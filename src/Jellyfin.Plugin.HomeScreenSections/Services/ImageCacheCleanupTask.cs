@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -43,17 +44,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
-        {
-            return
-            [
-                new TaskTriggerInfo
-                {
-                    // Run daily at 3:00 AM
-                    Type = TaskTriggerInfoType.DailyTrigger,
-                    TimeOfDayTicks = TimeSpan.FromHours(3).Ticks
-                }
-            ];
-        }
+        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetDailyTrigger(TimeSpan.FromHours(3));
     }
 }
