@@ -254,6 +254,18 @@
                                     <input is="emby-input" type="number" data-id="txtCacheTimeoutSeconds" label="Cache Timeout (seconds)" min="0" max="604800" />
                                     <div class="fieldDescription">How long browsers should cache plugin resources (default: 86400 = 24 hours). Set to 0 to disable caching.</div>
                                 </div>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="txtMaxImageCacheEntries" label="Max Image Cache Entries" min="1" max="100000" />
+                                    <div class="fieldDescription">Maximum number of images to cache (default: 10000). Higher values use more memory but reduce re-downloads.</div>
+                                </div>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="txtMaxImageWidth" label="Max Image Width (px)" min="100" max="10000" />
+                                    <div class="fieldDescription">Maximum width for cached images in pixels (default: 600). Images larger than this will be resized to save storage and bandwidth.</div>
+                                </div>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="txtImageJpegQuality" label="Image JPEG Quality" min="1" max="100" />
+                                    <div class="fieldDescription">JPEG compression quality for cached images (default: 85). Higher percentage means better quality but larger files.</div>
+                                </div>
                             </div>
                         </details>
                         <details>
@@ -573,6 +585,9 @@
                     DateDelimiter: document.querySelector('#dateDelimiter').value,
                     DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
                     CacheTimeoutSeconds: document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || 86400,
+                    MaxImageCacheEntries: parseInt(document.querySelector('[data-id=txtMaxImageCacheEntries]').value) || 10000,
+                    MaxImageWidth: parseInt(document.querySelector('[data-id=txtMaxImageWidth]').value) || 600,
+                    ImageJpegQuality: parseInt(document.querySelector('[data-id=txtImageJpegQuality]').value) || 85,
                     OverrideStreamyfinHome: document.querySelector('#globalStreamyfinHomeOverride').checked,
                     SectionSettings: []
                 };
@@ -619,6 +634,9 @@
                         document.querySelector('#globalStreamyfinHomeOverride').checked = config.OverrideStreamyfinHome;
                         document.querySelector('#globalDeveloperMode').checked = config.DeveloperMode;
                         document.querySelector('[data-id=txtCacheTimeoutSeconds]').value = config.CacheTimeoutSeconds || 86400;
+                        document.querySelector('[data-id=txtMaxImageCacheEntries]').value = config.MaxImageCacheEntries || 10000;
+                        document.querySelector('[data-id=txtMaxImageWidth]').value = config.MaxImageWidth || 600;
+                        document.querySelector('[data-id=txtImageJpegQuality]').value = config.ImageJpegQuality || 85;
 
                         setTimeout(function() {
                             if (config.DefaultMoviesLibraryId) {

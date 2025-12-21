@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Movies";
 
-        public UpcomingMoviesSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger<UpcomingMoviesSection> logger)
-            : base(userManager, dtoService, arrApiService, logger)
+        public UpcomingMoviesSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingMoviesSection> logger)
+            : base(userManager, dtoService, arrApiService, imageCacheService, logger)
         {
         }
 
@@ -80,13 +80,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "poster", StringComparison.OrdinalIgnoreCase));
 
+            string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
+            string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
+
             // Create provider IDs to store external image URL and metadata
             Dictionary<string, string> providerIds = new Dictionary<string, string>
             {
                 { "RadarrMovieId", calendarItem.Id.ToString() },
                 { "YearInfo", yearInfo },
                 { "FormattedDate", countdownText },
-                { "RadarrPoster", posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem) }
+                { "RadarrPoster", cachedImageUrl }
             };
 
             return new BaseItemDto
@@ -112,7 +115,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingMoviesSection(UserManager, DtoService, ArrApiService, (ILogger<UpcomingMoviesSection>)Logger)
+            yield return new UpcomingMoviesSection(UserManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingMoviesSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
