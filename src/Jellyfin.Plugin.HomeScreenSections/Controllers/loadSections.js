@@ -1,15 +1,48 @@
-﻿async function test(elem, apiClient, user, userSettings) {
-    if (!isHomePage()) {
-        return;
+﻿function test(elem, apiClient, user, userSettings) {
+    function isHomePage() {
+        var href = (location.href || "");
+        var hash = (location.hash || "");
+
+        var markers = {
+            href: href,
+            hash: hash,
+            indexPageId: document.getElementById("indexPage") !== null,
+            homePageClass: document.querySelector(".homePage") !== null,
+            pageHomePageClass: document.querySelector(".page.homePage") !== null,
+            sectionsDiv: document.querySelector(".sections") !== null,
+            pageRole: document.querySelector('[data-role="page"]') !== null,
+            pageIdHome: document.querySelector('[data-pageid="home"]') !== null,
+            routeHome: document.querySelector('[data-route="home"]') !== null
+        };
+
+        var hrefL = href.toLowerCase();
+        var hashL = hash.toLowerCase();
+
+        // Route-based (more stable across clients)
+        var isHomeRoute =
+            /(^#?!?\/?)(home)(\.html)?([/?&]|$)/.test(hashL) ||
+            hashL.indexOf("home.html") !== -1 ||
+            hrefL.indexOf("/web/index.html#!/home") !== -1;
+
+        // DOM fallback (looser than requiring ALL markers)
+        var isHomeDom =
+            markers.sectionsDiv && (
+                markers.homePageClass ||
+                markers.pageHomePageClass ||
+                markers.indexPageId ||
+                markers.pageIdHome ||
+                markers.routeHome
+            );
+
+        var result = !!(isHomeRoute || isHomeDom);
+        return result;
     }
 
-    function isHomePage() {
-        const hasIndexPageId = document.getElementById('indexPage') !== null;
-        const hasHomePageClass = document.querySelector('.page.homePage') !== null;
-        const hasSectionsDiv = document.querySelector('.sections') !== null;
-        const hasPageRole = document.querySelector('[data-role="page"]') !== null;
-
-        return hasIndexPageId && hasHomePageClass && hasSectionsDiv && hasPageRole;
+    if (!isHomePage()) {
+        if (this && typeof this.originalLoadSections === "function") {
+            return this.originalLoadSections(elem, apiClient, user, userSettings);
+        }
+        return;
     }
 
     function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
@@ -312,53 +345,61 @@
         return Promise.resolve()
     }
     
-    async function isUserUsingHomeScreenSections(_userSettings, _apiClient) {
-        
-        try {
-            var pluginConfig = await _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
-
-            if (pluginConfig.AllowUserOverride === true) {
-                if (_userSettings && _userSettings.getData() && _userSettings.getData().CustomPrefs && _userSettings.getData().CustomPrefs.useModularHome !== undefined) {
-                    return _userSettings.getData().CustomPrefs.useModularHome === "true";
+    function isUserUsingHomeScreenSections(_userSettings, _apiClient) {
+        return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta")).then(function (pluginConfig) {
+            try {
+                if (pluginConfig && pluginConfig.AllowUserOverride === true) {
+                    var data = _userSettings && _userSettings.getData && _userSettings.getData();
+                    if (data && data.CustomPrefs && data.CustomPrefs.useModularHome !== undefined) {
+                        return data.CustomPrefs.useModularHome === "true";
+                    }
                 }
+                return !!(pluginConfig && pluginConfig.Enabled);
+            } catch (e) {
+                return false;
             }
-
-            return pluginConfig.Enabled;
-        } catch {
+        }, function () {
             return false;
-        }
+        });
     }
-    
+
     var _this = this;
-    if (await isUserUsingHomeScreenSections(userSettings, apiClient)) {
+
+    return isUserUsingHomeScreenSections(userSettings, apiClient).then(function (useHss) {
+        if (!useHss) {
+            return _this.originalLoadSections(elem, apiClient, user, userSettings);
+        }
+
         var getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
             Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
         };
+
         var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
-        var hssSectionsResponse = await apiClient.getJSON(getSectionsUrl).then(function(response) {
-            return function(elem, apiClient, user, userSettings) {
+
+        return apiClient.getJSON(getSectionsUrl).then(function (response) {
+            return function (elem, apiClient, user, userSettings) {
                 var var39_, var39_3, var39_4;
-                return var39_ = this, void 0, var39_4 = function() {
+                return var39_ = this, void 0, var39_4 = function () {
                     var var44_, options, var44_3, var44_4, var44_5, var44_6, var44_7, sectionInfo, var44_9, var44_10, var44_11;
-                    return function(param45_, param45_2) {
+                    return function (param45_, param45_2) {
                         var var46_, var47_, var48_, var49_ = {
-                                label: 0,
-                                sent: function() {
-                                    if (1 & var48_[0]) throw var48_[1];
-                                    return var48_[1]
-                                },
-                                trys: [],
-                                ops: []
+                            label: 0,
+                            sent: function () {
+                                if (1 & var48_[0]) throw var48_[1];
+                                return var48_[1]
                             },
+                            trys: [],
+                            ops: []
+                        },
                             var58_ = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
-                        return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function() {
+                        return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function () {
                             return this
                         }), var58_;
 
                         function fn69_(param69_) {
-                            return function(param70_) {
-                                return function(param71_) {
+                            return function (param70_) {
+                                return function (param71_) {
                                     if (var46_) throw TypeError("Generator is already executing.");
                                     for (; var58_ && (var58_ = 0, param71_[0] && (var49_ = 0)), var49_;) try {
                                         if (var46_ = 1, var47_ && (var48_ = 2 & param71_[0] ? var47_.return : param71_[0] ? var47_.throw || ((var48_ = var47_.return) && var48_.call(var47_), 0) : var47_.next) && !(var48_ = var48_.call(var47_, param71_[1])).done) return var48_;
@@ -402,8 +443,8 @@
                                     } catch (let110_) {
                                         param71_ = [6, let110_], var47_ = 0
                                     } finally {
-                                        var46_ = var48_ = 0
-                                    }
+                                            var46_ = var48_ = 0
+                                        }
                                     if (5 & param71_[0]) throw param71_[1];
                                     return {
                                         value: param71_[0] ? param71_[1] : void 0,
@@ -412,7 +453,7 @@
                                 }([param69_, param70_])
                             }
                         }
-                    }(this, (function(param120_) {
+                    }(this, (function (param120_) {
                         switch (param120_.label) {
                             case 0:
                                 return [4, (apiClient, getSectionsData, getSectionsUrl, response)];
@@ -424,19 +465,19 @@
                                     if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
                                         for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                                 }
-                                return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function() {
+                                return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function () {
                                     var var134_2, var134_3, var134_4;
                                     return var134_2 = {
                                         refresh: !0
-                                    }, var134_3 = elem.querySelectorAll(".itemsContainer"), var134_4 = [], Array.prototype.forEach.call(var134_3, (function(param139_) {
+                                    }, var134_3 = elem.querySelectorAll(".itemsContainer"), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
                                         param139_.resume && var134_4.push(param139_.resume(var134_2))
                                     })), Promise.all(var134_4)
-                                }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function() {
+                                }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function () {
                                     l.default.navigate("dashboard/libraries")
                                 })), [2])
                         }
                     }))
-                }, new(var39_3 = void 0, var39_3 = Promise)((function(param160_, param160_2) {
+                }, new (var39_3 = void 0, var39_3 = Promise)((function (param160_, param160_2) {
                     function fn161_(param161_) {
                         try {
                             fn175_(var39_4.next(param161_))
@@ -455,7 +496,7 @@
 
                     function fn175_(param175_) {
                         var var176_;
-                        param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function(param181_) {
+                        param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function (param181_) {
                             param181_(var176_)
                         }))).then(fn161_, fn168_)
                     }
@@ -466,9 +507,7 @@
             console.error("Error fetching sections with HSS, defaulting back to Jellyfin:", error);
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
         });
-        
-        return hssSectionsResponse;
-    } else {
-        return this.originalLoadSections(elem, apiClient, user, userSettings);
-    }
+    }, function (err) {
+        return _this.originalLoadSections(elem, apiClient, user, userSettings);
+    });
 }
