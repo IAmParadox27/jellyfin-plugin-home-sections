@@ -42,12 +42,31 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public string? AdditionalData { get; set; }
 
         public object? OriginalPayload { get; }
+
+        public TranslationMetadata? TranslationMetadata => null;
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection);
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount);
 
         public HomeScreenSectionInfo GetInfo();
+    }
+
+    public enum TranslationType
+    {
+        FullText,
+        Prefix,
+        Suffix,
+        Pattern
+    }
+
+    public class TranslationMetadata
+    {
+        public TranslationType Type { get; set; } = TranslationType.FullText;
+
+        public string? AdditionalContent { get; set; } = null;
+        
+        public bool TranslateAdditionalContent { get; set; } = false;
     }
 
     public class HomeScreenSectionInfo

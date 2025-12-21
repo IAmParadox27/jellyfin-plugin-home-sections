@@ -122,6 +122,41 @@ This is common, particularly on a fresh install. The first thing you should try 
 </details>
 
 ## Contribution
+
+### Translation
+
+If you would like to help translate this plugin into your language, follow the below steps:
+
+The plugin is setup to support language codes and language + region codes. Please use the [ISO 639-1](https://www.loc.gov/standards/iso639-2/php/code_list.php) language codes for file names. If you're including region code as well please format as `en-GB` where region codes are from [ISO 3166](https://www.iso.org/obp/ui/#search).
+
+If you need to add a genre to the translation list, please add it at the bottom of the language file (below the line break) with the below rules:
+
+- Please add the English name to en.json
+- Please use the English name for the key
+- Please ensure the key has no spaces or dashes
+  - The key should be in the format `GenreName` (e.g. `SciFi` or `GameShow` instead of `Sci-Fi` or `Game Show`)
+- If you are adding a full translation for `<Genre> Movies` please add the key in the format `<Genre>Movies` (without the angle brackets) to the very bottom of the file.
+  - See `de.json` for an example with "ComedyMovies" 
+
+> [!NOTE]
+>
+> The initial translations were generated using AI and may not be perfect. If you find any issues with the translations, please feel free to open a PR to resolve them; I am unfortunately very monolingual, so I won't be able to spot any issues myself.
+
+1. Fork this repository
+2. Add/Edit the translation file in `src/Jellyfin.Plugin.HomeScreenSections/_Localization`
+3. Create a pull request
+
+### Code Contributions
+
+You're more than welcome to contribute to this plugin in any way that betters it, whether that's new sections or bug/performance fixes! I only ask that you follow the same code style as myself. A few points to note:
+
+- Please don't commit with any whitespace changes, might be worth turning off auto-linters
+- Please don't use `var` unless you have to due to differing namespaces between JF versions (honestly, I'm not going to gripe for the odd one, but it's good to try at least)
+- Please at least check the plugin compiles with 10.10.7 and the latest version of JF
+- Please put braces on new lines and use them even for 1 line statements
+
+After following these guidelines, please create a pull request and I'll review it as soon as I can. For more complex changes, I may ask you to rebase to the `experimental` branch to give it extra testing before it gets merged across.
+
 ### Adding your own sections
 > This is great an' all but I want a section that doesn't exist here. Can I make one?
 
@@ -168,6 +203,3 @@ When your section results method is invoked you will receive an object represent
 ```
 
 You must make sure that your section results method returns a `QueryResult<BaseItemDto>`.
-
-### Pull Requests
-I'm open to any and all pull requests that expand the functionality of this plugin, while keeping within the scope of what its outlined to do.

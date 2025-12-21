@@ -25,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
         
         internal IServiceProvider ServiceProvider { get; set; }
     
-        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, IHomeScreenManager homeScreenManager) : base(applicationPaths, xmlSerializer)
+        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, IHomeScreenManager homeScreenManager, ITranslationManager translationManager) : base(applicationPaths, xmlSerializer)
         {
             int pluginPageConfigVersion = 1;
             Instance = this;
@@ -40,6 +40,8 @@ namespace Jellyfin.Plugin.HomeScreenSections
             {
                 Directory.CreateDirectory(homeScreenSectionsConfigDir);
             }
+        
+            translationManager.Initialize();
             
             string pluginPagesConfig = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.PluginPages", "config.json");
         

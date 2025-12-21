@@ -23,6 +23,7 @@ public class GenreSection : IHomeScreenSection
     public string? Route => null;
     public string? AdditionalData { get; set; }
     public object? OriginalPayload => null;
+    public TranslationMetadata? TranslationMetadata { get; private set; }
 
     private readonly IUserManager m_userManager;
     private readonly ILibraryManager m_libraryManager;
@@ -165,7 +166,13 @@ public class GenreSection : IHomeScreenSection
                 yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
                 {
                     AdditionalData = selectedGenre,
-                    DisplayText = $"{selectedGenre} Movies"
+                    DisplayText = $"{selectedGenre} Movies",
+                    TranslationMetadata = new TranslationMetadata()
+                    {
+                        Type = TranslationType.Pattern,
+                        AdditionalContent = selectedGenre,
+                        TranslateAdditionalContent = true
+                    }
                 };
             }
         }

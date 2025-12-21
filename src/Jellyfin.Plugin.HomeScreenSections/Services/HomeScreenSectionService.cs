@@ -13,13 +13,16 @@ public class HomeScreenSectionService
     private readonly IDisplayPreferencesManager m_displayPreferencesManager;
     private readonly IHomeScreenManager m_homeScreenManager;
     private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
+    private readonly ITranslationManager m_translationManager;
 
     public HomeScreenSectionService(IDisplayPreferencesManager displayPreferencesManager,
-        IHomeScreenManager homeScreenManager, ILogger<HomeScreenSectionsPlugin> logger)
+        IHomeScreenManager homeScreenManager, ILogger<HomeScreenSectionsPlugin> logger, 
+        ITranslationManager translationManager)
     {
         m_displayPreferencesManager = displayPreferencesManager;
         m_homeScreenManager = homeScreenManager;
         m_logger = logger;
+        m_translationManager = translationManager;
     }
     
     public List<HomeScreenSectionInfo> GetSectionsForUser(Guid userId, string? language)
@@ -145,11 +148,10 @@ public class HomeScreenSectionService
             info.OrderIndex = x.ConfiguredOrder;
             info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => y.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
             
-            if (language != "en" && !string.IsNullOrEmpty(language?.Trim()) &&
-                info.DisplayText != null)
+            if (info.DisplayText != null)
             {
-                string? translatedResult = TranslationHelper.TranslateAsync(info.DisplayText, "en", language.Trim())
-                    .GetAwaiter().GetResult();
+                // Always fallback to "en" if there's no language provided.
+                string? translatedResult = m_translationManager.Translate(info.Section!, language?.Trim() ?? "en", info.DisplayText, x.Section.TranslationMetadata);
 
                 info.DisplayText = translatedResult;
             }
