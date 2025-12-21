@@ -135,8 +135,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public void UpdateTranslationPack(string language, JObject translationPack)
         {
-            // Testing the embedded data.
-            //m_translationPacks[language] = translationPack;
+            m_translationPacks[language] = translationPack;
         }
     }
 }
