@@ -81,7 +81,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             JObject translationPack = m_translationPacks[languageKey];
 
             string translatedText = "";
-            if (translationPack.ContainsKey(key))
+            string fullTextKey = fallbackText.Replace(" ", "").Replace("-", "");
+            if (key != fullTextKey && translationPack.ContainsKey(fullTextKey))
+            {
+                m_logger.LogTrace($"Found translation for key '{fullTextKey}' in language '{languageKey}'");
+                translatedText = translationPack.Value<string>(fullTextKey)!;
+                
+                // Since we've got a full translation we don't need the metadata
+                metadata = null;
+            }
+            else if (translationPack.ContainsKey(key))
             {
                 m_logger.LogTrace($"Found translation for key '{key}' in language '{languageKey}'");
                 translatedText = translationPack.Value<string>(key)!;

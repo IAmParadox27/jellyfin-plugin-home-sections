@@ -5,7 +5,7 @@
   "Discover": "Entdecken",
   "DiscoverMovies": "Filme entdecken",
   "DiscoverTV": "Serien entdecken",
-  "Genre": "{0}-Filme",
+  "Genre": "{0}filme",
   "LatestAlbums": "Neueste Alben",
   "LatestAudioBooks": "Neueste Hörbücher",
   "LatestBooks": "Neueste Bücher",
@@ -62,5 +62,7 @@
   "Thriller": "Thriller",
   "TVMovie": "TV-Film",
   "War": "Krieg",
-  "Western": "Western"
+  "Western": "Western",
+  
+  "ComedyMovies": "Komödien"
 }
