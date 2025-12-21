@@ -88,7 +88,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             else
             {
-                m_logger.LogTrace($"No translation found for key '{key}' in language '{languageKey}', falling back to previous routes");
+                m_logger.LogWarning($"No translation found for key '{key}' in language '{languageKey}', falling back to previous routes");
                 // If Libre is disabled this will be null
                 string? libreTranslateVersion = LibreTranslateHelper.TranslateAsync(fallbackText, "en", desiredLanguage).GetAwaiter().GetResult();
                 
@@ -102,7 +102,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 string? additionalContent = metadata.AdditionalContent;
                 if (metadata.TranslateAdditionalContent && !string.IsNullOrEmpty(additionalContent))
                 {
-                    additionalContent = Translate(additionalContent, desiredLanguage, additionalContent, null);
+                    additionalContent = Translate(additionalContent.Replace(" ", "").Replace("-", ""), desiredLanguage, additionalContent);
                 }
                 
                 if (metadata.Type == TranslationType.Prefix)
@@ -126,7 +126,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public void UpdateTranslationPack(string language, JObject translationPack)
         {
-            m_translationPacks[language] = translationPack;
+            // Testing the embedded data.
+            //m_translationPacks[language] = translationPack;
         }
     }
 }
