@@ -127,7 +127,16 @@ This is common, particularly on a fresh install. The first thing you should try 
 
 If you would like to help translate this plugin into your language, follow the below steps:
 
-The plugin is setup to support language codes and language + region codes. Please use the [ISO 639-1](https://www.loc.gov/standards/iso639-2/php/code_list.php) language codes for file names. If you're including region code as well please format as `en-GB` where region codes are from [ISO 3166](https://www.iso.org/obp/ui/#search)
+The plugin is setup to support language codes and language + region codes. Please use the [ISO 639-1](https://www.loc.gov/standards/iso639-2/php/code_list.php) language codes for file names. If you're including region code as well please format as `en-GB` where region codes are from [ISO 3166](https://www.iso.org/obp/ui/#search).
+
+If you need to add a genre to the translation list, please add it at the bottom of the language file (below the line break) with the below rules:
+
+- Please add the English name to en.json
+- Please use the English name for the key
+- Please ensure the key has no spaces or dashes
+  - The key should be in the format `GenreName` (e.g. `SciFi` or `GameShow` instead of `Sci-Fi` or `Game Show`)
+- If you are adding a full translation for `<Genre> Movies` please add the key in the format `<Genre>Movies` (without the angle brackets) to the very bottom of the file.
+  - See `de.json` for an example with "ComedyMovies" 
 
 > [!NOTE]
 >
