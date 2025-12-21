@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Services
 {
-    public class DailyService : IScheduledTask
+    public class DailyTranslationCacheService : IScheduledTask
     {
         public string Name => "HSS Daily Translation Cache";
         public string Key => "Jellyfin.Plugin.HomeScreenSections.DailyTranslationCache";
@@ -18,11 +18,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         // Trailing slash included to avoid getting the folder from the github trees JSON data
         private const string c_locPath = "src/Jellyfin.Plugin.HomeScreenSections/_Localization/";
 
-        public DailyService(ITranslationManager translationManager)
+        public DailyTranslationCacheService(ITranslationManager translationManager)
         {
             m_translationManager = translationManager;
         }
         
+        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetStartupTrigger()
+            .Concat(StartupServiceHelper.GetDailyTrigger(TimeSpan.FromHours(3)));
+
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
             HttpClient client = new HttpClient();
@@ -68,9 +71,5 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             progress.Report(1);
         }
-
-        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetStartupTrigger()
-            .Concat(StartupServiceHelper.GetDailyTrigger(TimeSpan.FromHours(3)));
-
     }
 }
