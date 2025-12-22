@@ -393,7 +393,7 @@
                 Page: 1,
                 ResultsPerPage: hssMeta.NumResultsPerPage,
                 LastScrollHeight: 0,
-                ScrollThreshold: 100,
+                ScrollThreshold: 10,
                 PageHash: uuidv4()
             };
             
@@ -409,18 +409,35 @@
                 var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
                 
-                if (scrollPosition >= windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < windowHeight) {
+                if (window.HssPageMeta.Finished !== true && window.HssPageMeta.IsLoading !== true && scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < window.scrollY) {
+                    window.HssPageMeta.IsLoading = true;
                     
                     document.querySelector('#hssLoadingIndicator').style.display = 'block';
                     
                     // Do the calculation after the scroller is turned on
-                    scrollPosition = window.scrollY + window.innerHeight;
                     windowHeight = getDocHeight();
+                    window.scroll(0, windowHeight - (window.innerHeight + window.HssPageMeta.ScrollThreshold));
                     
-                    window.HssPageMeta.LastScrollHeight = windowHeight;
+                    window.HssPageMeta.LastScrollHeight = window.scrollY;
+                    window.HssPageMeta.LastWindowHeight = windowHeight;
+                    
+                    window.HssPageMeta.ScrollFixerHandle = setInterval(function () {
+                        window.scroll(0, window.HssPageMeta.LastScrollHeight);
+                        
+                        if (getDocHeight() > window.HssPageMeta.LastWindowHeight) {
+                            clearInterval(window.HssPageMeta.ScrollFixerHandle);
+                            window.HssPageMeta.ScrollFixerHandle = undefined;
+                        }
+                    }, 1);
                     
                     _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
                         document.querySelector('#hssLoadingIndicator').style.display = 'none';
+
+                        window.HssPageMeta.IsLoading = false;
+                        
+                        if (window.HssPageMeta.ScrollFixerHandle) {
+                            clearInterval(window.HssPageMeta.ScrollFixerHandle);
+                        }
                     });
                 }
 
@@ -433,14 +450,6 @@
                     );
                 }
             });
-            // var tab = document.getElementById("homeTab");
-            // var button = document.createElement('button');
-            // button.innerText = "Next Page";
-            // button.onclick = function () {
-            //     _this.loadSections(elem, apiClient, user, userSettings, window.HssPageMeta.Page + 1);
-            // };
-            //
-            // tab.appendChild(button);
         }
         
         var getSectionsData = {
@@ -458,6 +467,7 @@
 
         return apiClient.getJSON(getSectionsUrl).then(function (response) {
             if (response.TotalRecordCount === 0 && window.HssPageMeta.Page > 1) {
+                window.HssPageMeta.Finished = true;
                 // Just a do nothing function
                 return function (elem, apiClient, user, userSettings) { };
             }
