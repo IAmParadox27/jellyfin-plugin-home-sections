@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -88,6 +89,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             
             RegisterResultsDelegate<GenreSection>();
             RegisterResultsDelegate<MyRequestsSection>();
+            
+            RegisterResultsDelegate<DirectedBySection>();
+            RegisterResultsDelegate<StarringSection>();
+            
             // Removed from public access while its still in dev.
             //RegisterResultsDelegate<TopTenSection>();
         }
