@@ -1,4 +1,4 @@
-﻿function test(elem, apiClient, user, userSettings) {
+﻿function test(elem, apiClient, user, userSettings, page = null) {
     function isHomePage() {
         var href = (location.href || "");
         var hash = (location.hash || "");
@@ -249,12 +249,19 @@
         return html;
     }
     
-    function loadHomeSection(page, apiClient, user, userSettings, sectionInfo, options) {
-        var sectionClass = sectionInfo.Section;
+    function getSectionClass(sectionInfo) {
         if (sectionInfo.Limit > 1) {
-            sectionClass += "-" + sectionInfo.AdditionalData;
+            return sectionInfo.Section + "-" + sectionInfo.AdditionalData.replace(' ', '-').replace('.', '-').replace("'", '');
+        } else {
+            return sectionInfo.Section;
         }
-        var var5_, var6_, var7_, var8_, elem = page.querySelector("." + sectionClass);
+    }
+    
+    function loadHomeSection(page, apiClient, user, userSettings, sectionInfo, options) {
+        var sectionClass = getSectionClass(sectionInfo);
+        console.log("Loading section: ." + sectionClass + ", could also be .section" + options.sectionIndex);
+        
+        var var5_, var6_, var7_, var8_, elem = page.querySelector('.' + sectionClass + '[data-page="' + window.HssPageMeta.Page + '"]');
         if (null !== elem) {
             var html = "";
             var layoutManager = {{layoutmanager_hook}}.A;
@@ -345,39 +352,98 @@
         return Promise.resolve()
     }
     
-    function isUserUsingHomeScreenSections(_userSettings, _apiClient) {
-        return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta")).then(function (pluginConfig) {
-            try {
-                if (pluginConfig && pluginConfig.AllowUserOverride === true) {
-                    var data = _userSettings && _userSettings.getData && _userSettings.getData();
-                    if (data && data.CustomPrefs && data.CustomPrefs.useModularHome !== undefined) {
-                        return data.CustomPrefs.useModularHome === "true";
-                    }
+    function getHomeScreenSectionsMeta(_apiClient) {
+        return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
+    }
+    
+    function isUserUsingHomeScreenSections(pluginMeta, _userSettings) {
+        try {
+            if (pluginMeta && pluginMeta.AllowUserOverride === true) {
+                var data = _userSettings && _userSettings.getData && _userSettings.getData();
+                if (data && data.CustomPrefs && data.CustomPrefs.useModularHome !== undefined) {
+                    return data.CustomPrefs.useModularHome === "true";
                 }
-                return !!(pluginConfig && pluginConfig.Enabled);
-            } catch (e) {
-                return false;
             }
-        }, function () {
+            return !!(pluginMeta && pluginMeta.Enabled);
+        } catch (e) {
             return false;
-        });
+        }
     }
 
+    function uuidv4() {
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+            (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+        );
+    }
+    
     var _this = this;
 
-    return isUserUsingHomeScreenSections(userSettings, apiClient).then(function (useHss) {
+    return getHomeScreenSectionsMeta(apiClient).then(function (hssMeta) {
+        var useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
+        
         if (!useHss) {
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
         }
 
+        if (page !== null) {
+            window.HssPageMeta.Page = page;
+        } else {
+            window.HssPageMeta = {
+                UsePagination: hssMeta.PaginationEnabled,
+                Page: 1,
+                ResultsPerPage: hssMeta.NumResultsPerPage,
+                LastScrollHeight: 0,
+                ScrollThreshold: 100,
+                PageHash: uuidv4()
+            };
+            
+            // Setup the scrolly event
+            $(window).scroll(function () {
+                var scrollPosition = $(window).scrollTop() + $(window).height();
+                var windowHeight = getDocHeight();
+                
+                if (scrollPosition >= windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < windowHeight) {
+                    window.HssPageMeta.LastScrollHeight = windowHeight;
+                    _this.loadSections(elem, apiClient, user, userSettings, window.HssPageMeta.Page + 1);
+                }
+
+                function getDocHeight() {
+                    var D = document;
+                    return Math.max(
+                        D.body.scrollHeight, D.documentElement.scrollHeight,
+                        D.body.offsetHeight, D.documentElement.offsetHeight,
+                        D.body.clientHeight, D.documentElement.clientHeight
+                    );
+                }
+            });
+            // var tab = document.getElementById("homeTab");
+            // var button = document.createElement('button');
+            // button.innerText = "Next Page";
+            // button.onclick = function () {
+            //     _this.loadSections(elem, apiClient, user, userSettings, window.HssPageMeta.Page + 1);
+            // };
+            //
+            // tab.appendChild(button);
+        }
+        
         var getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
             Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
         };
+        
+        if (window.HssPageMeta.UsePagination) {
+            getSectionsData.Page = window.HssPageMeta.Page;
+            getSectionsData.NumResultsPerPage = window.HssPageMeta.ResultsPerPage;
+            getSectionsData.PageHash = window.HssPageMeta.PageHash;
+        }
 
         var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
 
         return apiClient.getJSON(getSectionsUrl).then(function (response) {
+            if (response.TotalRecordCount === 0 && window.HssPageMeta.Page > 1) {
+                // Just a do nothing function
+                return function (elem, apiClient, user, userSettings) { };
+            }
             return function (elem, apiClient, user, userSettings) {
                 var var39_, var39_3, var39_4;
                 return var39_ = this, void 0, var39_4 = function () {
@@ -461,15 +527,26 @@
                                 if (var44_ = param120_.sent(), options = {
                                     enableOverflow: !0
                                 }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div style="order:' + var44_.Items[var44_5].OrderIndex + ';" class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
-                                    if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
-                                        for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
+                                    
+                                    if (window.HssPageMeta.Page !== 1) {
+                                        elem.innerHTML += var44_3;
+                                    } else {
+                                        elem.innerHTML = var44_3;
+                                    }
+                                    
+                                    if (!elem.classList.contains("homeSectionsContainer")) {
+                                        elem.classList.add("homeSectionsContainer")
+                                    }
+                                    
+                                    if (var44_.TotalRecordCount > 0)
+                                        for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], options.sectionIndex = var44_7, var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                                 }
                                 return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function () {
                                     var var134_2, var134_3, var134_4;
                                     return var134_2 = {
                                         refresh: !0
-                                    }, var134_3 = elem.querySelectorAll(".itemsContainer"), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
+                                    }, var134_3 = elem.querySelectorAll('[data-page="' + window.HssPageMeta.Page + '"] .itemsContainer'), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
                                         param139_.resume && var134_4.push(param139_.resume(var134_2))
                                     })), Promise.all(var134_4)
                                 }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function () {

@@ -199,7 +199,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return Ok(new { Enabled = false, AllowUserOverride = false });
             }
 
-            return Ok(new { Enabled = cfg.Enabled, AllowUserOverride = cfg.AllowUserOverride });
+            return Ok(new
+            {
+                Enabled = cfg.Enabled, 
+                AllowUserOverride = cfg.AllowUserOverride, 
+                PaginationEnabled = true, 
+                NumResultsPerPage = 5
+            });
         }
 
         [HttpGet("Ready")]
@@ -236,9 +242,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public ActionResult<QueryResult<HomeScreenSectionInfo>> GetHomeScreenSections(
             [FromQuery] Guid? userId,
-            [FromQuery] string? language)
+            [FromQuery] string? language,
+            [FromQuery] int? page = null,
+            [FromQuery] int? numResultsPerPage = null,
+            [FromQuery] Guid? pageHash = null)
         {
-            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.GetSectionsForUser(userId ?? Guid.Empty, language);
+            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.GetSectionsForUser(userId ?? Guid.Empty, language, 
+                page ?? 1, numResultsPerPage, pageHash);
 
             return new QueryResult<HomeScreenSectionInfo>(
                 0,
