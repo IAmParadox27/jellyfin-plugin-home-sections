@@ -12,9 +12,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         
         public override string? DisplayText { get; set; } = "Starring";
 
-        public override IReadOnlyList<string> PersonTypes => new[] { PersonType.Actor };
+        protected override IReadOnlyList<string> PersonTypes => new[] { PersonType.Actor, PersonType.GuestStar };
         
-        public override int MinRequiredItems => 3;
+        protected override IReadOnlyList<string>? ExcludedPersonTypes => new[] { PersonType.Director, PersonType.Writer, PersonType.Producer, PersonType.Composer };
+        
+        protected override int MinRequiredItems => 3;
         
         public override TranslationMetadata? TranslationMetadata { get; protected set; }
         

@@ -27,9 +27,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         
         public object? OriginalPayload => null;
         
-        public abstract IReadOnlyList<string> PersonTypes { get; }
+        protected abstract IReadOnlyList<string> PersonTypes { get; }
+
+        protected virtual IReadOnlyList<string>? ExcludedPersonTypes => null;
         
-        public abstract int MinRequiredItems { get; }
+        protected abstract int MinRequiredItems { get; }
 
         public virtual TranslationMetadata? TranslationMetadata { get; protected set; } = null;
         
@@ -75,28 +77,33 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
                 Limit = 16,
                 ParentId = Guid.Parse(x.ItemId),
                 Recursive = true
-            })).ToArray();
+            })).DistinctBy(x => x.Id).ToArray();
             
             return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(personItems, dtoOptions, user));
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
+            User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
             // Want to use the user data at some point to actually weight the people chosen based on watch history, similar to how Genres are picked.
             // For now this is fine to get something in.
-            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, Array.Empty<string>())).ToList();
+            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, ExcludedPersonTypes ?? Array.Empty<string>())).ToList();
 
             people.Shuffle();
 
             List<IHomeScreenSection> sections = new List<IHomeScreenSection>();
+            
+            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+                .FilterToUserPermitted(m_libraryManager, user);
+
             foreach (Person person in people)
             {
-                IReadOnlyList<BaseItem> personItems = m_libraryManager.GetItemList(new InternalItemsQuery()
+                IReadOnlyList<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
                 {
                     PersonIds = new[] { person.Id },
                     PersonTypes = PersonTypes.ToArray(),
                     Limit = 16
-                });
+                })).DistinctBy(x => x.Id).ToList();
 
                 if (personItems.Count >= MinRequiredItems)
                 {
