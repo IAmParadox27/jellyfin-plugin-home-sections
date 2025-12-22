@@ -410,9 +410,14 @@
                 var windowHeight = getDocHeight();
                 
                 if (scrollPosition >= windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < windowHeight) {
-                    window.HssPageMeta.LastScrollHeight = windowHeight;
                     
                     document.querySelector('#hssLoadingIndicator').style.display = 'block';
+                    
+                    // Do the calculation after the scroller is turned on
+                    scrollPosition = window.scrollY + window.innerHeight;
+                    windowHeight = getDocHeight();
+                    
+                    window.HssPageMeta.LastScrollHeight = windowHeight;
                     
                     _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
                         document.querySelector('#hssLoadingIndicator').style.display = 'none';
