@@ -461,6 +461,8 @@
             getSectionsData.Page = window.HssPageMeta.Page;
             getSectionsData.NumResultsPerPage = window.HssPageMeta.ResultsPerPage;
             getSectionsData.PageHash = window.HssPageMeta.PageHash;
+        } else {
+            window.HssPageMeta.Finished = true;
         }
 
         var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
