@@ -12,9 +12,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         
         public override string? DisplayText { get; set; } = "Directed by";
         
-        public override IReadOnlyList<string> PersonTypes => new [] { PersonType.Director };
+        protected override IReadOnlyList<string> PersonTypes => new [] { PersonType.Director };
         
-        public override int MinRequiredItems => 1;
+        protected override int MinRequiredItems => 3;
         
         public override TranslationMetadata? TranslationMetadata { get; protected set; }
         
