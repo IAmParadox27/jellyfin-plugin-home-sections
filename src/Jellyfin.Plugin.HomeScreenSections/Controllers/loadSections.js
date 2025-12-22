@@ -398,13 +398,25 @@
             };
             
             // Setup the scrolly event
-            $(window).scroll(function () {
-                var scrollPosition = $(window).scrollTop() + $(window).height();
+            window.HssPageCache = {
+                elem: elem,
+                apiClient: apiClient,
+                user: user,
+                userSettings: userSettings
+            };
+            
+            window.addEventListener('scroll', function () {
+                var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
                 
                 if (scrollPosition >= windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < windowHeight) {
                     window.HssPageMeta.LastScrollHeight = windowHeight;
-                    _this.loadSections(elem, apiClient, user, userSettings, window.HssPageMeta.Page + 1);
+                    
+                    document.querySelector('#hssLoadingIndicator').style.display = 'block';
+                    
+                    _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
+                        document.querySelector('#hssLoadingIndicator').style.display = 'none';
+                    });
                 }
 
                 function getDocHeight() {
@@ -527,12 +539,24 @@
                                 if (var44_ = param120_.sent(), options = {
                                     enableOverflow: !0
                                 }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + var44_5 + '"></div>';
+                                    var existingContainer = document.querySelector('.homeSectionsContainer');
+                                    var existingSections = 0;
+                                    if (existingContainer !== null) {
+                                        existingSections = existingContainer.children.length;
+                                    }
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + (existingSections + var44_5) + '"></div>';
                                     
                                     if (window.HssPageMeta.Page !== 1) {
-                                        elem.innerHTML += var44_3;
+                                        var tempContainer = document.createElement("div");
+                                        tempContainer.innerHTML = var44_3;
+                                        
+                                        while (tempContainer.firstChild) {
+                                            elem.appendChild(tempContainer.firstChild);
+                                        }
                                     } else {
-                                        elem.innerHTML = var44_3;
+                                        var spinnerHtml = '<div id="hssLoadingIndicator" class="verticalSection" style="order: 2147000000;margin-top:60px;margin-bottom:60px;display:none;"><div dir="ltr" class="docspinner mdl-spinner mdlSpinnerActive" style="position: relative;top: 0;left: calc(50vw - 1.5em);"><div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div></div></div>';
+                                        
+                                        elem.innerHTML = spinnerHtml + var44_3;
                                     }
                                     
                                     if (!elem.classList.contains("homeSectionsContainer")) {
