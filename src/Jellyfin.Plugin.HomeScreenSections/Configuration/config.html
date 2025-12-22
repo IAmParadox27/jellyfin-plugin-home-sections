@@ -119,6 +119,19 @@
                     <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Advanced Settings</legend>
                     <div style="padding-left: .5em;">
                         <details style="margin-bottom: 1em;">
+                            <summary style="cursor: pointer; font-weight: bold;">Lazy Load Settings</summary>
+                            <div style="padding-top: 1em;">
+                                <label class="emby-checkbox-label">
+                                    <input id="chkLazyLoadEnabled" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                    <span>Lazy Load Enabled</span>
+                                </label>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="numLazyLoadSections" label="Number of sections to load per page" />
+                                    <div class="fieldDescription">The number of sections that should be loaded per page.</div>
+                                </div>
+                            </div>
+                        </details>
+                        <details style="margin-bottom: 1em;">
                             <summary style="cursor: pointer; font-weight: bold;">*arr API Settings</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
@@ -565,6 +578,8 @@
                 Dashboard.showLoadingMsg();
                 const config = {
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
+                    LazyLoadEnabled: document.querySelector('#chkLazyLoadEnabled').checked,
+                    NumSectionsPerPage: parseInt(document.querySelector('[data-id=numLazyLoadSections]').value),
                     AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
                     LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                     LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
@@ -624,6 +639,8 @@
                         document.querySelector('[data-id=txtJellyseerrExternalUrl]').value = config.JellyseerrExternalUrl;
                         document.querySelector('[data-id=txtJellyseerrApiKey]').value = config.JellyseerrApiKey;
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
+                        document.querySelector('#chkLazyLoadEnabled').checked = config.LazyLoadEnabled;
+                        document.querySelector('[data-id=numLazyLoadSections]').value = config.NumSectionsPerPage;
                         
                         arrServiceConfigs.forEach(serviceConfig => {
                             loadArrConfig(serviceConfig, config);

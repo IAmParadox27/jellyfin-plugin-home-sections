@@ -6,6 +6,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
     {
         public bool Enabled { get; set; } = false;
 
+        public bool LazyLoadEnabled { get; set; } = false;
+
+        public int NumSectionsPerPage { get; set; } = 10;
+        
         public bool AllowUserOverride { get; set; } = true;
 
         public string? LibreTranslateUrl { get; set; } = "";
