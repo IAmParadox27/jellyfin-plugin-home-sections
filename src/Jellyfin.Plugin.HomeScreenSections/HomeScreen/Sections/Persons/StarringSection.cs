@@ -14,8 +14,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 
         protected override IReadOnlyList<string> PersonTypes => new[] { PersonType.Actor, PersonType.GuestStar };
         
-        protected override IReadOnlyList<string>? ExcludedPersonTypes => new[] { PersonType.Director, PersonType.Writer, PersonType.Producer, PersonType.Composer };
-        
         protected override int MinRequiredItems => 3;
         
         public override TranslationMetadata? TranslationMetadata { get; protected set; }
