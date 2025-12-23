@@ -5,6 +5,7 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
@@ -29,8 +30,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         
         protected abstract IReadOnlyList<string> PersonTypes { get; }
 
-        protected virtual IReadOnlyList<string>? ExcludedPersonTypes => null;
-        
         protected abstract int MinRequiredItems { get; }
 
         public virtual TranslationMetadata? TranslationMetadata { get; protected set; } = null;
@@ -73,11 +72,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
                 PersonIds = new[] { personId },
                 PersonTypes = PersonTypes.ToArray(),
                 OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
-                IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series },
+                IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Episode },
                 Limit = 16,
                 ParentId = Guid.Parse(x.ItemId),
                 Recursive = true
-            })).DistinctBy(x => x.Id).ToArray();
+            })).DistinctBy(x => x.Id).Select(x =>
+            {
+                if (x is Episode episode)
+                {
+                    return episode.Series;
+                }
+
+                return x;
+            }).DistinctBy(x => x.Id).ToArray();
             
             return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(personItems, dtoOptions, user));
         }
@@ -87,7 +94,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
             // Want to use the user data at some point to actually weight the people chosen based on watch history, similar to how Genres are picked.
             // For now this is fine to get something in.
-            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, ExcludedPersonTypes ?? Array.Empty<string>())).ToList();
+            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, Array.Empty<string>())).ToList();
 
             people.Shuffle();
 
@@ -102,8 +109,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
                 {
                     PersonIds = new[] { person.Id },
                     PersonTypes = PersonTypes.ToArray(),
+                    IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Episode },
+                    ParentId = Guid.Parse(x.ItemId),
+                    Recursive = true,
                     Limit = 16
-                })).DistinctBy(x => x.Id).ToList();
+                })).DistinctBy(x => x.Id).Select(x =>
+                {
+                    if (x is Episode episode)
+                    {
+                        return episode.Series;
+                    }
+
+                    return x;
+                }).DistinctBy(x => x.Id).ToList();
 
                 if (personItems.Count >= MinRequiredItems)
                 {
