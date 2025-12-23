@@ -231,9 +231,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 if (userSectionsData != null)
                 {
                     userSectionsData.OrderedSections.TryAdd(orderedSections.Key, sectionList);
-
-                    int[] orderIndices = userSectionsData.SectionsInProgress.Keys.ToArray();
-
                     userSectionsData.SectionsInProgress.Remove(orderedSections.Key, out _);
                 }
             });
