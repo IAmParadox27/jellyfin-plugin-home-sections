@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Threading.Channels;
 using HarmonyLib;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -71,7 +72,7 @@ public class PatchHelpers
             Guid userId = string.IsNullOrEmpty(userIdString) ? Guid.Empty : Guid.Parse(userIdString);
             
             HomeScreenSectionService hssService = HomeScreenSectionsPlugin.Instance.ServiceProvider.GetRequiredService<HomeScreenSectionService>();
-            List<HomeScreenSectionInfo> sections = hssService.GetSectionsForUser(userId, null);
+            List<HomeScreenSectionInfo> sections = hssService.MonitorLiveUpdatedSectionsForUser(userId, "en", 1) ?? new List<HomeScreenSectionInfo>();
 
             JArray? sectionsArr = parsedOutput.Value<JObject>("settings")?.Value<JObject>("home")?.Value<JObject>("value")?.Value<JArray>("sections");
 
