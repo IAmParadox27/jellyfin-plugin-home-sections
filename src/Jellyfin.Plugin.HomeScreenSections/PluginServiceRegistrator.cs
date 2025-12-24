@@ -1,4 +1,5 @@
 using System.Reflection;
+using Jellyfin.Plugin.HomeScreenSections.Data;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -28,6 +29,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 IHttpClientFactory httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
                 return ActivatorUtilities.CreateInstance<ImageCacheService>(services, httpClientFactory.CreateClient());
             });
+            serviceCollection.AddSingleton<UserSectionsDataCache>();
             serviceCollection.AddSingleton<ITranslationManager, TranslationManager>();
             serviceCollection.AddSingleton<IHomeScreenManager, HomeScreenManager>(services =>
             {

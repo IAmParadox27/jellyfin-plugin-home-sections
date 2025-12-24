@@ -247,8 +247,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             [FromQuery] int? numResultsPerPage = null,
             [FromQuery] Guid? pageHash = null)
         {
-            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.GetSectionsForUser(userId ?? Guid.Empty, language, 
-                page ?? 1, numResultsPerPage, pageHash);
+            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
+                page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
 
             return new QueryResult<HomeScreenSectionInfo>(
                 0,
