@@ -48,7 +48,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             for (int i = 0; i < orderedKeys.Length; i++)
             {
                 int key = orderedKeys[i];
-                int prevKey = i > 0 ? orderedKeys[i - 1] : 0;
+                int prevKey = i > 0 ? orderedKeys[i - 1] : orderedKeys[i] - 1;
 
                 bool cohesive = (key - prevKey) == 1;
                 if (prevKey > 0 && key - prevKey > 1)
@@ -117,8 +117,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
             // If its still in progress then we'll wait for it to finish.
             UserSectionsData cache = m_dataCache.Cache[pageHash.Value];
+            int lowestSectionIndex = Math.Min(
+                m_dataCache.Cache[pageHash.Value].OrderedSections.Any() 
+                    ? m_dataCache.Cache[pageHash.Value].OrderedSections.Min(x => x.Key) 
+                    : int.MaxValue,
+                m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() 
+                    ? m_dataCache.Cache[pageHash.Value].SectionsInProgress.Min(x => x.Key) 
+                    : int.MaxValue);
 
-            for (int i = 1; i <= cache.MaxOrderIndex; i++)
+            for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
             {
                 if (cache.OrderIndicesWithoutSections.Any(x => x.Contains(i)))
                 {
