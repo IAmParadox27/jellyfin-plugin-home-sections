@@ -18,7 +18,6 @@ namespace Jellyfin.Plugin.HomeScreenSections
             serviceCollection.AddSingleton<CollectionManagerProxy>();
             serviceCollection.AddSingleton<HomeScreenSectionService>();
             serviceCollection.AddHttpClient();
-            serviceCollection.AddSingleton<HomeScreenSectionService>();
             serviceCollection.AddSingleton<ArrApiService>(services =>
             {
                 IHttpClientFactory httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
@@ -39,6 +38,9 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 
                 string pluginLocation = Path.Combine(appPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!);
 
+                DirectoryInfo pluginDir = new DirectoryInfo(pluginLocation);
+                pluginDir.Create();
+                
                 string[] extraDlls = Directory.GetFiles(pluginLocation, "*.dll", SearchOption.AllDirectories).ToArray();
 
                 foreach (string extraDll in extraDlls)
