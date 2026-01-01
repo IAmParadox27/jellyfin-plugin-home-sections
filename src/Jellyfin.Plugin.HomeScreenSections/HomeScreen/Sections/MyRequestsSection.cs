@@ -2,6 +2,7 @@
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -85,7 +86,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     .FilterToUserPermitted(m_libraryManager, user);
 
                 IEnumerable<string?>? jellyfinItemIds = presentRequestedMedia?.Select(x => x.Value<string>("jellyfinMediaId"));
-                
+
+                var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+                var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+                bool hideWatchedItems = sectionSettings?.HideWatchedItems == true;
+
                 IEnumerable<BaseItem> items = folders.SelectMany(x =>
                 {
                     return m_libraryManager.GetItemList(new InternalItemsQuery(user)
@@ -96,6 +101,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                         ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString())
                     });
                 }).OrderByDescending(item => item.DateCreated);
+            // Filter watched items after query since IsPlayed parameter doesn't work with specific ItemIds for TV shows
+            if (hideWatchedItems)
+            {
+                items = items.Where(item => !item.IsPlayedVersionSpecific(user));
+            }
                 
                 return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
             }
@@ -119,7 +129,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Landscape,
-                AllowViewModeChange = true // TODO: Change this to allowed view modes
+                AllowViewModeChange = true, // TODO: Change this to allowed view modes
+                AllowHideWatched = true
             };
         }
     }
