@@ -42,6 +42,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 returnItems.AddRange(nuResults.Where(x => returnItems.All(y => y.Id != x.Id)));
             }
 
+            // If HideWatchedItems is enabled for this section, filter out watched items
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+            if (sectionSettings?.HideWatchedItems == true)
+            {
+                returnItems = returnItems.Where(x => x.UserData?.Played != true).ToList();
+            }
+
             // For now just returning this data as Continue Watching then Next Up, but we may want to sort this differently in the future
             return new QueryResult<BaseItemDto>(returnItems);
         }
@@ -61,7 +69,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Landscape
+                ViewMode = SectionViewMode.Landscape,
+                AllowHideWatched = true
             };
         }
     }
