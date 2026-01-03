@@ -123,7 +123,7 @@
         
         var index = 0;
         items.forEach(function (item) {
-            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '">';
+            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" aria-haspopup="true">';
             html += '   <div class="cardBox cardBox-bottompadded">';
             html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
@@ -139,6 +139,14 @@
             html += '                       <span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover add" aria-hidden="true"></span>';
             html += '                   </button>';
             html += '               </div>';
+            if (item.Overview && item.Overview.trim()) {
+                var escapedOverview = item.Overview.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                html += '               <div class="discover-overview-overlay">';
+                html += '                   <div class="discover-overview-content">';
+                html += '                       <p>' + escapedOverview + '</p>';
+                html += '                   </div>';
+                html += '               </div>';
+            }
             html += '           </div>';
             html += '       </div>';
             html += '       <div class="cardText cardTextCentered cardText-first">';
