@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -42,19 +43,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
 
         protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed)
         {
-            return folders.SelectMany(x =>
-            {
-                return m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            IEnumerable<BaseItem> candidateShows = folders.SelectMany(x =>
+                m_libraryManager.GetItemList(new InternalItemsQuery(user)
                 {
                     IncludeItemTypes = new[]
                     {
                         SectionItemKind
                     },
                     DtoOptions = dtoOptions,
-                    IsPlayed = isPlayed,
                     EnableTotalRecordCount = false
-                });
-            }).DistinctBy(x => x.Id).OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions)).Take(16);
+                }))
+                .DistinctBy(x => x.Id);
+
+            // Filter watch status in memory to avoid expensive database query
+            if (isPlayed.HasValue && user != null)
+            {
+                candidateShows = candidateShows.Where(x => x.IsPlayedVersionSpecific(user) == isPlayed.Value);
+            }
+
+            // Materialize to prevent re-execution, then sort by latest episode date
+            return candidateShows
+                .ToArray()
+                .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
+                .Take(16);
         }
 
         protected override DateTime GetSortDateForItem(BaseItem item, User? user, DtoOptions dtoOptions)
