@@ -60,6 +60,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public int ImageJpegQuality { get; set; } = 85;
 
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
+        
+        public CustomDiscoverSectionConfig[] CustomDiscoverSections { get; set; } = Array.Empty<CustomDiscoverSectionConfig>();
     }
 
     public enum SectionViewMode
@@ -106,5 +108,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public bool ConsiderCinemaRelease { get; set; } = false;
         public bool ConsiderPhysicalRelease { get; set; } = false;
         public bool ConsiderDigitalRelease { get; set; } = true;
+    }
+    
+    public class CustomDiscoverSectionConfig
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        
+        public string DisplayText { get; set; } = "Custom List";
+        
+        public string Endpoint { get; set; } = "/api/v1/discover/movies";
+        
+        public string QueryParameters { get; set; } = "";
+        
+        public bool Enabled { get; set; } = true;
     }   
 }

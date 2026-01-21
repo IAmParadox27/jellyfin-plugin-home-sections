@@ -8,6 +8,7 @@ using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Common.Configuration;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
@@ -82,6 +83,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<DiscoverMoviesSection>();
             RegisterResultsDelegate<DiscoverTvSection>();
             
+            // Register custom discover sections from configuration
+            RegisterCustomDiscoverSections();
+            
             RegisterResultsDelegate<UpcomingShowsSection>();
             RegisterResultsDelegate<UpcomingMoviesSection>();
             RegisterResultsDelegate<UpcomingMusicSection>();
@@ -95,6 +99,53 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             //RegisterResultsDelegate<StarringSection>();
             
             //RegisterResultsDelegate<TopTenSection>();
+        }
+
+        private void RegisterCustomDiscoverSections()
+        {
+            PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
+            if (config.CustomDiscoverSections != null && config.CustomDiscoverSections.Length > 0)
+            {
+                m_logger.LogInformation("Registering {Count} custom discover sections", config.CustomDiscoverSections.Length);
+                
+                foreach (var customSection in config.CustomDiscoverSections.Where(s => s.Enabled))
+                {
+                    CustomDiscoverSection section = new CustomDiscoverSection(
+                        m_serviceProvider.GetRequiredService<IUserManager>(),
+                        m_serviceProvider.GetRequiredService<Services.ImageCacheService>(),
+                        displayText: customSection.DisplayText,
+                        endpoint: customSection.Endpoint,
+                        queryParameters: customSection.QueryParameters
+                    );
+                    
+                    // Use a unique section ID based on the custom section ID
+                    section.Section = $"CustomDiscover_{customSection.Id}";
+                    
+                    m_logger.LogDebug("Registering custom discover section: {SectionId} - {DisplayText}", section.Section, section.DisplayText);
+                    
+                    RegisterResultsDelegate(section);
+                }
+            }
+            else
+            {
+                m_logger.LogDebug("No custom discover sections configured");
+            }
+        }
+
+        public void RefreshCustomDiscoverSections()
+        {
+            m_logger.LogInformation("Refreshing custom discover sections");
+            
+            // Remove all existing custom discover sections
+            List<string> keysToRemove = m_delegates.Keys.Where(k => k.StartsWith("CustomDiscover_")).ToList();
+            foreach (var key in keysToRemove)
+            {
+                m_delegates.Remove(key);
+                m_logger.LogDebug("Removed custom discover section: {SectionId}", key);
+            }
+            
+            // Re-register from current configuration
+            RegisterCustomDiscoverSections();
         }
 
         /// <inheritdoc/>

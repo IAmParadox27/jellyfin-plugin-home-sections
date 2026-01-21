@@ -19,6 +19,7 @@
         <div style="margin-bottom: 1.5em;">
             <button class="jellyfin-tab-button active" data-tab="global" style="background: none; border: none; color: #fff; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid #fff; padding: 0.5em 1em;"><h3>Global Settings</h3></button>
             <button class="jellyfin-tab-button" data-tab="sections" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Section Settings</h3></button>
+            <button class="jellyfin-tab-button" data-tab="custom-discover" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Custom Lists</h3></button>
         </div>
 
         <form class="artworkConfigurationForm">
@@ -357,6 +358,20 @@
                 </div>
             </div>
 
+            <div id="custom-discover" class="jellyfin-tab-content" style="display: none;">
+                <fieldset class="verticalSection-extrabottompadding">
+                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Custom Lists</legend>
+                    <div class="fieldDescription" style="margin-bottom: 1em;">
+                        Create custom Jellyseerr lists with specific filters (e.g., Horror Movies, Action TV Shows, Top Rated Sci-Fi).
+                        Each section can have its own query parameters like genre, language, rating, etc.
+                    </div>
+                    <button type="button" id="btnAddCustomDiscover" class="raised emby-button" style="margin-bottom: 1em;">
+                        <span>+ Add Custom List</span>
+                    </button>
+                    <div id="customDiscoverSectionsWrapper"></div>
+                </fieldset>
+            </div>
+
             <br>
             <button id="btnSaveConfig" is="emby-button" type="submit" class="raised button-submit block emby-button">
                 <span>Save</span>
@@ -418,6 +433,48 @@
                 </select>
             </td>
         </tr>
+    </template>
+
+    <template id="customDiscoverTemplate">
+        <div data-id="custom-discover-item" style="background: rgba(255,255,255,0.05); padding: 1em; margin-bottom: 1em; border-radius: 4px;">
+            <input type="hidden" data-id="customDiscoverId" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em;">
+                <h3 style="margin: 0;" data-id="customDiscoverTitle">New Custom List</h3>
+                <button type="button" data-id="btnDeleteCustomDiscover" class="raised emby-button" style="background-color: #d32f2f;">
+                    <span>Delete</span>
+                </button>
+            </div>
+            <div class="inputContainer">
+                <input is="emby-input" type="text" data-id="txtDisplayText" label="Display Text" required />
+                <div class="fieldDescription">The title shown for this section (e.g., "Horror Movies", "Top Rated Sci-Fi")</div>
+            </div>
+            <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused" for="selectEndpoint">Endpoint</label>
+                <select is="emby-select" data-id="selectEndpoint" class="emby-select-withcolor emby-select">
+                    <option value="/api/v1/discover/movies">Movies</option>
+                    <option value="/api/v1/discover/tv">TV Shows</option>
+                </select>
+                <div class="fieldDescription">Whether to discover movies or TV shows</div>
+            </div>
+            <div class="inputContainer">
+                <input is="emby-input" type="text" data-id="txtQueryParameters" label="Query Parameters" />
+                <div class="fieldDescription">
+                    API query parameters (e.g., "genre=27" for horror, "genre=878&sortBy=vote_average.desc" for top-rated sci-fi).
+                    <a href="#" onclick="event.preventDefault(); alert('Common parameters:\n\nGenre Examples:\n• genre=27 (Horror)\n• genre=28 (Action)\n• genre=878 (Sci-Fi)\n• genre=35 (Comedy)\n\nSorting:\n• sortBy=popularity.desc\n• sortBy=vote_average.desc\n• sortBy=release_date.desc\n\nFiltering:\n• vote_average.gte=7.0\n• with_runtime.lte=90\n• language=en\n\nSee documentation for more examples.');" style="color: var(--accent-color, #00a4dc);">See examples</a>
+                </div>
+            </div>
+            <div class="checkboxContainer checkboxContainer-withDescription">
+                <label class="emby-checkbox-label">
+                    <input data-id="chkEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                    <span>Enabled</span>
+                    <span class="checkboxOutline">
+                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                        <span class="material-icons checkboxIcon checkboxIcon-unchecked" aria-hidden="true"></span>
+                    </span>
+                </label>
+                <div class="fieldDescription">Enable this custom list</div>
+            </div>
+        </div>
     </template>
 
     <script type="text/javascript">
@@ -562,6 +619,68 @@
                 });
             }
 
+            function addCustomDiscoverSection(config) {
+                const wrapper = document.querySelector('#customDiscoverSectionsWrapper');
+                const template = document.querySelector('#customDiscoverTemplate').content.cloneNode(true);
+                const container = template.querySelector('[data-id=custom-discover-item]');
+                
+                const id = config?.Id || generateGuid();
+                container.querySelector('[data-id=customDiscoverId]').value = id;
+                container.querySelector('[data-id=txtDisplayText]').value = config?.DisplayText || '';
+                container.querySelector('[data-id=selectEndpoint]').value = config?.Endpoint || '/api/v1/discover/movies';
+                container.querySelector('[data-id=txtQueryParameters]').value = config?.QueryParameters || '';
+                container.querySelector('[data-id=chkEnabled]').checked = config?.Enabled !== false;
+                
+                // Update title when display text changes
+                const txtDisplayText = container.querySelector('[data-id=txtDisplayText]');
+                const title = container.querySelector('[data-id=customDiscoverTitle]');
+                txtDisplayText.addEventListener('input', () => {
+                    title.textContent = txtDisplayText.value || 'New Custom List';
+                });
+                if (config?.DisplayText) {
+                    title.textContent = config.DisplayText;
+                }
+                
+                // Delete button
+                container.querySelector('[data-id=btnDeleteCustomDiscover]').addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete this custom list?')) {
+                        container.remove();
+                    }
+                });
+                
+                wrapper.appendChild(container);
+            }
+            
+            function generateGuid() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+            
+            function loadCustomDiscoverSections(sections) {
+                const wrapper = document.querySelector('#customDiscoverSectionsWrapper');
+                wrapper.innerHTML = '';
+                if (sections && sections.length > 0) {
+                    sections.forEach(section => addCustomDiscoverSection(section));
+                }
+            }
+            
+            function getCustomDiscoverSections() {
+                const sections = [];
+                document.querySelectorAll('[data-id=custom-discover-item]').forEach(container => {
+                    sections.push({
+                        Id: container.querySelector('[data-id=customDiscoverId]').value,
+                        DisplayText: container.querySelector('[data-id=txtDisplayText]').value,
+                        Endpoint: container.querySelector('[data-id=selectEndpoint]').value,
+                        QueryParameters: container.querySelector('[data-id=txtQueryParameters]').value,
+                        Enabled: container.querySelector('[data-id=chkEnabled]').checked
+                    });
+                });
+                return sections;
+            }
+
             function saveConfig(e) {
                 e.preventDefault();
 
@@ -604,7 +723,8 @@
                     MaxImageWidth: parseInt(document.querySelector('[data-id=txtMaxImageWidth]').value) || 600,
                     ImageJpegQuality: parseInt(document.querySelector('[data-id=txtImageJpegQuality]').value) || 85,
                     OverrideStreamyfinHome: document.querySelector('#globalStreamyfinHomeOverride').checked,
-                    SectionSettings: []
+                    SectionSettings: [],
+                    CustomDiscoverSections: getCustomDiscoverSections()
                 };
 
                 document.querySelectorAll('#sectionWrapper tr').forEach(row => {
@@ -621,8 +741,34 @@
                     config.SectionSettings.push(sectionConfig);
                 });
 
+                // Automatically add SectionSettings for custom discover sections
+                const customSections = getCustomDiscoverSections();
+                customSections.forEach(customSection => {
+                    const sectionId = `CustomDiscover_${customSection.Id}`;
+                    // Only add if not already in SectionSettings
+                    if (!config.SectionSettings.find(s => s.SectionId === sectionId)) {
+                        config.SectionSettings.push({
+                            SectionId: sectionId,
+                            Enabled: customSection.Enabled,
+                            AllowUserOverride: true,
+                            LowerLimit: 1,
+                            UpperLimit: 1,
+                            OrderIndex: 999,
+                            ViewMode: 'Portrait',
+                            HideWatchedItems: false
+                        });
+                    }
+                });
+
                 window.ApiClient.updatePluginConfiguration(pluginId, config)
                     .then(Dashboard.processPluginConfigurationUpdateResult)
+                    .then(() => {
+                        // Refresh custom discover sections without server restart
+                        return window.ApiClient.ajax({
+                            url: window.ApiClient.getUrl('ModularHomeViews/RefreshCustomSections'),
+                            type: 'POST'
+                        });
+                    })
                     .catch(e => console.error(e))
                     .finally(() => Dashboard.hideLoadingMsg());
             }
@@ -673,6 +819,9 @@
                             }
                         }, 500);
 
+                        // Load custom discover sections
+                        loadCustomDiscoverSections(config.CustomDiscoverSections);
+
                         window.ApiClient.ajax({
                             url: ApiClient.getUrl('ModularHomeViews/Sections'),
                             type: 'GET'
@@ -702,6 +851,11 @@
                 loadLibraries();
                 loadConfig();
                 document.querySelector('#btnSaveConfig').addEventListener("click", saveConfig);
+                
+                // Custom Discover Section button
+                document.querySelector('#btnAddCustomDiscover').addEventListener("click", function() {
+                    addCustomDiscoverSection(null);
+                });
 
                 // Cache bust functionality
                 const btnBustHomeSectionsCache = document.querySelector('#btnBustHomeSectionsCache');
