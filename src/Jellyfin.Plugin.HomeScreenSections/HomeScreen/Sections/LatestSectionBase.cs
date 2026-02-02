@@ -1,4 +1,5 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -27,6 +28,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected abstract CollectionType CollectionType { get; }
         
         protected abstract string? LibraryId { get; }
+        
+        protected abstract CollectionTypeOptions CollectionTypeOptions { get; }
         
         protected readonly IUserViewManager m_userViewManager;
         protected readonly IUserManager m_userManager;
@@ -75,7 +78,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
-            IReadOnlyList<BaseItem> latestMovies = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions)
+                .FilterToUserPermitted(m_libraryManager, user);
+
+            IEnumerable<BaseItem> latestMovies = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
                 {
@@ -86,9 +93,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 {
                     (ItemSortBy.PremiereDate, SortOrder.Descending)
                 },
-                IsPlayed = isPlayed
-            });
-
+                IsPlayed = isPlayed,
+                ParentId = Guid.Parse(x.ItemId),
+                Recursive = true
+            })).ToArray();
+            
             return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }

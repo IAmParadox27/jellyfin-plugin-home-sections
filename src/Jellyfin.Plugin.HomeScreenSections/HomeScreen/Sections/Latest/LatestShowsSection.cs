@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -34,6 +35,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         protected override BaseItemKind SectionItemKind => BaseItemKind.Episode;
         protected override CollectionType CollectionType => CollectionType.tvshows;
         protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultTVShowsLibraryId;
+        protected override CollectionTypeOptions CollectionTypeOptions => CollectionTypeOptions.tvshows;
 
         public override QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
@@ -61,9 +63,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
+            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions)
+                .FilterToUserPermitted(m_libraryManager, user);
+
             // Single query: Get recent episodes, limited but enough to find 16 unique series
             // Fetch more episodes to account for multiple episodes per series
-            var recentEpisodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            var recentEpisodes = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { SectionItemKind },
                 OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
@@ -71,8 +77,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 IsVirtualItem = false,
                 IsPlayed = isPlayed,
                 Recursive = true,
+                ParentId = Guid.Parse(x.ItemId),
                 DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-            }).OfType<Episode>()
+            })).OfType<Episode>()
             .Where(x => !x.IsUnaired)
             .ToList();
 
