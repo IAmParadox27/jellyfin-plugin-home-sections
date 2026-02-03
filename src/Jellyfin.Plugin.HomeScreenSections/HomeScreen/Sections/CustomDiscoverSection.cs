@@ -149,7 +149,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                     SourceType = item.Value<string>("mediaType"),
                                     ProviderIds = new Dictionary<string, string>()
                                     {
-                                        { "JellyseerrRoot", jellyseerrDisplayUrl ?? jellyseerrUrl },
+                                        { "JellyseerrRoot", jellyseerrDisplayUrl },
                                         { "Jellyseerr", item.Value<int>("id").ToString() },
                                         { "JellyseerrPoster", cachedImageUrl }
                                     },
