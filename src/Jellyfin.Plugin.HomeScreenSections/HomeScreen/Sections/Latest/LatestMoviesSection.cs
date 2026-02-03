@@ -1,6 +1,7 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
 {
@@ -19,6 +20,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         protected override CollectionType CollectionType => CollectionType.movies;
         
         protected override string? LibraryId => HomeScreenSectionsPlugin.Instance?.Configuration?.DefaultMoviesLibraryId;
+        protected override CollectionTypeOptions CollectionTypeOptions => CollectionTypeOptions.movies;
 
         public LatestMoviesSection(IUserViewManager userViewManager,
             IUserManager userManager,

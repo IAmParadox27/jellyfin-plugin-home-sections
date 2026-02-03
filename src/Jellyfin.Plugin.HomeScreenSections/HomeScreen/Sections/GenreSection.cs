@@ -70,7 +70,14 @@ public class GenreSection : IHomeScreenSection
 
         var movies = folders.SelectMany(x =>
         {
-            InternalItemsQuery? genreMovies = new InternalItemsQuery(user)
+            var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+            if (item is not Folder folder)
+            {
+                folder = m_libraryManager.GetUserRootFolder();
+            }
+
+            return folder.GetItems(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[]
                 {
@@ -82,9 +89,7 @@ public class GenreSection : IHomeScreenSection
                 Limit = 24,
                 DtoOptions = dtoOptions,
                 Genres = new List<string> { genre.Name }
-            };
-
-            return m_libraryManager.GetItemList(genreMovies);
+            }).Items;
         }).GroupBy(x => x.Id).Select(x => x.First()).ToList();
 
         movies.Shuffle();
@@ -202,13 +207,22 @@ public class GenreSection : IHomeScreenSection
         // === QUERY 1: Get all played movies in a single query ===
         // This replaces the N+1 pattern of querying per-genre then per-movie
         var allPlayedMovies = folderIds.SelectMany(folderId =>
-            m_libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            var item = m_libraryManager.GetParentItem(folderId, user?.Id);
+
+            if (item is not Folder folder)
+            {
+                folder = m_libraryManager.GetUserRootFolder();
+            }
+
+            return folder.GetItems(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { BaseItemKind.Movie },
                 Recursive = true,
                 IsPlayed = true,
                 ParentId = folderId,
-            })).OfType<Movie>().ToList();
+            }).Items;
+        }).OfType<Movie>().ToList();
 
         // Fetch user data for all played movies at once, then cache in a dictionary
         var userDataCache = new Dictionary<Guid, UserItemData?>();
@@ -250,14 +264,23 @@ public class GenreSection : IHomeScreenSection
 
         // === QUERY 2: Get favorited/liked movies ===
         var likedOrFavoritedMovies = folderIds.SelectMany(folderId =>
-            m_libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            var item = m_libraryManager.GetParentItem(folderId, user?.Id);
+
+            if (item is not Folder folder)
+            {
+                folder = m_libraryManager.GetUserRootFolder();
+            }
+
+            return folder.GetItems(new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { BaseItemKind.Movie },
                 Recursive = true,
                 IsFavoriteOrLiked = true,
                 User = user,
                 ParentId = folderId,
-            })).OfType<Movie>().ToList();
+            }).Items;
+        }).OfType<Movie>().ToList();
 
         var likedByGenre = likedOrFavoritedMovies
             .SelectMany(movie => movie.Genres)

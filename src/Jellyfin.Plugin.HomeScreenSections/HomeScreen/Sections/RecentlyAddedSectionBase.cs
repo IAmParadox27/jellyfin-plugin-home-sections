@@ -149,18 +149,30 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             // Default behaviour is to get the 16 most recently added items from each library that matches, then order that by date created and take 16.
             // The reason we do this is to ensure that we always get 16 items, even if there is only 1 library that matches our type.
-            return folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            return folders.SelectMany(x =>
             {
-                IncludeItemTypes = new[]
+                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                if (item is not Folder folder)
                 {
-                    SectionItemKind
-                },
-                DtoOptions = dtoOptions,
-                IsPlayed = isPlayed,
-                OrderBy = new [] { (ItemSortBy.DateCreated, SortOrder.Descending) },
-                Limit = 16,
-                IsMissing = false
-            })).DistinctBy(x => x.Id)
+                    folder = m_libraryManager.GetUserRootFolder();
+                }
+
+                return folder.GetItems(new InternalItemsQuery(user)
+                {
+                    IncludeItemTypes = new[]
+                    {
+                        SectionItemKind
+                    },
+                    DtoOptions = dtoOptions,
+                    IsPlayed = isPlayed,
+                    OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+                    Limit = 16,
+                    IsMissing = false,
+                    Recursive = true,
+                    ParentId = folder.Id
+                }).Items;
+            }).DistinctBy(x => x.Id)
             .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
             .Take(16);
         }

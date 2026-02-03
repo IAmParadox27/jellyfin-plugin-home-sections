@@ -73,7 +73,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			List<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
 			{
-				InternalItemsQuery? query = new InternalItemsQuery(user)
+				var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+				if (item is not Folder folder)
+				{
+					folder = LibraryManager.GetUserRootFolder();
+				}
+
+				return folder.GetItems(new InternalItemsQuery(user)
 				{
 					IncludeItemTypes = new[]
 					{
@@ -85,9 +92,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					Recursive = true,
 					IsPlayed = true,
 					DtoOptions = dtoOptions
-				};
-
-				return LibraryManager.GetItemList(query);
+				}).Items;
 			}).ToList();
 			
 			recentlyPlayedMovies.Shuffle();
@@ -170,7 +175,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             IList<BaseItem>? similar = folders.SelectMany(x =>
             {
-	            var items = LibraryManager.GetItemList(new InternalItemsQuery
+	            var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+	            if (item is not Folder folder)
+	            {
+		            folder = LibraryManager.GetUserRootFolder();
+	            }
+
+	            return folder.GetItems(new InternalItemsQuery(user)
 	            {
 		            IncludeItemTypes = new[]
 		            {
@@ -183,9 +195,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		            Limit = 24,
 		            Recursive = true,
 		            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-	            }.ApplySimilarSettings(item));
-
-	            return items;
+	            }.ApplySimilarSettings(item)).Items;
             }).ToList();
             
             similar.Shuffle();
