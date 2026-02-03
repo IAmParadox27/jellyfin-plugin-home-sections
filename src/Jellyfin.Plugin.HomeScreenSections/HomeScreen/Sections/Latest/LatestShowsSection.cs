@@ -67,47 +67,79 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 .Where(x => x.CollectionType == CollectionTypeOptions)
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            // Single query: Get recent episodes, limited but enough to find 16 unique series
-            // Fetch more episodes to account for multiple episodes per series
-            var recentEpisodes = folders.SelectMany(x =>
-            {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-                if (item is not Folder folder)
-                {
-                    folder = m_libraryManager.GetUserRootFolder();
-                }
-
-                return folder.GetItems(new InternalItemsQuery(user)
-                {
-                    IncludeItemTypes = new[] { SectionItemKind },
-                    OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
-                    Limit = 200, // Enough to find 16 unique series even with multi-episode releases
-                    IsVirtualItem = false,
-                    IsPlayed = isPlayed,
-                    Recursive = true,
-                    ParentId = folder.Id
-                    // DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-                }).Items;
-            }).OfType<Episode>()
-            .Where(x => !x.IsUnaired)
-            .ToList();
+            List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries = new List<(Series, DateTime?)>();
+            int dayIncrement = 30;
+            DateTime currentDate = DateTime.Now;
+            DateTime stopDate = DateTime.Parse("01/01/1925"); // The first show ever was 1925 so this should be safe, we never expect to get as far back as this but we need an escape.
+            bool continueSearching = true;
             
-            // Group by series and get the one with the latest premiere date per series
-            var seriesWithLatestEpisode = recentEpisodes
-                .Select(ep => (Episode: ep, Series: ep.Series))
-                .Where(x => x.Series != null)
-                .GroupBy(x => x.Series!.Id)
-                .Select(g => (
-                    Series: g.First().Series!,
-                    LatestPremiereDate: g.Max(x => x.Episode.PremiereDate)
-                ))
-                .OrderByDescending(x => x.LatestPremiereDate)
-                .Take(16)
+            do
+            {
+                // Single query: Get recent episodes, limited but enough to find 16 unique series
+                // Fetch more episodes to account for multiple episodes per series
+                var mainQuery = folders.Select(x =>
+                {
+                    var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                    if (item is not Folder folder)
+                    {
+                        folder = m_libraryManager.GetUserRootFolder();
+                    }
+
+                    var items = folder.GetItems(new InternalItemsQuery(user)
+                    {
+                        IncludeItemTypes = new[] { SectionItemKind },
+                        OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
+                        Limit = 200, // Enough to find 16 unique series even with multi-episode releases
+                        IsVirtualItem = false,
+                        IsPlayed = isPlayed,
+                        Recursive = true,
+                        ParentId = folder.Id,
+                        MaxPremiereDate = currentDate,
+                        MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
+                        EnableTotalRecordCount = true // This might have to go
+                        // DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                    });
+
+                    return (Items: items.Items, items.Items.Count, items.TotalRecordCount);
+                }).ToArray();
+
+                var recentEpisodes = mainQuery.SelectMany(x => x.Items).OfType<Episode>()
+                .Where(x => !x.IsUnaired)
                 .ToList();
+                
+                // Group by series and get the one with the latest premiere date per series
+                var seriesWithLatestEpisode = recentEpisodes
+                    .Select(ep => (Episode: ep, Series: ep.Series))
+                    .Where(x => x.Series != null)
+                    .GroupBy(x => x.Series!.Id)
+                    .Select(g => (
+                        Series: g.First().Series!,
+                        LatestPremiereDate: g.Max(x => x.Episode.PremiereDate)
+                    ))
+                    .OrderByDescending(x => x.LatestPremiereDate)
+                    .Take(16)
+                    .ToList();
+                
+                var seriesToAdd = seriesWithLatestEpisode.Where(x => selectedSeries.All(y => y.Series.Id != x.Series.Id)).ToList();
+                
+                selectedSeries.AddRange(seriesToAdd);
+
+                if (selectedSeries.Count >= 16)
+                {
+                    continueSearching = false;
+                }
+                
+                currentDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement));
+                
+                if (currentDate < stopDate)
+                {
+                    break;
+                }
+            } while (continueSearching);
             
             // Fetch the full series objects with proper DtoOptions for images
-            var seriesIds = seriesWithLatestEpisode.Select(x => x.Series.Id);
+            var seriesIds = selectedSeries.OrderByDescending(x => x.LatestPremiereDate).Select(x => x.Series.Id);
             var seriesIdArray = seriesIds.ToArray();
             var seriesItems = m_libraryManager.GetItemList(new InternalItemsQuery(user)
             {

@@ -82,33 +82,67 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .Where(x => x.CollectionType == CollectionTypeOptions)
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            var latestMovies = folders.SelectMany(x =>
+            List<(BaseItem Item, DateTime? PremiereDate)> selectedItems = new List<(BaseItem, DateTime?)>();
+            int dayIncrement = 30;
+            DateTime currentDate = DateTime.Now;
+            DateTime stopDate = DateTime.Parse("01/01/1887"); // The first movie ever was 1888 so this should be safe, we never expect to get as far back as this but we need an escape.
+            bool continueSearching = true;
+
+            do
             {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-                if (item is not Folder folder)
+                var latestMovies = folders.Select(x =>
                 {
-                    folder = m_libraryManager.GetUserRootFolder();
+                    var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                    if (item is not Folder folder)
+                    {
+                        folder = m_libraryManager.GetUserRootFolder();
+                    }
+
+                    var items = folder.GetItems(new InternalItemsQuery(user)
+                    {
+                        IncludeItemTypes = new[]
+                        {
+                            SectionItemKind
+                        },
+                        Limit = 16,
+                        OrderBy = new[]
+                        {
+                            (ItemSortBy.PremiereDate, SortOrder.Descending)
+                        },
+                        IsPlayed = isPlayed,
+                        ParentId = Guid.Parse(x.ItemId),
+                        Recursive = true,
+                        MaxPremiereDate = currentDate,
+                        MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
+                        EnableTotalRecordCount = true // This might have to go
+                    });
+
+                    return (Items: items.Items, items.Items.Count, items.TotalRecordCount);
+                }).ToArray();
+                
+                var itemsToAdd = latestMovies
+                    .SelectMany(x => x.Items)
+                    .Where(x => selectedItems.All(y => y.Item.Id != x.Id))
+                    .Select(x => (Item: x, PremiereDate: x.PremiereDate))
+                    .ToList();
+                
+                selectedItems.AddRange(itemsToAdd);
+
+                if (selectedItems.Count >= 16)
+                {
+                    continueSearching = false;
                 }
-
-                return folder.GetItems(new InternalItemsQuery(user)
+                
+                currentDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement));
+                
+                if (currentDate < stopDate)
                 {
-                    IncludeItemTypes = new[]
-                    {
-                        SectionItemKind
-                    },
-                    Limit = 16,
-                    OrderBy = new[]
-                    {
-                        (ItemSortBy.PremiereDate, SortOrder.Descending)
-                    },
-                    IsPlayed = isPlayed,
-                    ParentId = Guid.Parse(x.ItemId),
-                    Recursive = true
-                }).Items;
-            }).ToArray();
-            
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
+                    break;
+                }
+            } while (continueSearching);
+
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(selectedItems.OrderByDescending(x => x.PremiereDate).Select(x => x.Item).ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
         
