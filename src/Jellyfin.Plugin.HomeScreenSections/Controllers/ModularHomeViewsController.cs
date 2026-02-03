@@ -141,7 +141,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// </summary>
         /// <returns>Success result.</returns>
         [HttpPost("RefreshCustomSections")]
-        [Authorize]
+        [Authorize(Roles = "Administrator")]
         public ActionResult RefreshCustomSections()
         {
             m_homeScreenManager.RefreshCustomDiscoverSections();

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
@@ -24,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
     /// </summary>
     public class HomeScreenManager : IHomeScreenManager
     {
-        private Dictionary<string, IHomeScreenSection> m_delegates = new Dictionary<string, IHomeScreenSection>();
+        private ConcurrentDictionary<string, IHomeScreenSection> m_delegates = new ConcurrentDictionary<string, IHomeScreenSection>();
         private Dictionary<Guid, bool> m_userFeatureEnabledStates = new Dictionary<Guid, bool>();
 
         private readonly IServiceProvider m_serviceProvider;
@@ -140,7 +141,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             List<string> keysToRemove = m_delegates.Keys.Where(k => k.StartsWith("CustomDiscover_")).ToList();
             foreach (var key in keysToRemove)
             {
-                m_delegates.Remove(key);
+                m_delegates.TryRemove(key, out _);
                 m_logger.LogDebug("Removed custom discover section: {SectionId}", key);
             }
             
@@ -162,9 +163,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> InvokeResultsDelegate(string key, HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            if (m_delegates.ContainsKey(key))
+            if (m_delegates.TryGetValue(key, out var section))
             {
-                return m_delegates[key].GetResults(payload, queryCollection);
+                return section.GetResults(payload, queryCollection);
             }
 
             return new QueryResult<BaseItemDto>(Array.Empty<BaseItemDto>());
@@ -192,13 +193,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
             if (handler.Section != null)
             {
-                if (!m_delegates.ContainsKey(handler.Section))
+                if (!m_delegates.TryAdd(handler.Section, handler))
                 {
-                    m_delegates.Add(handler.Section, handler);
-                }
-                else
-                {
-                    throw new Exception($"Section type '{handler.Section}' has already been registered to type '{m_delegates[handler.Section].GetType().FullName}'.");
+                    if (m_delegates.TryGetValue(handler.Section, out var existing))
+                    {
+                        throw new Exception($"Section type '{handler.Section}' has already been registered to type '{existing.GetType().FullName}'.");
+                    }
                 }
             }
         }

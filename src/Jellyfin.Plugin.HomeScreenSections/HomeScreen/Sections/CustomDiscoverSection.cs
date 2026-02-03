@@ -19,8 +19,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
     /// </summary>
     public class CustomDiscoverSection : IHomeScreenSection
     {
-        private readonly IUserManager _userManager;
-        private readonly ImageCacheService _imageCacheService;
+        private readonly IUserManager m_userManager;
+        private readonly ImageCacheService m_imageCacheService;
 
         public virtual string? Section { get; set; } = "CustomDiscover";
 
@@ -49,8 +49,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             string? endpoint = null,
             string? queryParameters = null)
         {
-            _userManager = userManager;
-            _imageCacheService = imageCacheService;
+            m_userManager = userManager;
+            m_imageCacheService = imageCacheService;
             
             if (!string.IsNullOrEmpty(displayText))
             {
@@ -82,7 +82,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
             
-            User? user = _userManager.GetUserById(payload.UserId);
+            User? user = m_userManager.GetUserById(payload.UserId);
             
             if (user == null)
             {
@@ -110,59 +110,119 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             // Make the API call to discover with custom parameters
             int page = 1;
+            const int maxPages = 10; // Safety limit to prevent infinite loops
+            
             do 
             {
                 HttpResponseMessage discoverResponse = client.GetAsync($"{CustomEndpoint}?page={page}{customParams}").GetAwaiter().GetResult();
 
-                if (discoverResponse.IsSuccessStatusCode)
+                if (!discoverResponse.IsSuccessStatusCode)
                 {
-                    string jsonRaw = discoverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    JObject? jsonResponse = JObject.Parse(jsonRaw);
+                    // Non-success response, stop pagination
+                    break;
+                }
 
-                    if (jsonResponse != null)
+                string jsonRaw = discoverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                JObject? jsonResponse = JObject.Parse(jsonRaw);
+
+                if (jsonResponse == null)
+                {
+                    break;
+                }
+
+                JArray? results = jsonResponse.Value<JArray>("results");
+                if (results == null || results.Count == 0)
+                {
+                    // No more results available
+                    break;
+                }
+
+                // Check if we've reached the last page
+                int? totalPages = jsonResponse.Value<int?>("totalPages");
+                if (totalPages.HasValue && page >= totalPages.Value)
+                {
+                    // Process current page then exit
+                    foreach (JObject item in results.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
                     {
-                        foreach (JObject item in jsonResponse.Value<JArray>("results")!.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
+                        if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) && 
+                            !HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages.Split(',')
+                                .Select(x => x.Trim()).Contains(item.Value<string>("originalLanguage")))
                         {
-                            if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) && 
-                                !HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages.Split(',')
-                                    .Select(x => x.Trim()).Contains(item.Value<string>("originalLanguage")))
+                            continue;
+                        }
+                        
+                        if (item.Value<JObject>("mediaInfo") == null)
+                        {
+                            string dateTimeString = item.Value<string>("firstAirDate") ??
+                                                    item.Value<string>("releaseDate") ?? "1970-01-01";
+                            
+                            if (string.IsNullOrWhiteSpace(dateTimeString))
                             {
-                                continue;
+                                dateTimeString = "1970-01-01";
                             }
                             
-                            if (item.Value<JObject>("mediaInfo") == null)
+                            string posterPath = item.Value<string>("posterPath") ?? "404";
+                            string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
+                            
+                            returnItems.Add(new BaseItemDto()
                             {
-                                string dateTimeString = item.Value<string>("firstAirDate") ??
-                                                        item.Value<string>("releaseDate") ?? "1970-01-01";
-                                
-                                if (string.IsNullOrWhiteSpace(dateTimeString))
+                                Name = item.Value<string>("title") ?? item.Value<string>("name"),
+                                OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
+                                SourceType = item.Value<string>("mediaType"),
+                                ProviderIds = new Dictionary<string, string>()
                                 {
-                                    dateTimeString = "1970-01-01";
-                                }
-                                
-                                string posterPath = item.Value<string>("posterPath") ?? "404";
-                                string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
-                                
-                                returnItems.Add(new BaseItemDto()
-                                {
-                                    Name = item.Value<string>("title") ?? item.Value<string>("name"),
-                                    OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
-                                    SourceType = item.Value<string>("mediaType"),
-                                    ProviderIds = new Dictionary<string, string>()
-                                    {
-                                        { "JellyseerrRoot", jellyseerrDisplayUrl },
-                                        { "Jellyseerr", item.Value<int>("id").ToString() },
-                                        { "JellyseerrPoster", cachedImageUrl }
-                                    },
-                                    PremiereDate = DateTime.Parse(dateTimeString)
-                                });
-                            }
+                                    { "JellyseerrRoot", jellyseerrDisplayUrl },
+                                    { "Jellyseerr", item.Value<int>("id").ToString() },
+                                    { "JellyseerrPoster", cachedImageUrl }
+                                },
+                                PremiereDate = DateTime.Parse(dateTimeString)
+                            });
                         }
+                    }
+                    break;
+                }
+
+                foreach (JObject item in results.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
+                {
+                    if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) && 
+                        !HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages.Split(',')
+                            .Select(x => x.Trim()).Contains(item.Value<string>("originalLanguage")))
+                    {
+                        continue;
+                    }
+                    
+                    if (item.Value<JObject>("mediaInfo") == null)
+                    {
+                        string dateTimeString = item.Value<string>("firstAirDate") ??
+                                                item.Value<string>("releaseDate") ?? "1970-01-01";
+                        
+                        if (string.IsNullOrWhiteSpace(dateTimeString))
+                        {
+                            dateTimeString = "1970-01-01";
+                        }
+                        
+                        string posterPath = item.Value<string>("posterPath") ?? "404";
+                        string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
+                        
+                        returnItems.Add(new BaseItemDto()
+                        {
+                            Name = item.Value<string>("title") ?? item.Value<string>("name"),
+                            OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
+                            SourceType = item.Value<string>("mediaType"),
+                            ProviderIds = new Dictionary<string, string>()
+                            {
+                                { "JellyseerrRoot", jellyseerrDisplayUrl },
+                                { "Jellyseerr", item.Value<int>("id").ToString() },
+                                { "JellyseerrPoster", cachedImageUrl }
+                            },
+                            PremiereDate = DateTime.Parse(dateTimeString)
+                        });
                     }
                 }
 
                 page++;
-            } while (returnItems.Count < 20);
+            } while (returnItems.Count < 20 && page <= maxPages);
+            }
             
             return new QueryResult<BaseItemDto>()
             {
@@ -174,7 +234,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected string GetCachedImageUrl(string sourceUrl)
         {
-            return ImageCacheHelper.GetCachedImageUrl(_imageCacheService, sourceUrl);
+            return ImageCacheHelper.GetCachedImageUrl(m_imageCacheService, sourceUrl);
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)

@@ -460,7 +460,7 @@
                 <input is="emby-input" type="text" data-id="txtQueryParameters" label="Query Parameters" />
                 <div class="fieldDescription">
                     API query parameters (e.g., "genre=27" for horror, "genre=878&sortBy=vote_average.desc" for top-rated sci-fi).
-                    <a href="#" onclick="event.preventDefault(); alert('Common parameters:\n\nGenre Examples:\n• genre=27 (Horror)\n• genre=28 (Action)\n• genre=878 (Sci-Fi)\n• genre=35 (Comedy)\n\nSorting:\n• sortBy=popularity.desc\n• sortBy=vote_average.desc\n• sortBy=release_date.desc\n\nFiltering:\n• vote_average.gte=7.0\n• with_runtime.lte=90\n• language=en\n\nSee documentation for more examples.');" style="color: var(--accent-color, #00a4dc);">See examples</a>
+                    <a href="#" data-id="btnQueryParametersHelp" style="color: var(--accent-color, #00a4dc);">See examples</a>
                 </div>
             </div>
             <div class="checkboxContainer checkboxContainer-withDescription">
@@ -648,6 +648,12 @@
                     }
                 });
                 
+                // Query parameters help button
+                container.querySelector('[data-id=btnQueryParametersHelp]').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    alert('Common parameters:\n\nGenre Examples:\n• genre=27 (Horror)\n• genre=28 (Action)\n• genre=878 (Sci-Fi)\n• genre=35 (Comedy)\n\nSorting:\n• sortBy=popularity.desc\n• sortBy=vote_average.desc\n• sortBy=release_date.desc\n\nFiltering:\n• vote_average.gte=7.0\n• with_runtime.lte=90\n• language=en\n\nSee documentation for more examples.');
+                });
+                
                 wrapper.appendChild(container);
             }
             
@@ -741,12 +747,22 @@
                     config.SectionSettings.push(sectionConfig);
                 });
 
-                // Automatically add SectionSettings for custom discover sections
+                // Reconcile SectionSettings for custom discover sections
                 const customSections = getCustomDiscoverSections();
+                const customSectionIds = new Set(customSections.map(cs => `CustomDiscover_${cs.Id}`));
+
+                // Remove SectionSettings for deleted custom discover sections
+                config.SectionSettings = config.SectionSettings.filter(s => 
+                    !s.SectionId.startsWith('CustomDiscover_') || customSectionIds.has(s.SectionId)
+                );
+
+                // Add or update SectionSettings for current custom discover sections
                 customSections.forEach(customSection => {
                     const sectionId = `CustomDiscover_${customSection.Id}`;
-                    // Only add if not already in SectionSettings
-                    if (!config.SectionSettings.find(s => s.SectionId === sectionId)) {
+                    let sectionSetting = config.SectionSettings.find(s => s.SectionId === sectionId);
+                    
+                    if (!sectionSetting) {
+                        // Add new SectionSettings entry
                         config.SectionSettings.push({
                             SectionId: sectionId,
                             Enabled: customSection.Enabled,
@@ -757,6 +773,9 @@
                             ViewMode: 'Portrait',
                             HideWatchedItems: false
                         });
+                    } else {
+                        // Update existing entry's Enabled flag to match custom section
+                        sectionSetting.Enabled = customSection.Enabled;
                     }
                 });
 
