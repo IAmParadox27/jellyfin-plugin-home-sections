@@ -89,22 +89,23 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
             
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(jellyseerrUrl);
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
-
-            if (jellyseerrUserId == null)
+            using (HttpClient client = new HttpClient())
             {
-                return new QueryResult<BaseItemDto>();
-            }
-            
-            client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
+                client.BaseAddress = new Uri(jellyseerrUrl);
+                client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
 
-            // Build the custom query string
+                HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
+                string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
+
+                if (jellyseerrUserId == null)
+                {
+                    return new QueryResult<BaseItemDto>();
+                }
+
+                client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
+
+                // Build the custom query string
             string customParams = string.IsNullOrEmpty(CustomQueryParameters) ? "" : $"&{CustomQueryParameters}";
 
             // Make the API call to discover with custom parameters
