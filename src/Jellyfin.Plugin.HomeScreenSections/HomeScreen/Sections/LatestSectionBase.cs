@@ -82,21 +82,31 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .Where(x => x.CollectionType == CollectionTypeOptions)
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            IEnumerable<BaseItem> latestMovies = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            var latestMovies = folders.SelectMany(x =>
             {
-                IncludeItemTypes = new[]
+                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                if (item is not Folder folder)
                 {
-                    SectionItemKind
-                },
-                Limit = 16,
-                OrderBy = new[]
+                    folder = m_libraryManager.GetUserRootFolder();
+                }
+
+                return folder.GetItems(new InternalItemsQuery(user)
                 {
-                    (ItemSortBy.PremiereDate, SortOrder.Descending)
-                },
-                IsPlayed = isPlayed,
-                ParentId = Guid.Parse(x.ItemId),
-                Recursive = true
-            })).ToArray();
+                    IncludeItemTypes = new[]
+                    {
+                        SectionItemKind
+                    },
+                    Limit = 16,
+                    OrderBy = new[]
+                    {
+                        (ItemSortBy.PremiereDate, SortOrder.Descending)
+                    },
+                    IsPlayed = isPlayed,
+                    ParentId = Guid.Parse(x.ItemId),
+                    Recursive = true
+                }).Items;
+            }).ToArray();
             
             return new QueryResult<BaseItemDto>(Array.ConvertAll(latestMovies.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));

@@ -98,13 +98,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 var boxSets = folders.SelectMany(x =>
                 {
-                    return LibraryManager.GetItemList(new InternalItemsQuery(user)
+                    var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                    if (item is not Folder folder)
+                    {
+                        folder = LibraryManager.GetUserRootFolder();
+                    }
+
+                    return folder.GetItems(new InternalItemsQuery(user)
                     {
                         ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                         Recursive = true,
                         IncludeItemTypes = new[] { BaseItemKind.BoxSet },
                         DtoOptions = dtoOptions
-                    });
+                    }).Items;
                 }).OfType<BoxSet>().ToArray();
 
                 foreach (var boxSet in boxSets)
@@ -148,14 +155,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 var playedMovies = movieFolders.SelectMany(x =>
                 {
-                    return LibraryManager.GetItemList(new InternalItemsQuery(user)
+                    var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                    if (item is not Folder folder)
+                    {
+                        folder = LibraryManager.GetUserRootFolder();
+                    }
+
+                    return folder.GetItems(new InternalItemsQuery(user)
                     {
                         ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                         IncludeItemTypes = new[] { BaseItemKind.Movie },
                         IsPlayed = true,
                         Recursive = true,
                         DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-                    });
+                    }).Items;
                 }).OfType<Movie>().ToList();
 
                 foreach (var movie in playedMovies)

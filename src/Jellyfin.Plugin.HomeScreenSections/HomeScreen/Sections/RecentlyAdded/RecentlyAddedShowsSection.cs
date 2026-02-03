@@ -44,7 +44,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed)
         {
             IEnumerable<BaseItem> candidateShows = folders.SelectMany(x =>
-                m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            {
+                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                if (item is not Folder folder)
+                {
+                    folder = m_libraryManager.GetUserRootFolder();
+                }
+
+                return folder.GetItems(new InternalItemsQuery(user)
                 {
                     IncludeItemTypes = new[]
                     {
@@ -52,8 +60,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                     },
                     DtoOptions = dtoOptions,
                     EnableTotalRecordCount = false
-                }))
-                .DistinctBy(x => x.Id);
+                }).Items;
+            })
+            .DistinctBy(x => x.Id);
 
             // Filter watch status in memory to avoid expensive database query
             if (isPlayed.HasValue && user != null)
