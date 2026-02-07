@@ -41,7 +41,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             IReadOnlyList<BaseItemDto>? cwResults = m_continueWatchingSection?.GetResults(payload, queryCollection).Items;
-            IReadOnlyList<BaseItemDto>? nuResults = m_nextUpSection?.GetResults(payload, queryCollection).Items;
+            
+            // Apply default Next Up settings, halves performance impact
+            // Unfortunately we can't get the user's actual Next Up settings, as they're stored in local storage on the client
+            var nuQuery = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+            {
+                ["UserId"] = queryCollection["UserId"],
+                ["EnableRewatching"] = "false",
+                ["NextUpDateCutoff"] = DateTime.UtcNow.AddDays(-365).ToString("O")
+            };
+            
+            IReadOnlyList<BaseItemDto>? nuResults = m_nextUpSection?.GetResults(payload, new QueryCollection(nuQuery)).Items;
             
             List<BaseItemDto> returnItems = new List<BaseItemDto>();
 
