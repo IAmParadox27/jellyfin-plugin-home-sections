@@ -135,5 +135,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
             return File(stream, MimeTypes.GetMimeType(view.EmbeddedResourcePath));
         }
+
+        /// <summary>
+        /// Refresh custom discover sections without restarting the server.
+        /// </summary>
+        /// <returns>Success result.</returns>
+        [HttpPost("RefreshCustomSections")]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult RefreshCustomSections()
+        {
+            m_homeScreenManager.RefreshCustomDiscoverSections();
+            return Ok(new { success = true, message = "Custom lists refreshed" });
+        }
     }
 }
