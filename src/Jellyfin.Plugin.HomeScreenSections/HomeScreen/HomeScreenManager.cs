@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
@@ -8,6 +9,7 @@ using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Common.Configuration;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
     /// </summary>
     public class HomeScreenManager : IHomeScreenManager
     {
-        private Dictionary<string, IHomeScreenSection> m_delegates = new Dictionary<string, IHomeScreenSection>();
+        private ConcurrentDictionary<string, IHomeScreenSection> m_delegates = new ConcurrentDictionary<string, IHomeScreenSection>();
         private Dictionary<Guid, bool> m_userFeatureEnabledStates = new Dictionary<Guid, bool>();
 
         private readonly IServiceProvider m_serviceProvider;
@@ -82,6 +84,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<DiscoverMoviesSection>();
             RegisterResultsDelegate<DiscoverTvSection>();
             
+            // Register custom discover sections from configuration
+            RegisterCustomDiscoverSections();
+            
             RegisterResultsDelegate<UpcomingShowsSection>();
             RegisterResultsDelegate<UpcomingMoviesSection>();
             RegisterResultsDelegate<UpcomingMusicSection>();
@@ -95,6 +100,53 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             //RegisterResultsDelegate<StarringSection>();
             
             //RegisterResultsDelegate<TopTenSection>();
+        }
+
+        private void RegisterCustomDiscoverSections()
+        {
+            PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
+            if (config.CustomDiscoverSections != null && config.CustomDiscoverSections.Length > 0)
+            {
+                m_logger.LogInformation("Registering {Count} custom discover sections", config.CustomDiscoverSections.Length);
+                
+                foreach (var customSection in config.CustomDiscoverSections.Where(s => s.Enabled))
+                {
+                    CustomDiscoverSection section = new CustomDiscoverSection(
+                        m_serviceProvider.GetRequiredService<IUserManager>(),
+                        m_serviceProvider.GetRequiredService<Services.ImageCacheService>(),
+                        displayText: customSection.DisplayText,
+                        endpoint: customSection.Endpoint,
+                        queryParameters: customSection.QueryParameters
+                    );
+                    
+                    // Use a unique section ID based on the custom section ID
+                    section.Section = $"CustomDiscover_{customSection.Id}";
+                    
+                    m_logger.LogDebug("Registering custom discover section: {SectionId} - {DisplayText}", section.Section, section.DisplayText);
+                    
+                    RegisterResultsDelegate(section);
+                }
+            }
+            else
+            {
+                m_logger.LogDebug("No custom discover sections configured");
+            }
+        }
+
+        public void RefreshCustomDiscoverSections()
+        {
+            m_logger.LogInformation("Refreshing custom discover sections");
+            
+            // Remove all existing custom discover sections
+            List<string> keysToRemove = m_delegates.Keys.Where(k => k.StartsWith("CustomDiscover_")).ToList();
+            foreach (var key in keysToRemove)
+            {
+                m_delegates.TryRemove(key, out _);
+                m_logger.LogDebug("Removed custom discover section: {SectionId}", key);
+            }
+            
+            // Re-register from current configuration
+            RegisterCustomDiscoverSections();
         }
 
         /// <inheritdoc/>
@@ -111,9 +163,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> InvokeResultsDelegate(string key, HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            if (m_delegates.ContainsKey(key))
+            if (m_delegates.TryGetValue(key, out var section))
             {
-                return m_delegates[key].GetResults(payload, queryCollection);
+                return section.GetResults(payload, queryCollection);
             }
 
             return new QueryResult<BaseItemDto>(Array.Empty<BaseItemDto>());
@@ -141,13 +193,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
             if (handler.Section != null)
             {
-                if (!m_delegates.ContainsKey(handler.Section))
+                if (!m_delegates.TryAdd(handler.Section, handler))
                 {
-                    m_delegates.Add(handler.Section, handler);
-                }
-                else
-                {
-                    throw new Exception($"Section type '{handler.Section}' has already been registered to type '{m_delegates[handler.Section].GetType().FullName}'.");
+                    if (m_delegates.TryGetValue(handler.Section, out var existing))
+                    {
+                        throw new Exception($"Section type '{handler.Section}' has already been registered to type '{existing.GetType().FullName}'.");
+                    }
                 }
             }
         }
