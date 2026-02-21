@@ -27,7 +27,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 
                 if (!string.IsNullOrEmpty(cacheKey))
                 {
-                    return $"/HomeScreen/CachedImage/{cacheKey}";
+                    return $"HomeScreen/CachedImage/{cacheKey}";
                 }
 
                 logger?.LogWarning("Failed to cache image from {SourceUrl}, using original URL", sourceUrl);
