@@ -62,6 +62,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
     }
 
+    public enum SectionSortOrder
+    {
+        Default,
+        Random,
+        Rating,
+        ReleaseDate,
+        DateAdded
+    }
+
     public enum SectionViewMode
     {
         Portrait,
@@ -95,6 +104,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public SectionViewMode ViewMode { get; set; } = SectionViewMode.Landscape;
 
         public bool HideWatchedItems { get; set; } = false;
+
+        public SectionSortOrder SortOrder { get; set; } = SectionSortOrder.Default;
     }
     
     public class ArrConfig
