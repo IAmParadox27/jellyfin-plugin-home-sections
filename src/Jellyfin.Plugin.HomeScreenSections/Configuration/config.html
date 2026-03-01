@@ -335,6 +335,7 @@
                         <li><strong>Lower Limit (Min):</strong> The minimum number of times this section should appear</li>
                         <li><strong>Upper Limit (Max):</strong> The maximum number of times this section can appear</li>
                         <li><strong>View Mode:</strong> Defines the card layout used when displaying results.<i>If disabled, the section only supports the displayed layout.</i></li>
+                        <li><strong>Sort Order:</strong> Determines how items are sorted within this section. Options include Default (section's native ordering), Random, By Rating, By Release Date, or By Date Added.</li>
                     </ul>
                 </fieldset>
                 <div style="overflow-x: auto;">
@@ -349,6 +350,7 @@
                             <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
                             <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
                             <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
+                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Sort Order</th>
                         </tr>
                     </thead>
                     <tbody id="sectionWrapper">
@@ -417,6 +419,15 @@
                     <option value="Small">Small</option>
                 </select>
             </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <select data-id="sortOrderSelect" is="emby-select" class="emby-select-withcolor emby-select" style="width: auto;">
+                    <option value="0">Default</option>
+                    <option value="1">Random</option>
+                    <option value="2">By Rating</option>
+                    <option value="3">By Release Date</option>
+                    <option value="4">By Date Added</option>
+                </select>
+            </td>                
         </tr>
     </template>
 
@@ -522,6 +533,9 @@
                     hideWatchedLabel.style.cursor = 'default';
                 }
 
+                const sortOrderSelect = template.querySelector('[data-id=sortOrderSelect]');
+                sortOrderSelect.value = sectionConfig.SortOrder || 0;
+
                 sectionWrapper.appendChild(template);
             }
 
@@ -617,6 +631,7 @@
                         OrderIndex: row.querySelector('[data-id=txtOrderIndex]').value,
                         ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
                         HideWatchedItems: row.querySelector('[data-id=chkHideWatchedItems]').checked,
+                        SortOrder: parseInt(row.querySelector('[data-id=sortOrderSelect]').value),
                     };
                     config.SectionSettings.push(sectionConfig);
                 });
@@ -688,7 +703,8 @@
                                         UpperLimit: sectionType.Limit,
                                         ViewMode: sectionType.ViewMode,
                                         OrderIndex: 999,
-                                        HideWatchedItems: false
+                                        HideWatchedItems: false,
+                                        SortOrder: 0,
                                     };
                                 }
                                 addSectionSetting(sectionConfig, sectionType);
