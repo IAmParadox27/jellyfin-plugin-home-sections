@@ -53,7 +53,7 @@
             var queryParams = {
                 UserId: apiClient.getCurrentUserId(),
                 AdditionalData: sectionInfo.AdditionalData,
-                Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+                Language: userSettings.language()
             };
             
             if (sectionInfo.Section === 'NextUp') {
@@ -465,7 +465,7 @@
         
         var getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
-            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+            Language: userSettings.language()
         };
         
         if (window.HssPageMeta.UsePagination) {

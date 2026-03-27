@@ -6,6 +6,7 @@ using Jellyfin.Plugin.HomeScreenSections.Data;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Services
@@ -17,16 +18,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
         private readonly ITranslationManager m_translationManager;
         private readonly UserSectionsDataCache m_dataCache;
-    
+        private readonly IServerConfigurationManager m_configurationManager;
+
         public HomeScreenSectionService(IDisplayPreferencesManager displayPreferencesManager,
-            IHomeScreenManager homeScreenManager, ILogger<HomeScreenSectionsPlugin> logger, 
-            ITranslationManager translationManager, UserSectionsDataCache dataCache)
+            IHomeScreenManager homeScreenManager, ILogger<HomeScreenSectionsPlugin> logger,
+            ITranslationManager translationManager, UserSectionsDataCache dataCache,
+            IServerConfigurationManager configurationManager)
         {
             m_displayPreferencesManager = displayPreferencesManager;
             m_homeScreenManager = homeScreenManager;
             m_logger = logger;
             m_translationManager = translationManager;
             m_dataCache = dataCache;
+            m_configurationManager = configurationManager;
         }
 
         public List<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
@@ -252,8 +256,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             if (info.DisplayText != null)
             {
-                // Always fallback to "en" if there's no language provided.
-                string? translatedResult = m_translationManager.Translate(info.Section!, language?.Trim() ?? "en", info.DisplayText, section.TranslationMetadata);
+                // Fallback to system default language if there's no language provided.
+                string? translatedResult = m_translationManager.Translate(info.Section!, language?.Trim() ?? m_configurationManager.Configuration.UICulture, info.DisplayText, section.TranslationMetadata);
 
                 info.DisplayText = translatedResult;
             }
