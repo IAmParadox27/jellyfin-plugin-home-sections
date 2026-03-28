@@ -167,6 +167,13 @@
   "AdminDeveloperModeDesc": "Browser-Caching für Plugin-Ressourcen während der Entwicklung deaktivieren.",
   "AdminBustStaticCache": "Statischen Cache leeren",
   "AdminBustAllCaches": "Alle Caches leeren (Assets + Index)",
+  "AdminBustingCache": "Cache wird geleert...",
+  "AdminCacheBustSuccess": "Statischer Asset-Cache erfolgreich geleert",
+  "AdminCacheBustFailed": "Statischer Asset-Cache konnte nicht geleert werden",
+  "AdminAllCachesBustSuccess": "Alle Caches erfolgreich geleert (Assets + Index)",
+  "AdminCacheBustTransformNotFound": "Statischer Cache geleert – File-Transformation-Plugin nicht gefunden oder nicht registriert",
+  "AdminCacheBustTransformFailed": "Statischer Cache geleert – Transformations-Cache fehlgeschlagen (siehe Konsole)",
+  "AdminCacheBustMixed": "Cache-Bereinigung mit gemischten Ergebnissen abgeschlossen (siehe Konsole)",
   "AdminStaticCacheDesc": "Leert den Browser-Cache nur für CSS/JS-Dateien.",
   "AdminAllCachesDesc": "Leert sowohl statische Assets als auch den index.html-Transformations-Cache.",
 

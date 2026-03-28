@@ -438,11 +438,38 @@
                 { name: 'Readarr', timeframePrefix: 'upcomingBooks', defaultValue: 1, defaultUnit: 'Years' }
             ];
 
-            // Stored after translatePage() fetches them, used by saveConfig() for alert messages
+            // UI language detected once, used by translatePage() and loadConfig()
+            const uiLanguage = document.documentElement.lang || navigator.language || 'en';
+
+            // Stored after translatePage() fetches them, used by saveConfig() and applyTranslations()
             var pageTranslations = {};
 
+            // Applies stored translations to data-i18n and data-i18n-label attributes
+            // within the given root element. Safe to call before translations are loaded
+            // (no-op when pageTranslations is empty).
+            function applyTranslations(root) {
+                if (!root || Object.keys(pageTranslations).length === 0) return;
+
+                root.querySelectorAll('[data-i18n]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n');
+                    if (pageTranslations[key]) {
+                        el.textContent = pageTranslations[key];
+                    }
+                });
+
+                root.querySelectorAll('[data-i18n-label]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n-label');
+                    if (pageTranslations[key]) {
+                        el.setAttribute('label', pageTranslations[key]);
+                        var labelEl = el.parentElement && el.parentElement.querySelector('label.inputLabel');
+                        if (labelEl) {
+                            labelEl.textContent = pageTranslations[key];
+                        }
+                    }
+                });
+            }
+
             function translatePage() {
-                const uiLanguage = document.documentElement.lang || navigator.language || 'en';
 
                 window.ApiClient.ajax({
                     url: ApiClient.getUrl('ModularHomeViews/Translations') + '?language=' + encodeURIComponent(uiLanguage),
@@ -450,15 +477,10 @@
                 }).then(response => response.json()).then(function (translations) {
                     pageTranslations = translations;
 
-                    // Translate elements with data-i18n (textContent)
-                    document.querySelectorAll('[data-i18n]').forEach(function (el) {
-                        const key = el.getAttribute('data-i18n');
-                        if (translations[key]) {
-                            el.textContent = translations[key];
-                        }
-                    });
+                    // Translate all static elements on the page
+                    applyTranslations(document);
 
-                    // Translate elements with data-i18n-html (innerHTML)
+                    // Translate composite HTML elements (not handled by applyTranslations)
                     var htmlTranslations = {
                         'AdminLibraryDescRestart': translations['AdminLibraryDesc'] + '<br><strong>' + translations['AdminRequiresRestart'] + '</strong>',
                         'AdminStreamyfinDesc': translations['AdminOverrideStreamyfinHomeDesc'] + '<br /><br/><i>' + translations['AdminExperimental'] + '</i>',
@@ -471,37 +493,11 @@
                         }
                     });
 
-                    // Translate emby-input label attributes
-                    document.querySelectorAll('[data-i18n-label]').forEach(function (el) {
-                        const key = el.getAttribute('data-i18n-label');
-                        if (translations[key]) {
-                            el.setAttribute('label', translations[key]);
-                            // Update rendered label if present
-                            var labelEl = el.parentElement && el.parentElement.querySelector('label.inputLabel');
-                            if (labelEl) {
-                                labelEl.textContent = translations[key];
-                            }
-                        }
-                    });
-
-                    // Translate view mode options in the template
+                    // Pre-translate the template so future clones are already translated
                     var template = document.querySelector('#sectionConfigTemplate');
                     if (template) {
-                        template.content.querySelectorAll('[data-i18n]').forEach(function (el) {
-                            var key = el.getAttribute('data-i18n');
-                            if (translations[key]) {
-                                el.textContent = translations[key];
-                            }
-                        });
+                        applyTranslations(template.content);
                     }
-
-                    // Translate already-rendered view mode selects in sections table
-                    document.querySelectorAll('#sectionWrapper [data-i18n]').forEach(function (el) {
-                        var key = el.getAttribute('data-i18n');
-                        if (translations[key]) {
-                            el.textContent = translations[key];
-                        }
-                    });
                 }).catch(function (error) {
                     console.warn('Failed to load translations:', error);
                 });
@@ -605,11 +601,12 @@
                     const booksSelect = document.querySelector('#defaultBooksLibrary');
                     const musicVideosSelect = document.querySelector('#defaultMusicVideosLibrary');
 
-                    moviesSelect.innerHTML = '<option value="">Default</option>';
-                    tvShowsSelect.innerHTML = '<option value="">Default</option>';
-                    musicSelect.innerHTML = '<option value="">Default</option>';
-                    booksSelect.innerHTML = '<option value="">Default</option>';
-                    musicVideosSelect.innerHTML = '<option value="">Default</option>';
+                    var defaultLabel = pageTranslations['AdminDefault'] || 'Default';
+                    moviesSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    tvShowsSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    musicSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    booksSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    musicVideosSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
 
                     result.forEach(function (folder) {
                          if (folder.CollectionType === 'movies' || folder.CollectionType === 'tvshows' || folder.CollectionType === 'music' || folder.CollectionType === 'books' ||
@@ -745,8 +742,6 @@
                             }
                         }, 500);
 
-                        const uiLanguage = document.documentElement.lang || navigator.language || 'en';
-
                         window.ApiClient.ajax({
                             url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
                             type: 'GET'
@@ -767,6 +762,9 @@
                                 }
                                 addSectionSetting(sectionConfig, sectionType);
                             });
+                            // Translate dynamically added section rows in case
+                            // translatePage() finished before sections were rendered
+                            applyTranslations(document.querySelector('#sectionWrapper'));
                         }).finally(() => Dashboard.hideLoadingMsg());
                     });
             }
@@ -795,7 +793,7 @@
 
                 function setButtonState(button, loading, originalText) {
                     button.disabled = loading;
-                    button.querySelector('span').textContent = loading ? 'Busting Cache...' : originalText;
+                    button.querySelector('span').textContent = loading ? (pageTranslations['AdminBustingCache'] || 'Busting Cache...') : originalText;
                 }
 
                 if (btnBustHomeSectionsCache) {
@@ -812,10 +810,10 @@
                                 'Content-Type': 'application/json'
                             }
                         }).then(response => {
-                            showStatus('Static assets cache busted successfully');
+                            showStatus(pageTranslations['AdminCacheBustSuccess'] || 'Static assets cache busted successfully');
                         }).catch(error => {
                             console.error('Static assets cache bust error:', error);
-                            showStatus('Failed to bust static assets cache', true);
+                            showStatus(pageTranslations['AdminCacheBustFailed'] || 'Failed to bust static assets cache', true);
                         }).finally(() => {
                             setButtonState(btnBustHomeSectionsCache, false, originalText);
                         });
@@ -858,20 +856,20 @@
                                 let isError = false;
 
                                 if (staticResult.status === 'fulfilled' && transformResult.status === 'fulfilled') {
-                                    message = 'All caches busted successfully (assets + index)';
+                                    message = pageTranslations['AdminAllCachesBustSuccess'] || 'All caches busted successfully (assets + index)';
                                 } else if (staticResult.status === 'fulfilled' && transformResult.status === 'rejected') {
                                     console.warn('Transformation cache bust failed:', transformResult.reason);
                                     if (transformResult.reason?.status === 404) {
-                                        message = 'Static assets cache busted - file-transformation plugin not found or plugin not registered';
+                                        message = pageTranslations['AdminCacheBustTransformNotFound'] || 'Static assets cache busted - file-transformation plugin not found or plugin not registered';
                                     } else {
-                                        message = 'Static assets cache busted - file-transformation cache failed (check console)';
+                                        message = pageTranslations['AdminCacheBustTransformFailed'] || 'Static assets cache busted - file-transformation cache failed (check console)';
                                     }
                                 } else if (staticResult.status === 'rejected') {
                                     console.error('Static assets cache bust failed:', staticResult.reason);
-                                    message = 'Failed to bust static assets cache';
+                                    message = pageTranslations['AdminCacheBustFailed'] || 'Failed to bust static assets cache';
                                     isError = true;
                                 } else {
-                                    message = 'Cache bust completed with mixed results (check console)';
+                                    message = pageTranslations['AdminCacheBustMixed'] || 'Cache bust completed with mixed results (check console)';
                                 }
 
                                 showStatus(message, isError);

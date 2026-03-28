@@ -165,6 +165,13 @@
   "AdminDeveloperModeDesc": "Disable browser caching for plugin resources during development.",
   "AdminBustStaticCache": "Bust Static Assets Cache",
   "AdminBustAllCaches": "Bust All Caches (Assets + Index)",
+  "AdminBustingCache": "Busting Cache...",
+  "AdminCacheBustSuccess": "Static assets cache busted successfully",
+  "AdminCacheBustFailed": "Failed to bust static assets cache",
+  "AdminAllCachesBustSuccess": "All caches busted successfully (assets + index)",
+  "AdminCacheBustTransformNotFound": "Static assets cache busted - file-transformation plugin not found or plugin not registered",
+  "AdminCacheBustTransformFailed": "Static assets cache busted - file-transformation cache failed (check console)",
+  "AdminCacheBustMixed": "Cache bust completed with mixed results (check console)",
   "AdminStaticCacheDesc": "Clears browser cache for CSS/JS files only.",
   "AdminAllCachesDesc": "Clears both static assets and index.html transformation cache.",
 
