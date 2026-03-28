@@ -1,31 +1,52 @@
 <form id="config-page" class="configForm" style="margin: 0 auto;">
     <div class="verticalSection verticalSection-extrabottompadding">
-        <h2 class="sectionTitle">Modular Home  - Settings:</h2>
+        <h2 class="sectionTitle" data-i18n="AdminModularHomeSettings">Modular Home  - Settings:</h2>
 
         <div class="verticalSection verticalSection-extrabottompadding">
             <label class="checkboxContainer">
                 <input is="emby-checkbox" type="checkbox" id="modularHomeEnabled" />
-                <span>Enable "Modular Home". This will change your home screen into a more dynamic screen with options from other plugins to be able to contribute into what you see and are recommended.</span>
+                <span data-i18n="AdminEnableModularHome">Enable "Modular Home". This will change your home screen into a more dynamic screen with options from other plugins to be able to contribute into what you see and are recommended.</span>
             </label>
         </div>
 
         <div class="verticalSection verticalSection-extrabottompadding">
-            <h3>Enabled Sections</h3>
+            <h3 data-i18n="AdminEnabledSections">Enabled Sections</h3>
             <div id="enabledSections">
             </div>
         </div>
 
     </div>
     <button is="emby-button" type="submit" class="raised button-submit block btnSave">
-        <span>Save</span>
+        <span data-i18n="AdminSave">Save</span>
     </button>
 </form>
 <script defer>
 
     if (window.HomeScreenSectionsUserSettings === undefined) {
-        
+
         window.HomeScreenSectionsUserSettings = {
             setup: function () {
+                var uiLanguage = document.documentElement.lang || navigator.language || 'en';
+
+                // Translate static page elements
+                ApiClient.fetch({
+                    url: ApiClient.getUrl('ModularHomeViews/Translations') + '?language=' + encodeURIComponent(uiLanguage),
+                    type: 'GET',
+                    dataType: 'json',
+                    headers: {
+                        accept: 'application/json'
+                    }
+                }).then(function (translations) {
+                    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                        var key = el.getAttribute('data-i18n');
+                        if (translations[key]) {
+                            el.textContent = translations[key];
+                        }
+                    });
+                }).catch(function (error) {
+                    console.warn('Failed to load translations:', error);
+                });
+
                 ApiClient.fetch({
                     url: ApiClient.getUrl('HomeScreen/Meta'),
                     type: 'GET',
@@ -37,16 +58,16 @@
                     ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
                         document.querySelector('#modularHomeEnabled').checked = userSettings.CustomPrefs['useModularHome'] === 'true';
                     });
-                    
+
                     if (!document.querySelector('#modularHomeEnabled').checked) {
                         document.querySelector('#modularHomeEnabled').checked = hssMeta.Enabled;
                     }
-                    
+
                     if (hssMeta.AllowUserOverride !== true) {
                         document.querySelector('#modularHomeEnabled').disabled = true;
                         document.querySelector('#modularHomeEnabled').parentElement.style.opacity = "0.5";
                     }
-    
+
                     ApiClient.fetch({
                         url: ApiClient.getUrl('ModularHomeViews/UserSettings?userId=' + ApiClient.getCurrentUserId()),
                         type: 'GET',
@@ -55,8 +76,6 @@
                             accept: 'application/json'
                         }
                     }).then(function (settings) {
-                        const uiLanguage = document.documentElement.lang || navigator.language || 'en';
-
                         ApiClient.fetch({
                             url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
                             type: 'GET',
@@ -66,63 +85,63 @@
                             }
                         }).then(function (response) {
                             if (response.TotalRecordCount > 0) {
-    
+
                                 let html = '';
                                 for (let i = 0; i < response.TotalRecordCount; ++i) {
                                     let section = response.Items[i];
-    
+
                                     let disabled = !hssMeta.AllowUserOverride;
                                     let checked = false;
                                     if (settings.EnabledSections.includes(section.Section)) {
                                         checked = true;
                                     }
-                                    
+
                                     if (!disabled) {
                                         if (settings.LockedSections.includes(section.Section)) {
                                             disabled = true;
                                         }
                                     }
-                                    
+
                                     if (disabled) {
                                         checked = settings.DefaultEnabledSections.includes(section.Section);
                                     }
-    
+
                                     html += '<label class="checkboxContainer" style="' + (disabled ? 'opacity: 0.5;' : '') + '">';
                                     html += '<input ' + (disabled ? 'disabled="true"' : '') + ' is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
                                     html += '<span>' + section.DisplayText + '</span>';
                                     html += '</label>';
                                 }
-    
+
                                 let elem = document.querySelector('#enabledSections');
                                 elem.innerHTML = html;
                             }
                         });
                     });
                 });
-                
+
                 document.querySelector('.configForm')
                     .addEventListener('submit', function (e) {
                         ApiClient.getDisplayPreferences('usersettings', ApiClient.getCurrentUserId(), 'emby').then(function (userSettings) {
                             userSettings.CustomPrefs['useModularHome'] = document.querySelector('#modularHomeEnabled').checked ? 'true' : 'false';
-    
+
                             ApiClient.updateDisplayPreferences('usersettings', userSettings, ApiClient.getCurrentUserId(), 'emby');
                         });
-    
+
                         let data = {
                             UserId: ApiClient.getCurrentUserId(),
                             EnabledSections: []
                         };
-    
+
                         let checkboxes = document.querySelectorAll('.sectionEnabledCheckbox');
-    
+
                         checkboxes.forEach(function (checkbox) {
                             let sectionId = checkbox.getAttribute('data-section');
-    
+
                             if (checkbox.checked) {
                                 data.EnabledSections.push(sectionId);
                             }
                         });
-    
+
                         ApiClient.ajax({
                             url: ApiClient.getUrl('ModularHomeViews/UserSettings'),
                             type: 'POST',
@@ -130,18 +149,18 @@
                             contentType: 'application/json'
                         }).then(function () {
                             Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
-    
+
                             setTimeout(function () {
                                 location.reload(true);
                             }, 2000);
                         })
-    
+
                         e.preventDefault();
                         return false;
                     });
             }
         }
     }
-    
+
     window.HomeScreenSectionsUserSettings.setup();
 </script>
