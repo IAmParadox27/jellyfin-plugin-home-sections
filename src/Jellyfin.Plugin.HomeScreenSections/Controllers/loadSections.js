@@ -123,13 +123,17 @@
         
         var index = 0;
         items.forEach(function (item) {
-            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '">';
+            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
             html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
             html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
             
             var posterUrl = item.ProviderIds.JellyseerrPoster;
+
+            if (!posterUrl.startsWith('http')) {
+                posterUrl = window.ApiClient.getUrl(posterUrl);
+            }
             
             html += '           <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(\'' + posterUrl + '\');color: inherit; text-decoration: none;"></a>';
             html += '           <div class="cardOverlayContainer itemAction" data-action="link">';
@@ -150,8 +154,15 @@
             html += '           <bdi>';
 
             var date = new Date(item.PremiereDate);
-            
-            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + date.getFullYear() + '</a>';
+            var yearText = '';
+            if (item.CommunityRating) {
+                var rating = item.CommunityRating.toFixed(1);
+                yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> ' + rating + ' • ';
+            } else {
+                yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> - • ';
+            }
+            yearText += date.getFullYear();
+            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + yearText + '</a>';
             html += '           </bdi>';
             html += '       </div>';
             html += '   </div>';
