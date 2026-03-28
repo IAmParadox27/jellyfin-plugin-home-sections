@@ -102,6 +102,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         }
 
         /// <summary>
+        /// Get the translation pack for the given language.
+        /// </summary>
+        /// <param name="language">Language code (e.g. "en", "de").</param>
+        /// <returns>Dictionary of translation keys to translated strings.</returns>
+        [HttpGet("Translations")]
+        [Authorize]
+        public ActionResult<IDictionary<string, string>> GetTranslations([FromQuery] string language = "en")
+        {
+            var translations = m_translationManager.GetTranslationPack(language.Trim());
+            return Ok(translations ?? new Dictionary<string, string>());
+        }
+
+        /// <summary>
         /// Update the user settings for Modular Home.
         /// </summary>
         /// <param name="obj">Instance of <see cref="ModularHomeUserSettings" />.</param>
