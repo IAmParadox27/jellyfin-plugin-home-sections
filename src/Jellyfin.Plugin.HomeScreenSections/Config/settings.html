@@ -55,8 +55,10 @@
                             accept: 'application/json'
                         }
                     }).then(function (settings) {
+                        const uiLanguage = document.documentElement.lang || navigator.language || 'en';
+
                         ApiClient.fetch({
-                            url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                            url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
                             type: 'GET',
                             dataType: 'json',
                             headers: {

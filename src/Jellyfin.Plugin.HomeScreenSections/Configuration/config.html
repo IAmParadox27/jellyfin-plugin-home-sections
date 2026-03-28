@@ -673,8 +673,10 @@
                             }
                         }, 500);
 
+                        const uiLanguage = document.documentElement.lang || navigator.language || 'en';
+
                         window.ApiClient.ajax({
-                            url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                            url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
                             type: 'GET'
                         }).then(response => response.json()).then(function (json) {
                             json.Items.forEach(sectionType => {

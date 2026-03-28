@@ -6,6 +6,7 @@ using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 {
@@ -18,16 +19,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
     {
         private readonly ILogger<ModularHomeViewsController> m_logger;
         private readonly IHomeScreenManager m_homeScreenManager;
+        private readonly ITranslationManager m_translationManager;
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="logger">Instance of <see cref="ILogger"/> interface.</param>
         /// <param name="homeScreenManager">Instance of <see cref="IHomeScreenManager"/> interface.</param>
-        public ModularHomeViewsController(ILogger<ModularHomeViewsController> logger, IHomeScreenManager homeScreenManager)
+        /// <param name="translationManager">Instance of <see cref="ITranslationManager"/> interface.</param>
+        public ModularHomeViewsController(ILogger<ModularHomeViewsController> logger, IHomeScreenManager homeScreenManager, ITranslationManager translationManager)
         {
             m_logger = logger;
             m_homeScreenManager = homeScreenManager;
+            m_translationManager = translationManager;
         }
 
         /// <summary>
@@ -45,10 +49,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <summary>
         /// Get the section types that are registered in Modular Home.
         /// </summary>
+        /// <param name="language">Optional language code for translating section display names.</param>
         /// <returns>Array of <see cref="HomeScreenSectionInfo"/>.</returns>
         [HttpGet("Sections")]
         [Authorize]
-        public QueryResult<HomeScreenSectionInfo> GetSectionTypes()
+        public QueryResult<HomeScreenSectionInfo> GetSectionTypes([FromQuery] string? language = null)
         {
             // Todo add reading whether the section is enabled or disabled by the user.
             List<HomeScreenSectionInfo> items = new List<HomeScreenSectionInfo>();
@@ -60,7 +65,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 HomeScreenSectionInfo item = section.GetInfo();
 
                 item.ViewMode ??= SectionViewMode.Landscape;
-                
+
+                if (!string.IsNullOrWhiteSpace(language) && item.DisplayText != null)
+                {
+                    item.DisplayText = m_translationManager.Translate(
+                        item.Section!, language.Trim(), item.DisplayText, section.TranslationMetadata);
+                }
+
                 items.Add(item);
             }
 
