@@ -197,5 +197,6 @@
   "AdminModularHomeSettings": "Modular Home – Einstellungen:",
   "AdminEnableModularHome": "\"Modular Home\" aktivieren. Dies ändert Ihren Startbildschirm in eine dynamischere Ansicht, bei der auch andere Plugins Inhalte und Empfehlungen beisteuern können.",
   "AdminEnabledSections": "Aktivierte Sektionen",
-  "AdminSettingsUpdated": "Einstellungen wurden aktualisiert, Seite wird in 2 Sekunden neu geladen."
+  "AdminSettingsUpdated": "Einstellungen wurden aktualisiert, Seite wird in 2 Sekunden neu geladen.",
+  "AdminReleaseTypeRequired": "Mindestens ein Veröffentlichungstyp muss für kommende Filme ausgewählt sein."
 }

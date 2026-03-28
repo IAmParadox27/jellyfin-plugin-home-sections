@@ -438,6 +438,9 @@
                 { name: 'Readarr', timeframePrefix: 'upcomingBooks', defaultValue: 1, defaultUnit: 'Years' }
             ];
 
+            // Stored after translatePage() fetches them, used by saveConfig() for alert messages
+            var pageTranslations = {};
+
             function translatePage() {
                 const uiLanguage = document.documentElement.lang || navigator.language || 'en';
 
@@ -445,6 +448,8 @@
                     url: ApiClient.getUrl('ModularHomeViews/Translations') + '?language=' + encodeURIComponent(uiLanguage),
                     type: 'GET'
                 }).then(response => response.json()).then(function (translations) {
+                    pageTranslations = translations;
+
                     // Translate elements with data-i18n (textContent)
                     document.querySelectorAll('[data-i18n]').forEach(function (el) {
                         const key = el.getAttribute('data-i18n');
@@ -638,7 +643,7 @@
                     document.querySelector('#radarrConsiderDigitalRelease').checked;
 
                 if (!hasReleaseCheck) {
-                    Dashboard.alert('At least one release type must be selected for upcoming movies.');
+                    Dashboard.alert(pageTranslations['AdminReleaseTypeRequired'] || 'At least one release type must be selected for upcoming movies.');
                     return;
                 }
 

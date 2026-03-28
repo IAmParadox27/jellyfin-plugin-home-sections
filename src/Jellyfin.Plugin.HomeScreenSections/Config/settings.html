@@ -27,6 +27,7 @@
         window.HomeScreenSectionsUserSettings = {
             setup: function () {
                 var uiLanguage = document.documentElement.lang || navigator.language || 'en';
+                var pageTranslations = {};
 
                 // Translate static page elements
                 ApiClient.fetch({
@@ -37,6 +38,7 @@
                         accept: 'application/json'
                     }
                 }).then(function (translations) {
+                    pageTranslations = translations;
                     document.querySelectorAll('[data-i18n]').forEach(function (el) {
                         var key = el.getAttribute('data-i18n');
                         if (translations[key]) {
@@ -148,7 +150,7 @@
                             data: JSON.stringify(data),
                             contentType: 'application/json'
                         }).then(function () {
-                            Dashboard.alert('Settings have been updated, reloading page in 2 seconds.');
+                            Dashboard.alert(pageTranslations['AdminSettingsUpdated'] || 'Settings have been updated, reloading page in 2 seconds.');
 
                             setTimeout(function () {
                                 location.reload(true);

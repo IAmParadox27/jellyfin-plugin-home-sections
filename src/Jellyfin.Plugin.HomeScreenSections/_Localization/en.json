@@ -195,5 +195,6 @@
   "AdminModularHomeSettings": "Modular Home - Settings:",
   "AdminEnableModularHome": "Enable \"Modular Home\". This will change your home screen into a more dynamic screen with options from other plugins to be able to contribute into what you see and are recommended.",
   "AdminEnabledSections": "Enabled Sections",
-  "AdminSettingsUpdated": "Settings have been updated, reloading page in 2 seconds."
+  "AdminSettingsUpdated": "Settings have been updated, reloading page in 2 seconds.",
+  "AdminReleaseTypeRequired": "At least one release type must be selected for upcoming movies."
 }
