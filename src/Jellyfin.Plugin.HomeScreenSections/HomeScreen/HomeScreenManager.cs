@@ -123,8 +123,47 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                     section.Section = $"CustomDiscover_{customSection.Id}";
                     
                     m_logger.LogDebug("Registering custom discover section: {SectionId} - {DisplayText}", section.Section, section.DisplayText);
-                    
-                    RegisterResultsDelegate(section);
+                
+                        // Ensure there's a corresponding SectionSettings entry so the section can be enabled/ordered
+                        try
+                        {
+                            if (!config.SectionSettings.Any(s => s.SectionId == section.Section))
+                            {
+                                int nextOrder = config.SectionSettings.Any() ? config.SectionSettings.Max(s => s.OrderIndex) + 1 : 1;
+                                var newSetting = new SectionSettings
+                                {
+                                    SectionId = section.Section,
+                                    Enabled = true,
+                                    AllowUserOverride = config.AllowUserOverride,
+                                    LowerLimit = 1,
+                                    UpperLimit = 1,
+                                    OrderIndex = nextOrder,
+                                    ViewMode = SectionViewMode.Portrait,
+                                    HideWatchedItems = false
+                                };
+
+                                var settingsList = config.SectionSettings.ToList();
+                                settingsList.Add(newSetting);
+                                config.SectionSettings = settingsList.ToArray();
+
+                                // Persist the updated configuration so the section is visible across restarts
+                                try
+                                {
+                                    HomeScreenSectionsPlugin.Instance.UpdateConfiguration(config);
+                                    m_logger.LogInformation("Added SectionSettings for custom discover section {SectionId}", section.Section);
+                                }
+                                catch (Exception ex)
+                                {
+                                    m_logger.LogError(ex, "Failed to persist SectionSettings for custom discover section {SectionId}", section.Section);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            m_logger.LogError(ex, "Error while ensuring SectionSettings for custom discover sections");
+                        }
+
+                        RegisterResultsDelegate(section);
                 }
             }
             else

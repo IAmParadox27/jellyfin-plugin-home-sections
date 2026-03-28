@@ -163,12 +163,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                             
                             string posterPath = item.Value<string>("posterPath") ?? "404";
                             string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
+
+                            // Preserve community rating (vote average) so frontend and other plugins (e.g., jellyfin-enhanced) can show scores
+                            float rating = item.Value<float?>("vote_average") ?? item.Value<float?>("voteAverage") ?? 0f;
                             
-                            returnItems.Add(new BaseItemDto()
+                            var dto = new BaseItemDto()
                             {
                                 Name = item.Value<string>("title") ?? item.Value<string>("name"),
                                 OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
                                 SourceType = item.Value<string>("mediaType"),
+                                CommunityRating = rating > 0 ? rating : null,
                                 ProviderIds = new Dictionary<string, string>()
                                 {
                                     { "JellyseerrRoot", jellyseerrDisplayUrl },
@@ -176,7 +180,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                     { "JellyseerrPoster", cachedImageUrl }
                                 },
                                 PremiereDate = DateTime.Parse(dateTimeString)
-                            });
+                            };
+
+                            returnItems.Add(dto);
                         }
                     }
                     break;
@@ -203,12 +209,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                         
                         string posterPath = item.Value<string>("posterPath") ?? "404";
                         string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
-                        
-                        returnItems.Add(new BaseItemDto()
+
+                        float rating = item.Value<float?>("vote_average") ?? item.Value<float?>("voteAverage") ?? 0f;
+
+                        var dto = new BaseItemDto()
                         {
                             Name = item.Value<string>("title") ?? item.Value<string>("name"),
                             OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
                             SourceType = item.Value<string>("mediaType"),
+                            CommunityRating = rating > 0 ? rating : null,
                             ProviderIds = new Dictionary<string, string>()
                             {
                                 { "JellyseerrRoot", jellyseerrDisplayUrl },
@@ -216,7 +225,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                 { "JellyseerrPoster", cachedImageUrl }
                             },
                             PremiereDate = DateTime.Parse(dateTimeString)
-                        });
+                        };
+
+                        returnItems.Add(dto);
                     }
                 }
 
