@@ -73,7 +73,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             
             sectionsToReturn = sectionsToReturn.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            if (isComplete || sectionsToReturn.Count == pageSize)
+            if ((isComplete && !userSectionsData.SectionsInProgress.Any()) || sectionsToReturn.Count == pageSize)
             {
                 return sectionsToReturn
                     .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
