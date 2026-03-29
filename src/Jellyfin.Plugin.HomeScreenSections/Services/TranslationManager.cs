@@ -137,5 +137,27 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             m_translationPacks[language] = translationPack;
         }
+
+        public IDictionary<string, string>? GetTranslationPack(string language)
+        {
+            string languageKey = language;
+
+            if (!m_translationPacks.ContainsKey(languageKey) && languageKey.Contains("-"))
+            {
+                languageKey = languageKey.Split("-")[0];
+            }
+
+            if (!m_translationPacks.ContainsKey(languageKey))
+            {
+                languageKey = "en";
+            }
+
+            if (m_translationPacks.TryGetValue(languageKey, out JObject? pack))
+            {
+                return pack.ToObject<Dictionary<string, string>>();
+            }
+
+            return null;
+        }
     }
 }
