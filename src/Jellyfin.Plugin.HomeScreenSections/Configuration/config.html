@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <title>Home Screen Sections</title>
@@ -11,96 +11,96 @@
                 <h2 class="sectionTitle">Home Screen Sections</h2>
                 <a is="emby-linkbutton" class="raised raised-mini emby-button" style="margin-left: 2em;" target="_blank" href="https://github.com/IAmParadox27/jellyfin-plugin-home-sections">
                     <i class="md-icon button-icon button-icon-left secondaryText"></i>
-                    <span>Help</span>
+                    <span data-i18n="AdminHelp">Help</span>
                 </a>
             </div>
         </div>
         <hr class="solid" style="margin-bottom: 1.5em;">
         <div style="margin-bottom: 1.5em;">
-            <button class="jellyfin-tab-button active" data-tab="global" style="background: none; border: none; color: #fff; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid #fff; padding: 0.5em 1em;"><h3>Global Settings</h3></button>
-            <button class="jellyfin-tab-button" data-tab="sections" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Section Settings</h3></button>
+            <button class="jellyfin-tab-button active" data-tab="global" style="background: none; border: none; color: #fff; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid #fff; padding: 0.5em 1em;"><h3 data-i18n="AdminGlobalSettings">Global Settings</h3></button>
+            <button class="jellyfin-tab-button" data-tab="sections" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3 data-i18n="AdminSectionSettings">Section Settings</h3></button>
             <button class="jellyfin-tab-button" data-tab="custom-discover" style="background: none; border: none; color: #ccc; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; border-bottom: 2px solid transparent; padding: 0.5em 1em;"><h3>Custom Lists</h3></button>
         </div>
 
         <form class="artworkConfigurationForm">
             <div id="global" class="jellyfin-tab-content active" style="display: block;">
             <fieldset class="verticalSection-extrabottompadding">
-                <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Default Settings</legend>
+                <legend data-i18n="AdminDefaultSettings" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Default Settings</legend>
                 <div style="padding-left: .5em;">
                     <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
                         <label class="emby-checkbox-label">
                             <input id="globalEnabledDefault" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                            <span>Enabled by Default</span>
+                            <span data-i18n="AdminEnabledByDefault">Enabled by Default</span>
                         </label>
-                        <div class="fieldDescription">Enable Home Screen Sections by default for all users?</div>
+                        <div class="fieldDescription" data-i18n="AdminEnabledByDefaultDesc">Enable Home Screen Sections by default for all users?</div>
                     </div>
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label class="emby-checkbox-label">
                             <input id="globalAllowUserOverride" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                            <span>Allow User Override</span>
+                            <span data-i18n="AdminAllowUserOverride">Allow User Override</span>
                         </label>
-                        <div class="fieldDescription">Can users enable/disable this plugin for their own view?</div>
+                        <div class="fieldDescription" data-i18n="AdminAllowUserOverrideDesc">Can users enable/disable this plugin for their own view?</div>
                     </div>
                 </div>
             </fieldset>
 
             <fieldset class="verticalSection-extrabottompadding">
-                <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Upcoming Section Settings</legend>
+                <legend data-i18n="AdminUpcomingSectionSettings" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Upcoming Section Settings</legend>
                 <div style="padding-left: .5em;">
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="upcomingShowsTimeframeValue">Upcoming Shows Timeframe</label>
+                        <label class="inputLabel inputLabelUnfocused" for="upcomingShowsTimeframeValue" data-i18n="AdminUpcomingShowsTimeframe">Upcoming Shows Timeframe</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input is="emby-input" type="number" id="upcomingShowsTimeframeValue" min="1" max="999" style="flex: 0 0 100px;" />
                             <select is="emby-select" id="upcomingShowsTimeframeUnit" class="emby-select-withcolor emby-select" style="flex: 0 0 120px;">
-                                <option value="Days">Days</option>
-                                <option value="Weeks">Weeks</option>
-                                <option value="Months">Months</option>
-                                <option value="Years">Years</option>
+                                <option value="Days" data-i18n="AdminDays">Days</option>
+                                <option value="Weeks" data-i18n="AdminWeeks">Weeks</option>
+                                <option value="Months" data-i18n="AdminMonths">Months</option>
+                                <option value="Years" data-i18n="AdminYears">Years</option>
                             </select>
                         </div>
-                        <div class="fieldDescription">How far in the future should we look for upcoming episodes?</div>
+                        <div class="fieldDescription" data-i18n="AdminUpcomingShowsDesc">How far in the future should we look for upcoming episodes?</div>
                     </div>
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="upcomingMoviesTimeframeValue">Upcoming Movies Timeframe</label>
+                        <label class="inputLabel inputLabelUnfocused" for="upcomingMoviesTimeframeValue" data-i18n="AdminUpcomingMoviesTimeframe">Upcoming Movies Timeframe</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input is="emby-input" type="number" id="upcomingMoviesTimeframeValue" min="1" max="999" style="flex: 0 0 100px;" />
                             <select is="emby-select" id="upcomingMoviesTimeframeUnit" class="emby-select-withcolor emby-select" style="flex: 0 0 120px;">
-                                <option value="Days">Days</option>
-                                <option value="Weeks">Weeks</option>
-                                <option value="Months">Months</option>
-                                <option value="Years">Years</option>
+                                <option value="Days" data-i18n="AdminDays">Days</option>
+                                <option value="Weeks" data-i18n="AdminWeeks">Weeks</option>
+                                <option value="Months" data-i18n="AdminMonths">Months</option>
+                                <option value="Years" data-i18n="AdminYears">Years</option>
                             </select>
                         </div>
-                        <div class="fieldDescription">How far in the future should we look for upcoming movies?</div>
+                        <div class="fieldDescription" data-i18n="AdminUpcomingMoviesDesc">How far in the future should we look for upcoming movies?</div>
                     </div>
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="upcomingMusicTimeframeValue">Upcoming Music Timeframe</label>
+                        <label class="inputLabel inputLabelUnfocused" for="upcomingMusicTimeframeValue" data-i18n="AdminUpcomingMusicTimeframe">Upcoming Music Timeframe</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input is="emby-input" type="number" id="upcomingMusicTimeframeValue" min="1" max="999" style="flex: 0 0 100px;" />
                             <select is="emby-select" id="upcomingMusicTimeframeUnit" class="emby-select-withcolor emby-select" style="flex: 0 0 120px;">
-                                <option value="Days">Days</option>
-                                <option value="Weeks">Weeks</option>
-                                <option value="Months">Months</option>
-                                <option value="Years">Years</option>
+                                <option value="Days" data-i18n="AdminDays">Days</option>
+                                <option value="Weeks" data-i18n="AdminWeeks">Weeks</option>
+                                <option value="Months" data-i18n="AdminMonths">Months</option>
+                                <option value="Years" data-i18n="AdminYears">Years</option>
                             </select>
                         </div>
-                        <div class="fieldDescription">How far in the future should we look for upcoming music releases?</div>
+                        <div class="fieldDescription" data-i18n="AdminUpcomingMusicDesc">How far in the future should we look for upcoming music releases?</div>
                     </div>
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="upcomingBooksTimeframeValue">Upcoming Books Timeframe</label>
+                        <label class="inputLabel inputLabelUnfocused" for="upcomingBooksTimeframeValue" data-i18n="AdminUpcomingBooksTimeframe">Upcoming Books Timeframe</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input is="emby-input" type="number" id="upcomingBooksTimeframeValue" min="1" max="999" style="flex: 0 0 100px;" />
                             <select is="emby-select" id="upcomingBooksTimeframeUnit" class="emby-select-withcolor emby-select" style="flex: 0 0 120px;">
-                                <option value="Days">Days</option>
-                                <option value="Weeks">Weeks</option>
-                                <option value="Months">Months</option>
-                                <option value="Years">Years</option>
+                                <option value="Days" data-i18n="AdminDays">Days</option>
+                                <option value="Weeks" data-i18n="AdminWeeks">Weeks</option>
+                                <option value="Months" data-i18n="AdminMonths">Months</option>
+                                <option value="Years" data-i18n="AdminYears">Years</option>
                             </select>
                         </div>
-                        <div class="fieldDescription">How far in the future should we look for upcoming book releases?</div>
+                        <div class="fieldDescription" data-i18n="AdminUpcomingBooksDesc">How far in the future should we look for upcoming book releases?</div>
                     </div>
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="dateFormat">Date Format</label>
+                        <label class="inputLabel inputLabelUnfocused" for="dateFormat" data-i18n="AdminDateFormat">Date Format</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <select is="emby-select" id="dateFormat" class="emby-select-withcolor emby-select" style="flex: 0 0 150px;">
                                 <option value="YYYY/MM/DD">YYYY/MM/DD</option>
@@ -111,186 +111,186 @@
                             </select>
                             <input is="emby-input" type="text" id="dateDelimiter" maxlength="3" style="flex: 0 0 60px;" placeholder="/" />
                         </div>
-                        <div class="fieldDescription">How should dates be displayed?</div>
+                        <div class="fieldDescription" data-i18n="AdminDateFormatDesc">How should dates be displayed?</div>
                     </div>
                 </div>
             </fieldset>
 
                 <fieldset class="verticalSection-extrabottompadding">
-                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Advanced Settings</legend>
+                    <legend data-i18n="AdminAdvancedSettings" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Advanced Settings</legend>
                     <div style="padding-left: .5em;">
                         <details style="margin-bottom: 1em;">
-                            <summary style="cursor: pointer; font-weight: bold;">Lazy Load Settings</summary>
+                            <summary data-i18n="AdminLazyLoadSettings" style="cursor: pointer; font-weight: bold;">Lazy Load Settings</summary>
                             <div style="padding-top: 1em;">
                                 <label class="emby-checkbox-label">
                                     <input id="chkLazyLoadEnabled" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                                    <span>Lazy Load Enabled</span>
+                                    <span data-i18n="AdminLazyLoadEnabled">Lazy Load Enabled</span>
                                 </label>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="number" data-id="numLazyLoadSections" label="Number of sections to load per page" />
-                                    <div class="fieldDescription">The number of sections that should be loaded per page.</div>
+                                    <input is="emby-input" type="number" data-id="numLazyLoadSections" data-i18n-label="AdminLazyLoadSectionsLabel" label="Number of sections to load per page" />
+                                    <div class="fieldDescription" data-i18n="AdminLazyLoadSectionsDesc">The number of sections that should be loaded per page.</div>
                                 </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
-                            <summary style="cursor: pointer; font-weight: bold;">*arr API Settings</summary>
+                            <summary data-i18n="AdminArrApiSettings" style="cursor: pointer; font-weight: bold;">*arr API Settings</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtSonarrUrl" label="Sonarr URL" />
-                                    <div class="fieldDescription">Complete URL for Sonarr to use for upcoming shows sections.</div>
+                                    <input is="emby-input" type="text" data-id="txtSonarrUrl" data-i18n-label="AdminSonarrUrl" label="Sonarr URL" />
+                                    <div class="fieldDescription" data-i18n="AdminSonarrUrlDesc">Complete URL for Sonarr to use for upcoming shows sections.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtSonarrApiKey" label="Sonarr API Key" />
-                                    <div class="fieldDescription">API Key for Sonarr instance.</div>
+                                    <input is="emby-input" type="password" data-id="txtSonarrApiKey" data-i18n-label="AdminSonarrApiKey" label="Sonarr API Key" />
+                                    <div class="fieldDescription" data-i18n="AdminSonarrApiKeyDesc">API Key for Sonarr instance.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtRadarrUrl" label="Radarr URL" />
-                                    <div class="fieldDescription">Complete URL for Radarr to use for upcoming movies sections.</div>
+                                    <input is="emby-input" type="text" data-id="txtRadarrUrl" data-i18n-label="AdminRadarrUrl" label="Radarr URL" />
+                                    <div class="fieldDescription" data-i18n="AdminRadarrUrlDesc">Complete URL for Radarr to use for upcoming movies sections.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtRadarrApiKey" label="Radarr API Key" />
-                                    <div class="fieldDescription">API Key for Radarr instance.</div>
+                                    <input is="emby-input" type="password" data-id="txtRadarrApiKey" data-i18n-label="AdminRadarrApiKey" label="Radarr API Key" />
+                                    <div class="fieldDescription" data-i18n="AdminRadarrApiKeyDesc">API Key for Radarr instance.</div>
                                 </div>
                                 <div class="inputContainer" style="padding-left: 1em;">
-                                    <label class="inputLabel inputLabelUnfocused">Radarr Release Types</label>
+                                    <label class="inputLabel inputLabelUnfocused" data-i18n="AdminRadarrReleaseTypes">Radarr Release Types</label>
                                     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
                                         <label class="emby-checkbox-label">
                                             <input id="radarrConsiderCinemaRelease" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                                            <span>Consider Cinema Release</span>
+                                            <span data-i18n="AdminConsiderCinemaRelease">Consider Cinema Release</span>
                                         </label>
                                         <label class="emby-checkbox-label">
                                             <input id="radarrConsiderPhysicalRelease" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                                            <span>Consider Physical Release</span>
+                                            <span data-i18n="AdminConsiderPhysicalRelease">Consider Physical Release</span>
                                         </label>
                                         <label class="emby-checkbox-label">
                                             <input id="radarrConsiderDigitalRelease" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                                            <span>Consider Digital Release</span>
+                                            <span data-i18n="AdminConsiderDigitalRelease">Consider Digital Release</span>
                                         </label>
                                     </div>
-                                    <div class="fieldDescription">Which release types should be considered for upcoming movies? At least one must be selected.</div>
+                                    <div class="fieldDescription" data-i18n="AdminRadarrReleaseTypesDesc">Which release types should be considered for upcoming movies? At least one must be selected.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtLidarrUrl" label="Lidarr URL" />
-                                    <div class="fieldDescription">Complete URL for Lidarr to use for upcoming music sections.</div>
+                                    <input is="emby-input" type="text" data-id="txtLidarrUrl" data-i18n-label="AdminLidarrUrl" label="Lidarr URL" />
+                                    <div class="fieldDescription" data-i18n="AdminLidarrUrlDesc">Complete URL for Lidarr to use for upcoming music sections.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtLidarrApiKey" label="Lidarr API Key" />
-                                    <div class="fieldDescription">API Key for Lidarr instance.</div>
+                                    <input is="emby-input" type="password" data-id="txtLidarrApiKey" data-i18n-label="AdminLidarrApiKey" label="Lidarr API Key" />
+                                    <div class="fieldDescription" data-i18n="AdminLidarrApiKeyDesc">API Key for Lidarr instance.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtReadarrUrl" label="Readarr URL" />
-                                    <div class="fieldDescription">Complete URL for Readarr to use for upcoming books sections.</div>
+                                    <input is="emby-input" type="text" data-id="txtReadarrUrl" data-i18n-label="AdminReadarrUrl" label="Readarr URL" />
+                                    <div class="fieldDescription" data-i18n="AdminReadarrUrlDesc">Complete URL for Readarr to use for upcoming books sections.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtReadarrApiKey" label="Readarr API Key" />
-                                    <div class="fieldDescription">API Key for Readarr instance.</div>
+                                    <input is="emby-input" type="password" data-id="txtReadarrApiKey" data-i18n-label="AdminReadarrApiKey" label="Readarr API Key" />
+                                    <div class="fieldDescription" data-i18n="AdminReadarrApiKeyDesc">API Key for Readarr instance.</div>
                                 </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
-                            <summary style="cursor: pointer; font-weight: bold;">LibreTranslate</summary>
+                            <summary data-i18n="AdminLibreTranslate" style="cursor: pointer; font-weight: bold;">LibreTranslate</summary>
                             <div style="padding-top: 1em;">
                                  <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtLibreTranslateUrl" label="LibreTranslate URL" />
-                                    <div class="fieldDescription">URL for LibreTranslate instance to use for translations.</div>
+                                    <input is="emby-input" type="text" data-id="txtLibreTranslateUrl" data-i18n-label="AdminLibreTranslateUrl" label="LibreTranslate URL" />
+                                    <div class="fieldDescription" data-i18n="AdminLibreTranslateUrlDesc">URL for LibreTranslate instance to use for translations.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtLibreTranslateApiKey" required="required" label="LibreTranslate API Key" />
-                                    <div class="fieldDescription">API Key for LibreTranslate instance.</div>
+                                    <input is="emby-input" type="text" data-id="txtLibreTranslateApiKey" required="required" data-i18n-label="AdminLibreTranslateApiKey" label="LibreTranslate API Key" />
+                                    <div class="fieldDescription" data-i18n="AdminLibreTranslateApiKeyDesc">API Key for LibreTranslate instance.</div>
                                 </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
-                            <summary style="cursor: pointer; font-weight: bold;">Jellyseerr</summary>
+                            <summary data-i18n="AdminJellyseerr" style="cursor: pointer; font-weight: bold;">Jellyseerr</summary>
                              <div style="padding-top: 1em;">
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtJellyseerrUrl" label="Jellyseerr URL (Internal)" />
-                                    <div class="fieldDescription">Internal URL for Jellyseerr to use for API requests from the plugin backend.</div>
+                                    <input is="emby-input" type="text" data-id="txtJellyseerrUrl" data-i18n-label="AdminJellyseerrInternalUrl" label="Jellyseerr URL (Internal)" />
+                                    <div class="fieldDescription" data-i18n="AdminJellyseerrInternalUrlDesc">Internal URL for Jellyseerr to use for API requests from the plugin backend.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtJellyseerrExternalUrl" label="Jellyseerr URL (External)" />
-                                    <div class="fieldDescription">External URL for Jellyseerr links in the frontend. Leave empty to use the internal URL.</div>
+                                    <input is="emby-input" type="text" data-id="txtJellyseerrExternalUrl" data-i18n-label="AdminJellyseerrExternalUrl" label="Jellyseerr URL (External)" />
+                                    <div class="fieldDescription" data-i18n="AdminJellyseerrExternalUrlDesc">External URL for Jellyseerr links in the frontend. Leave empty to use the internal URL.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtJellyseerrApiKey" required="required" label="Jellyseerr API Key" />
-                                    <div class="fieldDescription">API Key for Jellyseerr instance.</div>
+                                    <input is="emby-input" type="password" data-id="txtJellyseerrApiKey" required="required" data-i18n-label="AdminJellyseerrApiKey" label="Jellyseerr API Key" />
+                                    <div class="fieldDescription" data-i18n="AdminJellyseerrApiKeyDesc">API Key for Jellyseerr instance.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtJellyseerrPreferredLanguages" required="required" label="Discover Sections Language Filter" />
-                                    <div class="fieldDescription">Preferred languages to filter for Discover section. (comma delimited)</div>
+                                    <input is="emby-input" type="text" data-id="txtJellyseerrPreferredLanguages" required="required" data-i18n-label="AdminDiscoverLanguageFilter" label="Discover Sections Language Filter" />
+                                    <div class="fieldDescription" data-i18n="AdminDiscoverLanguageFilterDesc">Preferred languages to filter for Discover section. (comma delimited)</div>
                                 </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
-                            <summary style="cursor: pointer; font-weight: bold;">Default Libraries</summary>
+                            <summary data-i18n="AdminDefaultLibraries" style="cursor: pointer; font-weight: bold;">Default Libraries</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
-                                    <label class="inputLabel inputLabelUnfocused" for="defaultMoviesLibrary">Default Movies Library</label>
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultMoviesLibrary" data-i18n="AdminDefaultMoviesLibrary">Default Movies Library</label>
                                     <select is="emby-select" id="defaultMoviesLibrary" class="emby-select-withcolor emby-select">
-                                        <option value="">Default</option>
+                                        <option value="" data-i18n="AdminDefault">Default</option>
                                     </select>
-                                    <div class="fieldDescription">Select the specific movies library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                    <div class="fieldDescription" data-i18n-html="AdminLibraryDescRestart">Select the specific movies library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
                                 <div class="inputContainer">
-                                    <label class="inputLabel inputLabelUnfocused" for="defaultTVShowsLibrary">Default TV Shows Library</label>
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultTVShowsLibrary" data-i18n="AdminDefaultTVShowsLibrary">Default TV Shows Library</label>
                                     <select is="emby-select" id="defaultTVShowsLibrary" class="emby-select-withcolor emby-select">
-                                        <option value="">Default</option>
+                                        <option value="" data-i18n="AdminDefault">Default</option>
                                     </select>
-                                    <div class="fieldDescription">Select the specific TV shows library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                    <div class="fieldDescription" data-i18n-html="AdminLibraryDescRestart">Select the specific TV shows library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
                                 <div class="inputContainer">
-                                    <label class="inputLabel inputLabelUnfocused" for="defaultMusicLibrary">Default Music Library</label>
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultMusicLibrary" data-i18n="AdminDefaultMusicLibrary">Default Music Library</label>
                                     <select is="emby-select" id="defaultMusicLibrary" class="emby-select-withcolor emby-select">
-                                        <option value="">Default</option>
+                                        <option value="" data-i18n="AdminDefault">Default</option>
                                     </select>
-                                    <div class="fieldDescription">Select the specific music library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                    <div class="fieldDescription" data-i18n-html="AdminLibraryDescRestart">Select the specific music library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
                                 <div class="inputContainer">
-                                    <label class="inputLabel inputLabelUnfocused" for="defaultBooksLibrary">Default Books Library</label>
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultBooksLibrary" data-i18n="AdminDefaultBooksLibrary">Default Books Library</label>
                                     <select is="emby-select" id="defaultBooksLibrary" class="emby-select-withcolor emby-select">
-                                        <option value="">Default</option>
+                                        <option value="" data-i18n="AdminDefault">Default</option>
                                     </select>
-                                    <div class="fieldDescription">Select the specific books library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                    <div class="fieldDescription" data-i18n-html="AdminLibraryDescRestart">Select the specific books library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
                                 <div class="inputContainer">
-                                    <label class="inputLabel inputLabelUnfocused" for="defaultMusicVideosLibrary">Default Music Videos Library</label>
+                                    <label class="inputLabel inputLabelUnfocused" for="defaultMusicVideosLibrary" data-i18n="AdminDefaultMusicVideosLibrary">Default Music Videos Library</label>
                                     <select is="emby-select" id="defaultMusicVideosLibrary" class="emby-select-withcolor emby-select">
-                                        <option value="">Default</option>
+                                        <option value="" data-i18n="AdminDefault">Default</option>
                                     </select>
-                                    <div class="fieldDescription">Select the specific music videos library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
+                                    <div class="fieldDescription" data-i18n-html="AdminLibraryDescRestart">Select the specific music videos library to use for navigation. Lists all underlying library folders (not grouped views).<br><strong>Requires Jellyfin restart to take effect.</strong></div>
                                 </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
-                            <summary style="cursor: pointer; font-weight: bold;">Cache</summary>
+                            <summary data-i18n="AdminCache" style="cursor: pointer; font-weight: bold;">Cache</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="number" data-id="txtCacheTimeoutSeconds" label="Cache Timeout (seconds)" min="0" max="604800" />
-                                    <div class="fieldDescription">How long browsers should cache plugin resources (default: 86400 = 24 hours). Set to 0 to disable caching.</div>
+                                    <input is="emby-input" type="number" data-id="txtCacheTimeoutSeconds" data-i18n-label="AdminCacheTimeout" label="Cache Timeout (seconds)" min="0" max="604800" />
+                                    <div class="fieldDescription" data-i18n="AdminCacheTimeoutDesc">How long browsers should cache plugin resources (default: 86400 = 24 hours). Set to 0 to disable caching.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="number" data-id="txtMaxImageCacheEntries" label="Max Image Cache Entries" min="1" max="100000" />
-                                    <div class="fieldDescription">Maximum number of images to cache (default: 10000). Higher values use more memory but reduce re-downloads.</div>
+                                    <input is="emby-input" type="number" data-id="txtMaxImageCacheEntries" data-i18n-label="AdminMaxImageCacheEntries" label="Max Image Cache Entries" min="1" max="100000" />
+                                    <div class="fieldDescription" data-i18n="AdminMaxImageCacheEntriesDesc">Maximum number of images to cache (default: 10000). Higher values use more memory but reduce re-downloads.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="number" data-id="txtMaxImageWidth" label="Max Image Width (px)" min="100" max="10000" />
-                                    <div class="fieldDescription">Maximum width for cached images in pixels (default: 600). Images larger than this will be resized to save storage and bandwidth.</div>
+                                    <input is="emby-input" type="number" data-id="txtMaxImageWidth" data-i18n-label="AdminMaxImageWidth" label="Max Image Width (px)" min="100" max="10000" />
+                                    <div class="fieldDescription" data-i18n="AdminMaxImageWidthDesc">Maximum width for cached images in pixels (default: 600). Images larger than this will be resized to save storage and bandwidth.</div>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="number" data-id="txtImageJpegQuality" label="Image JPEG Quality" min="1" max="100" />
-                                    <div class="fieldDescription">JPEG compression quality for cached images (default: 85). Higher percentage means better quality but larger files.</div>
+                                    <input is="emby-input" type="number" data-id="txtImageJpegQuality" data-i18n-label="AdminImageJpegQuality" label="Image JPEG Quality" min="1" max="100" />
+                                    <div class="fieldDescription" data-i18n="AdminImageJpegQualityDesc">JPEG compression quality for cached images (default: 85). Higher percentage means better quality but larger files.</div>
                                 </div>
                             </div>
                         </details>
                         <details>
-                            <summary style="cursor: pointer; font-weight: bold;">Third-Party Integrations</summary>
+                            <summary data-i18n="AdminThirdPartyIntegrations" style="cursor: pointer; font-weight: bold;">Third-Party Integrations</summary>
                             <div style="padding-top: 1em;">
                                 <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
                                     <label class="emby-checkbox-label">
                                         <input id="globalStreamyfinHomeOverride" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                                        <span>Override Streamyfin Home</span>
+                                        <span data-i18n="AdminOverrideStreamyfinHome">Override Streamyfin Home</span>
                                     </label>
-                                    <div class="fieldDescription">Should requests for the Streamyfin config overwrite the home section with a Home Screen Sections generation.<br /><br/><i>Please Note: This functionality behind this setting is currently highly experimental and more work is likely needed before this is finalised.</i></div>
+                                    <div class="fieldDescription" data-i18n-html="AdminStreamyfinDesc">Should requests for the Streamyfin config overwrite the home section with a Home Screen Sections generation.<br /><br/><i>Please Note: This functionality behind this setting is currently highly experimental and more work is likely needed before this is finalised.</i></div>
                                 </div>
                             </div>
                         </details>
@@ -298,66 +298,67 @@
                 </fieldset>
 
                 <fieldset class="verticalSection-extrabottompadding">
-                    <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer Settings</legend>
+                    <legend data-i18n="AdminDeveloperSettings" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer Settings</legend>
                     <div style="padding-left: .5em;">
                         <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
                             <label class="emby-checkbox-label">
                                 <input id="globalDeveloperMode" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                                <span>Developer Mode</span>
+                                <span data-i18n="AdminDeveloperMode">Developer Mode</span>
                             </label>
-                            <div class="fieldDescription">Disable browser caching for plugin resources during development.</div>
+                            <div class="fieldDescription" data-i18n="AdminDeveloperModeDesc">Disable browser caching for plugin resources during development.</div>
                         </div>
                         <div style="margin-top: 1em;">
                             <div style="display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
                                 <button type="button" id="btnBustHomeSectionsCache" class="raised button-submit emby-button">
-                                    <span>Bust Static Assets Cache</span>
+                                    <span data-i18n="AdminBustStaticCache">Bust Static Assets Cache</span>
                                 </button>
                                 <button type="button" id="btnBustAllCaches" class="raised emby-button" style="background-color: #2196F3;">
-                                    <span>Bust All Caches (Assets + Index)</span>
+                                    <span data-i18n="AdminBustAllCaches">Bust All Caches (Assets + Index)</span>
                                 </button>
                                 <span id="cacheBustStatus" style="color: #52b54b; display: none; font-weight: bold;"></span>
                             </div>
-                            <div style="margin-top: 0.5em; font-size: 0.9em; color: #ccc;">
+                            <div style="margin-top: 0.5em; font-size: 0.9em; color: #ccc;" data-i18n-html="AdminCacheDescriptions">
                                 <strong>Static Assets Cache:</strong> Clears browser cache for CSS/JS files only.<br>
                                 <strong>All Caches:</strong> Clears both static assets and index.html transformation cache.
                             </div>
                         </div>
                     </div>
                 </fieldset>
+
+                <br>
+                <button id="btnSaveConfigGlobal" is="emby-button" type="submit" class="raised button-submit block emby-button">
+                    <span data-i18n="AdminSave">Save</span>
+                </button>
             </div>
 
-            <div id="sections" class="jellyfin-tab-content" style="display: none;">
+            <div id="sections" class="jellyfin-tab-content" style="display: none; width: fit-content;">
                 <fieldset class="verticalSection-extrabottompadding">
-                     <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Field Descriptions</legend>
-                    <ul style="margin: 0; padding-left: 1.5em;">
-                        <li><strong>Order:</strong>  Sets the display order for this section in Jellyfin. Lower numbers appear first. <i>Note: Sections with the same number are shown in random order among themselves</i></li>
-                        <li><strong>Enabled:</strong> Enable this section by default</li>
-                        <li><strong>User Override:</strong> Let the user override this section</li>
-                        <li><strong>Lower Limit (Min):</strong> The minimum number of times this section should appear</li>
-                        <li><strong>Upper Limit (Max):</strong> The maximum number of times this section can appear</li>
-                        <li><strong>View Mode:</strong> Defines the card layout used when displaying results.<i>If disabled, the section only supports the displayed layout.</i></li>
+                     <legend data-i18n="AdminFieldDescriptions" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Field Descriptions</legend>
+                    <ul id="fieldDescriptionsList" style="margin: 0; padding-left: 1.5em;">
+                        <li><strong data-i18n="AdminOrder">Order</strong>: <span data-i18n="AdminOrderDesc">Sets the display order for this section in Jellyfin. Lower numbers appear first.</span> <i data-i18n="AdminOrderNote">Note: Sections with the same number are shown in random order among themselves</i></li>
+                        <li><strong data-i18n="AdminEnabled">Enabled</strong>: <span data-i18n="AdminEnabledDesc">Enable this section by default</span></li>
+                        <li><strong data-i18n="AdminUserOverride">User Override</strong>: <span data-i18n="AdminUserOverrideDesc">Let the user override this section</span></li>
+                        <li><strong data-i18n="AdminMin">Min</strong>: <span data-i18n="AdminLowerLimitDesc">The minimum number of times this section should appear</span></li>
+                        <li><strong data-i18n="AdminMax">Max</strong>: <span data-i18n="AdminUpperLimitDesc">The maximum number of times this section can appear</span></li>
+                        <li><strong data-i18n="AdminViewMode">View Mode</strong>: <span data-i18n="AdminViewModeDesc">Defines the card layout used when displaying results.</span> <i data-i18n="AdminViewModeNote">If disabled, the section only supports the displayed layout.</i></li>
                     </ul>
                 </fieldset>
-                <div style="overflow-x: auto;">
                 <table id="sectionsTable" class="tblConnections" style="width: 100%;">
                     <thead>
                         <tr>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Hide Watched</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
-                            <th style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
+                            <th data-i18n="AdminSection" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
+                            <th data-i18n="AdminOrder" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
+                            <th data-i18n="AdminEnabled" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
+                            <th data-i18n="AdminUserOverride" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
+                            <th data-i18n="AdminHideWatched" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Hide Watched</th>
+                            <th data-i18n="AdminMin" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
+                            <th data-i18n="AdminMax" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
+                            <th data-i18n="AdminViewMode" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
                         </tr>
                     </thead>
                     <tbody id="sectionWrapper">
                     </tbody>
                 </table>
-                </div>
-            </div>
-
             <div id="custom-discover" class="jellyfin-tab-content" style="display: none;">
                 <fieldset class="verticalSection-extrabottompadding">
                     <legend style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Custom Lists</legend>
@@ -373,8 +374,9 @@
             </div>
 
             <br>
-            <button id="btnSaveConfig" is="emby-button" type="submit" class="raised button-submit block emby-button">
-                <span>Save</span>
+            <!-- Save button for sections (kept from upstream) -->
+            <button id="btnSaveConfigSections" is="emby-button" type="submit" class="raised button-submit block emby-button">
+                <span data-i18n="AdminSave">Save</span>
             </button>
         </form>
     </div>
@@ -426,10 +428,10 @@
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
                 <select is="emby-select" class="emby-select-withcolor emby-select" data-id="viewModeSelect" style="width: fit-content; text-align: center;">
-                    <option value="Portrait">Portrait</option>
-                    <option value="Landscape">Landscape</option>
-                    <option value="Square">Square</option>
-                    <option value="Small">Small</option>
+                    <option value="Portrait" data-i18n="AdminPortrait">Portrait</option>
+                    <option value="Landscape" data-i18n="AdminLandscape">Landscape</option>
+                    <option value="Square" data-i18n="AdminSquare">Square</option>
+                    <option value="Small" data-i18n="AdminSmall">Small</option>
                 </select>
             </td>
         </tr>
@@ -492,6 +494,71 @@
                 { name: 'Readarr', timeframePrefix: 'upcomingBooks', defaultValue: 1, defaultUnit: 'Years' }
             ];
 
+            // UI language detected once, used by translatePage() and loadConfig()
+            const uiLanguage = document.documentElement.lang || navigator.language || 'en';
+
+            // Stored after translatePage() fetches them, used by saveConfig() and applyTranslations()
+            var pageTranslations = {};
+
+            // Applies stored translations to data-i18n and data-i18n-label attributes
+            // within the given root element. Safe to call before translations are loaded
+            // (no-op when pageTranslations is empty).
+            function applyTranslations(root) {
+                if (!root || Object.keys(pageTranslations).length === 0) return;
+
+                root.querySelectorAll('[data-i18n]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n');
+                    if (pageTranslations[key]) {
+                        el.textContent = pageTranslations[key];
+                    }
+                });
+
+                root.querySelectorAll('[data-i18n-label]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n-label');
+                    if (pageTranslations[key]) {
+                        el.setAttribute('label', pageTranslations[key]);
+                        var labelEl = el.parentElement && el.parentElement.querySelector('label.inputLabel');
+                        if (labelEl) {
+                            labelEl.textContent = pageTranslations[key];
+                        }
+                    }
+                });
+            }
+
+            function translatePage() {
+
+                window.ApiClient.ajax({
+                    url: ApiClient.getUrl('ModularHomeViews/Translations') + '?language=' + encodeURIComponent(uiLanguage),
+                    type: 'GET'
+                }).then(response => response.json()).then(function (translations) {
+                    pageTranslations = translations;
+
+                    // Translate all static elements on the page
+                    applyTranslations(document);
+
+                    // Translate composite HTML elements (not handled by applyTranslations)
+                    var htmlTranslations = {
+                        'AdminLibraryDescRestart': translations['AdminLibraryDesc'] + '<br><strong>' + translations['AdminRequiresRestart'] + '</strong>',
+                        'AdminStreamyfinDesc': translations['AdminOverrideStreamyfinHomeDesc'] + '<br /><br/><i>' + translations['AdminExperimental'] + '</i>',
+                        'AdminCacheDescriptions': '<strong>' + translations['AdminBustStaticCache'] + ':</strong> ' + translations['AdminStaticCacheDesc'] + '<br><strong>' + translations['AdminBustAllCaches'] + ':</strong> ' + translations['AdminAllCachesDesc']
+                    };
+                    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+                        const key = el.getAttribute('data-i18n-html');
+                        if (htmlTranslations[key]) {
+                            el.innerHTML = htmlTranslations[key];
+                        }
+                    });
+
+                    // Pre-translate the template so future clones are already translated
+                    var template = document.querySelector('#sectionConfigTemplate');
+                    if (template) {
+                        applyTranslations(template.content);
+                    }
+                }).catch(function (error) {
+                    console.warn('Failed to load translations:', error);
+                });
+            }
+
             function createArrConfig(serviceConfig) {
                 const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
                 const config = {
@@ -506,7 +573,7 @@
                     config.ConsiderPhysicalRelease = document.querySelector('#radarrConsiderPhysicalRelease').checked;
                     config.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
                 }
-                
+
                 return config;
             }
 
@@ -514,12 +581,12 @@
                 const arrConfig = config[serviceConfig.name];
                 const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
                 const timeframeUnitSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeUnit';
-                
+
                 document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value = arrConfig?.Url || '';
                 document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value = arrConfig?.ApiKey || '';
                 document.querySelector(timeframeValueSelector).value = arrConfig?.UpcomingTimeframeValue || serviceConfig.defaultValue;
                 document.querySelector(timeframeUnitSelector).value = arrConfig?.UpcomingTimeframeUnit || serviceConfig.defaultUnit;
-                
+
                 if (serviceConfig.name === 'Radarr') {
                     document.querySelector('#radarrConsiderCinemaRelease').checked = arrConfig?.ConsiderCinemaRelease ?? false;
                     document.querySelector('#radarrConsiderPhysicalRelease').checked = arrConfig?.ConsiderPhysicalRelease ?? false;
@@ -590,11 +657,12 @@
                     const booksSelect = document.querySelector('#defaultBooksLibrary');
                     const musicVideosSelect = document.querySelector('#defaultMusicVideosLibrary');
 
-                    moviesSelect.innerHTML = '<option value="">Default</option>';
-                    tvShowsSelect.innerHTML = '<option value="">Default</option>';
-                    musicSelect.innerHTML = '<option value="">Default</option>';
-                    booksSelect.innerHTML = '<option value="">Default</option>';
-                    musicVideosSelect.innerHTML = '<option value="">Default</option>';
+                    var defaultLabel = pageTranslations['AdminDefault'] || 'Default';
+                    moviesSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    tvShowsSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    musicSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    booksSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    musicVideosSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
 
                     result.forEach(function (folder) {
                          if (folder.CollectionType === 'movies' || folder.CollectionType === 'tvshows' || folder.CollectionType === 'music' || folder.CollectionType === 'books' ||
@@ -606,7 +674,7 @@
                              }
                              option.value = folderId;
                              option.textContent = folder.Name;
- 
+
                              if(folder.CollectionType === 'movies') moviesSelect.appendChild(option);
                              if(folder.CollectionType === 'tvshows') tvShowsSelect.appendChild(option);
                              if(folder.CollectionType === 'music') musicSelect.appendChild(option);
@@ -690,16 +758,16 @@
             function saveConfig(e) {
                 e.preventDefault();
 
-                const hasReleaseCheck = 
+                const hasReleaseCheck =
                     document.querySelector('#radarrConsiderCinemaRelease').checked ||
                     document.querySelector('#radarrConsiderPhysicalRelease').checked ||
                     document.querySelector('#radarrConsiderDigitalRelease').checked;
-                    
+
                 if (!hasReleaseCheck) {
-                    Dashboard.alert('At least one release type must be selected for upcoming movies.');
+                    Dashboard.alert(pageTranslations['AdminReleaseTypeRequired'] || 'At least one release type must be selected for upcoming movies.');
                     return;
                 }
-                
+
                 Dashboard.showLoadingMsg();
                 const config = {
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
@@ -718,7 +786,7 @@
                     DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value,
                     DefaultMusicVideosLibraryId: document.querySelector('#defaultMusicVideosLibrary').value,
                     ...Object.fromEntries(arrServiceConfigs.map(serviceConfig => [
-                        serviceConfig.name, 
+                        serviceConfig.name,
                         createArrConfig(serviceConfig)
                     ])),
                     DateFormat: document.querySelector('#dateFormat').value,
@@ -806,7 +874,7 @@
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
                         document.querySelector('#chkLazyLoadEnabled').checked = config.LazyLoadEnabled;
                         document.querySelector('[data-id=numLazyLoadSections]').value = config.NumSectionsPerPage;
-                        
+
                         arrServiceConfigs.forEach(serviceConfig => {
                             loadArrConfig(serviceConfig, config);
                         });
@@ -842,7 +910,7 @@
                         loadCustomDiscoverSections(config.CustomDiscoverSections);
 
                         window.ApiClient.ajax({
-                            url: ApiClient.getUrl('ModularHomeViews/Sections'),
+                            url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
                             type: 'GET'
                         }).then(response => response.json()).then(function (json) {
                             json.Items.forEach(sectionType => {
@@ -861,6 +929,9 @@
                                 }
                                 addSectionSetting(sectionConfig, sectionType);
                             });
+                            // Translate dynamically added section rows in case
+                            // translatePage() finished before sections were rendered
+                            applyTranslations(document.querySelector('#sectionWrapper'));
                         }).finally(() => Dashboard.hideLoadingMsg());
                     });
             }
@@ -869,12 +940,24 @@
                 setupTabs();
                 loadLibraries();
                 loadConfig();
-                document.querySelector('#btnSaveConfig').addEventListener("click", saveConfig);
-                
-                // Custom Discover Section button
-                document.querySelector('#btnAddCustomDiscover').addEventListener("click", function() {
-                    addCustomDiscoverSection(null);
-                });
+                // Ensure translations are applied for dynamically added content
+                translatePage();
+
+                // Bind save handlers for the available save buttons
+                const btnSaveConfig = document.querySelector('#btnSaveConfig');
+                const btnSaveConfigGlobal = document.querySelector('#btnSaveConfigGlobal');
+                const btnSaveConfigSections = document.querySelector('#btnSaveConfigSections');
+                if (btnSaveConfig) btnSaveConfig.addEventListener("click", saveConfig);
+                if (btnSaveConfigGlobal) btnSaveConfigGlobal.addEventListener("click", saveConfig);
+                if (btnSaveConfigSections) btnSaveConfigSections.addEventListener("click", saveConfig);
+
+                // Custom Discover Section button (if present)
+                const btnAddCustomDiscover = document.querySelector('#btnAddCustomDiscover');
+                if (btnAddCustomDiscover) {
+                    btnAddCustomDiscover.addEventListener("click", function() {
+                        addCustomDiscoverSection(null);
+                    });
+                }
 
                 // Cache bust functionality
                 const btnBustHomeSectionsCache = document.querySelector('#btnBustHomeSectionsCache');
@@ -892,7 +975,7 @@
 
                 function setButtonState(button, loading, originalText) {
                     button.disabled = loading;
-                    button.querySelector('span').textContent = loading ? 'Busting Cache...' : originalText;
+                    button.querySelector('span').textContent = loading ? (pageTranslations['AdminBustingCache'] || 'Busting Cache...') : originalText;
                 }
 
                 if (btnBustHomeSectionsCache) {
@@ -909,10 +992,10 @@
                                 'Content-Type': 'application/json'
                             }
                         }).then(response => {
-                            showStatus('Static assets cache busted successfully');
+                            showStatus(pageTranslations['AdminCacheBustSuccess'] || 'Static assets cache busted successfully');
                         }).catch(error => {
                             console.error('Static assets cache bust error:', error);
-                            showStatus('Failed to bust static assets cache', true);
+                            showStatus(pageTranslations['AdminCacheBustFailed'] || 'Failed to bust static assets cache', true);
                         }).finally(() => {
                             setButtonState(btnBustHomeSectionsCache, false, originalText);
                         });
@@ -923,7 +1006,7 @@
                     const originalText = btnBustAllCaches.querySelector('span').textContent;
                     btnBustAllCaches.addEventListener('click', function() {
                         setButtonState(btnBustAllCaches, true, originalText);
-                        
+
                         // First bust static assets cache (Home Sections)
                         const staticAssetsPromise = window.ApiClient.ajax({
                             url: window.ApiClient.getUrl('HomeScreen/BustCache'),
@@ -950,27 +1033,27 @@
                             .then(results => {
                                 const staticResult = results[0];
                                 const transformResult = results[1];
-                                
+
                                 let message = '';
                                 let isError = false;
-                                
+
                                 if (staticResult.status === 'fulfilled' && transformResult.status === 'fulfilled') {
-                                    message = 'All caches busted successfully (assets + index)';
+                                    message = pageTranslations['AdminAllCachesBustSuccess'] || 'All caches busted successfully (assets + index)';
                                 } else if (staticResult.status === 'fulfilled' && transformResult.status === 'rejected') {
                                     console.warn('Transformation cache bust failed:', transformResult.reason);
                                     if (transformResult.reason?.status === 404) {
-                                        message = 'Static assets cache busted - file-transformation plugin not found or plugin not registered';
+                                        message = pageTranslations['AdminCacheBustTransformNotFound'] || 'Static assets cache busted - file-transformation plugin not found or plugin not registered';
                                     } else {
-                                        message = 'Static assets cache busted - file-transformation cache failed (check console)';
+                                        message = pageTranslations['AdminCacheBustTransformFailed'] || 'Static assets cache busted - file-transformation cache failed (check console)';
                                     }
                                 } else if (staticResult.status === 'rejected') {
                                     console.error('Static assets cache bust failed:', staticResult.reason);
-                                    message = 'Failed to bust static assets cache';
+                                    message = pageTranslations['AdminCacheBustFailed'] || 'Failed to bust static assets cache';
                                     isError = true;
                                 } else {
-                                    message = 'Cache bust completed with mixed results (check console)';
+                                    message = pageTranslations['AdminCacheBustMixed'] || 'Cache bust completed with mixed results (check console)';
                                 }
-                                
+
                                 showStatus(message, isError);
                             }).finally(() => {
                                 setButtonState(btnBustAllCaches, false, originalText);
