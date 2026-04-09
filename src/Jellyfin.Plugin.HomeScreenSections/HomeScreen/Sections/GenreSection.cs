@@ -64,6 +64,11 @@ public class GenreSection : IHomeScreenSection
             }
         };
 
+        var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+        var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+        // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
+        bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
+
         VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
             .Where(x => x.CollectionType == CollectionTypeOptions.movies)
             .FilterToUserPermitted(m_libraryManager, user);
@@ -87,6 +92,7 @@ public class GenreSection : IHomeScreenSection
                 ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 Limit = 24,
+                IsPlayed = isPlayed,
                 DtoOptions = dtoOptions,
                 Genres = new List<string> { genre.Name }
             }).Items;
