@@ -159,6 +159,8 @@ As a general rule of thumb, please try to blend in with the codebase, I use a mu
 
 After following these guidelines, please create a pull request and I'll review it as soon as I can. For more complex changes, I may ask you to rebase to the `experimental` branch to give it extra testing before it gets merged across.
 
+Please declare your AI usage, if any, and if you have used AI for your change, please also declare your coding experience without AI. This won't impact whether the change is merged, it will allow me to properly and correctly review the change to ensure that nothing slips through the net.
+
 ### Adding your own sections
 > This is great an' all but I want a section that doesn't exist here. Can I make one?
 
