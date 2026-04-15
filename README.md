@@ -155,6 +155,8 @@ You're more than welcome to contribute to this plugin in any way that betters it
 - Please at least check the plugin compiles with 10.10.7 and the latest version of JF
 - Please put braces on new lines and use them even for 1 line statements
 
+As a general rule of thumb, please try to blend in with the codebase, I use a mutated hungarian notation for my coding style, I will ask for this to be followed.
+
 After following these guidelines, please create a pull request and I'll review it as soon as I can. For more complex changes, I may ask you to rebase to the `experimental` branch to give it extra testing before it gets merged across.
 
 ### Adding your own sections
