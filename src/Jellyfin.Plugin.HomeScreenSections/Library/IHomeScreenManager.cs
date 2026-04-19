@@ -14,6 +14,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 
         void RegisterResultsDelegate<T>(T handler) where T : IHomeScreenSection;
         
+        void RefreshCustomDiscoverSections();
+        
         IEnumerable<IHomeScreenSection> GetSectionTypes();
         
         IHomeScreenSection? GetSection(string sectionName);
