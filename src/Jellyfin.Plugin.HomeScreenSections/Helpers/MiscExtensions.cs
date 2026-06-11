@@ -1,4 +1,6 @@
 using System.Reflection;
+using Jellyfin.Data;
+using Jellyfin.Database.Implementations.Enums;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -21,7 +23,15 @@ public static class MiscExtensions
 
     public static VirtualFolderInfo[] FilterToUserPermitted(this IEnumerable<VirtualFolderInfo> folders, ILibraryManager libraryManager, User? user)
     {
-        return folders
+        IEnumerable<VirtualFolderInfo> filtered = folders;
+
+        if (user != null)
+        {
+            Guid[] latestItemExcludes = user.GetPreferenceValues<Guid>(PreferenceKind.LatestItemExcludes);
+            filtered = filtered.Where(x => !latestItemExcludes.Contains(Guid.Parse(x.ItemId)));
+        }
+
+        return filtered
             .Where(x =>
             {
                 IEnumerable<BaseItem> items = libraryManager.GetItemList(new InternalItemsQuery(user)
