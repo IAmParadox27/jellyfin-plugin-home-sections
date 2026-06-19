@@ -37,9 +37,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override IOrderedEnumerable<SonarrCalendarDto> FilterAndSortItems(SonarrCalendarDto[] items)
         {
-            return items
-                .Where(item => item.Monitored && !item.HasFile && item.AirDateUtc.HasValue)
-                .OrderBy(item => item.AirDateUtc);
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var filtered = items.Where(item => item.Monitored && !item.HasFile && item.AirDateUtc.HasValue);
+
+            if (config?.Sonarr?.GroupUpcoming == true)
+            {
+                return filtered
+                    .GroupBy(item => item.SeriesId)
+                    .Select(g => g.OrderBy(e => e.AirDateUtc).First())
+                    .OrderBy(item => item.AirDateUtc);
+            }
+
+            return filtered.OrderBy(item => item.AirDateUtc);
         }
 
         protected override string GetFallbackCoverUrl(SonarrCalendarDto missingItem)

@@ -1,4 +1,4 @@
-﻿using MediaBrowser.Model.Plugins;
+using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 {
@@ -106,5 +106,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public bool ConsiderCinemaRelease { get; set; } = false;
         public bool ConsiderPhysicalRelease { get; set; } = false;
         public bool ConsiderDigitalRelease { get; set; } = true;
+        public bool GroupUpcoming { get; set; } = false;
     }   
 }

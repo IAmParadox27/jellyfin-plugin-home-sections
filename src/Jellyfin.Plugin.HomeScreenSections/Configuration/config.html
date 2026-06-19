@@ -59,6 +59,13 @@
                         </div>
                         <div class="fieldDescription" data-i18n="AdminUpcomingShowsDesc">How far in the future should we look for upcoming episodes?</div>
                     </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top: 10px; margin-bottom: 10px;">
+                        <label class="emby-checkbox-label">
+                            <input id="chkSonarrGroupUpcoming" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                            <span>Group upcoming episodes by series</span>
+                        </label>
+                        <div class="fieldDescription">If enabled, only the next upcoming episode of each series will be displayed instead of every individual episode.</div>
+                    </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="upcomingMoviesTimeframeValue" data-i18n="AdminUpcomingMoviesTimeframe">Upcoming Movies Timeframe</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
@@ -518,6 +525,10 @@
                     config.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
                 }
 
+                if (serviceConfig.name === 'Sonarr') {
+                    config.GroupUpcoming = document.querySelector('#chkSonarrGroupUpcoming').checked;
+                }
+
                 return config;
             }
 
@@ -535,6 +546,10 @@
                     document.querySelector('#radarrConsiderCinemaRelease').checked = arrConfig?.ConsiderCinemaRelease ?? false;
                     document.querySelector('#radarrConsiderPhysicalRelease').checked = arrConfig?.ConsiderPhysicalRelease ?? false;
                     document.querySelector('#radarrConsiderDigitalRelease').checked = arrConfig?.ConsiderDigitalRelease ?? true; // Default
+                }
+
+                if (serviceConfig.name === 'Sonarr') {
+                    document.querySelector('#chkSonarrGroupUpcoming').checked = arrConfig?.GroupUpcoming ?? false;
                 }
             }
 
