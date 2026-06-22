@@ -35,7 +35,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return ArrApiService.GetArrCalendarAsync<ReadarrCalendarDto>(ArrServiceType.Readarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
-        protected override IOrderedEnumerable<ReadarrCalendarDto> FilterAndSortItems(ReadarrCalendarDto[] items)
+        protected override IOrderedEnumerable<ReadarrCalendarDto> FilterAndSortItems(ReadarrCalendarDto[] items, string language)
         {
             return items
                 .Where(item => item.Monitored && !item.HasFile && item.ReleaseDate.HasValue)
@@ -47,10 +47,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\n{missingItem.Author?.AuthorName}\nImage Not Found")}";
         }
 
-        protected override BaseItemDto CreateDto(ReadarrCalendarDto calendarItem, PluginConfiguration config)
+        protected override BaseItemDto CreateDto(ReadarrCalendarDto calendarItem, PluginConfiguration config, string language)
         {
             DateTime releaseDate = calendarItem.ReleaseDate ?? DateTime.Now;
-            string countdownText = CalculateCountdown(releaseDate, config);
+            string countdownText = CalculateCountdown(releaseDate, config, language);
 
             ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));

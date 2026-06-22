@@ -107,5 +107,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public bool ConsiderPhysicalRelease { get; set; } = false;
         public bool ConsiderDigitalRelease { get; set; } = true;
         public bool GroupUpcoming { get; set; } = false;
+        public bool GroupUpcomingNextOnly { get; set; } = false;
     }   
 }

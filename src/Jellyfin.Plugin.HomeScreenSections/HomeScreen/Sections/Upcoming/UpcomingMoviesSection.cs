@@ -46,7 +46,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return candidates.Where(date => date.HasValue).Select(date => date!.Value).Min();
         }
 
-        protected override IOrderedEnumerable<RadarrCalendarDto> FilterAndSortItems(RadarrCalendarDto[] items)
+        protected override IOrderedEnumerable<RadarrCalendarDto> FilterAndSortItems(RadarrCalendarDto[] items, string language)
         {
             var config = HomeScreenSectionsPlugin.Instance.Configuration;
             return items
@@ -70,10 +70,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\nImage Not Found")}";
         }
 
-        protected override BaseItemDto CreateDto(RadarrCalendarDto calendarItem, PluginConfiguration config)
+        protected override BaseItemDto CreateDto(RadarrCalendarDto calendarItem, PluginConfiguration config, string language)
         {
             DateTime releaseDate = GetEarliestReleaseDate(calendarItem, config);
-            string countdownText = CalculateCountdown(releaseDate, config);
+            string countdownText = CalculateCountdown(releaseDate, config, language);
 
             string yearInfo = calendarItem.Year > 0 ? $" ({calendarItem.Year})" : "";
 

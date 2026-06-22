@@ -62,9 +62,16 @@
                     <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top: 10px; margin-bottom: 10px;">
                         <label class="emby-checkbox-label">
                             <input id="chkSonarrGroupUpcoming" type="checkbox" is="emby-checkbox" class="emby-checkbox">
-                            <span>Group upcoming episodes by series</span>
+                            <span data-i18n="AdminSonarrGroupUpcoming">Group upcoming episodes by series</span>
                         </label>
-                        <div class="fieldDescription">If enabled, only the next upcoming episode of each series will be displayed instead of every individual episode.</div>
+                        <div class="fieldDescription" data-i18n="AdminSonarrGroupUpcomingDesc">If enabled, only the next upcoming episode of each series will be displayed instead of every individual episode.</div>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top: 10px; margin-bottom: 10px;">
+                        <label class="emby-checkbox-label">
+                            <input id="chkSonarrGroupUpcomingNextOnly" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                            <span data-i18n="AdminSonarrGroupUpcomingNextOnly">Show only the next episode of each series</span>
+                        </label>
+                        <div class="fieldDescription" data-i18n="AdminSonarrGroupUpcomingNextOnlyDesc">If enabled, only the next upcoming episode of each series will be displayed individually (e.g., S03E01 - [Title]) instead of grouping the range (e.g., S03E01-10). Episodes without a valid title (e.g., TBA) will be hidden.</div>
                     </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="upcomingMoviesTimeframeValue" data-i18n="AdminUpcomingMoviesTimeframe">Upcoming Movies Timeframe</label>
@@ -527,6 +534,7 @@
 
                 if (serviceConfig.name === 'Sonarr') {
                     config.GroupUpcoming = document.querySelector('#chkSonarrGroupUpcoming').checked;
+                    config.GroupUpcomingNextOnly = document.querySelector('#chkSonarrGroupUpcomingNextOnly').checked;
                 }
 
                 return config;
@@ -550,6 +558,7 @@
 
                 if (serviceConfig.name === 'Sonarr') {
                     document.querySelector('#chkSonarrGroupUpcoming').checked = arrConfig?.GroupUpcoming ?? false;
+                    document.querySelector('#chkSonarrGroupUpcomingNextOnly').checked = arrConfig?.GroupUpcomingNextOnly ?? false;
                 }
             }
 
@@ -785,6 +794,21 @@
             }
 
             document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
+                const chkSonarrGroupUpcoming = document.querySelector('#chkSonarrGroupUpcoming');
+                const chkSonarrGroupUpcomingNextOnly = document.querySelector('#chkSonarrGroupUpcomingNextOnly');
+                if (chkSonarrGroupUpcoming && chkSonarrGroupUpcomingNextOnly) {
+                    chkSonarrGroupUpcoming.addEventListener('change', function (e) {
+                        if (e.target.checked) {
+                            chkSonarrGroupUpcomingNextOnly.checked = false;
+                        }
+                    });
+                    chkSonarrGroupUpcomingNextOnly.addEventListener('change', function (e) {
+                        if (e.target.checked) {
+                            chkSonarrGroupUpcoming.checked = false;
+                        }
+                    });
+                }
+
                 setupTabs();
                 loadLibraries();
                 loadConfig();
