@@ -18,16 +18,28 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             Regex variableFind = new Regex(@"var\s+([a-zA-Z][^=]*)=");
             string thisVariableName = variableFind.Matches(parts[0]).Last().Groups[1].Value;
             string replacementText = replacementTextReader.ReadToEnd()
-                .Replace("{{this_hook}}", thisVariableName)
-                .Replace("{{layoutmanager_hook}}", "n"); // TODO: lookup the first "assigned" variable after `var`
+                .Replace("{{this_hook}}", thisVariableName);
 
             if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.10.7") ?? false)
             {
-                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "h");
+                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "h.default");
+                replacementText = replacementText.Replace("{{appRouterParent_hook}}", "p");
+                replacementText = replacementText.Replace("{{shapebuilder_hook}}", "y");
+                replacementText = replacementText.Replace("{{layoutmanager_hook}}", "n"); // TODO: lookup the first "assigned" variable after `var`
             }
             else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.11") ?? false)
             {
-                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "u");
+                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "u.default");
+                replacementText = replacementText.Replace("{{appRouterParent_hook}}", "p");
+                replacementText = replacementText.Replace("{{shapebuilder_hook}}", "y");
+                replacementText = replacementText.Replace("{{layoutmanager_hook}}", "n"); // TODO: lookup the first "assigned" variable after `var`
+            }
+            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("12.0") ?? false)
+            {
+                replacementText = replacementText.Replace("{{cardbuilder_hook}}", "p.Ay");
+                replacementText = replacementText.Replace("{{appRouterParent_hook}}", "T");
+                replacementText = replacementText.Replace("{{shapebuilder_hook}}", "I");
+                replacementText = replacementText.Replace("{{layoutmanager_hook}}", "i"); // TODO: lookup the first "assigned" variable after `var`
             }
             
             string regex = content.Contents.Replace(",loadSections:", $",loadSections:{replacementText},originalLoadSections:");

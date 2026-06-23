@@ -270,6 +270,7 @@
     
     function loadHomeSection(page, apiClient, user, userSettings, sectionInfo, options) {
         var sectionClass = getSectionClass(sectionInfo);
+        var appRouterParent = {{appRouterParent_hook}};
         console.log("Loading section: ." + sectionClass + ", could also be .section" + options.sectionIndex);
         
         var var5_, var6_, var7_, var8_, elem = page.querySelector('.' + sectionClass + '[data-page="' + window.HssPageMeta.Page + '"]');
@@ -281,11 +282,11 @@
             if (!layoutManager.tv && sectionInfo.Route !== undefined) {
                 var route = undefined;
                 if (sectionInfo.OriginalPayload !== undefined) {
-                    route = p.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
+                    route = appRouterParent.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
                         serverId: apiClient.serverId()
                     });
                 } else {
-                    route = p.appRouter.getRouteUrl(sectionInfo.Route, {
+                    route = appRouterParent.appRouter.getRouteUrl(sectionInfo.Route, {
                         serverId: apiClient.serverId()
                     })
                 }
@@ -326,7 +327,7 @@
                     itemsContainer.classList.add(sectionInfo.ContainerClass);
                 }
                 
-                var cardBuilder = {{cardbuilder_hook}}.default;
+                var cardBuilder = {{cardbuilder_hook}};
                 
                 var cardSettings = {
                     ViewMode: sectionInfo.ViewMode,
@@ -336,9 +337,11 @@
                 
                 itemsContainer.fetchData = getHomeScreenSectionFetchFn(apiClient.serverId(), sectionInfo, u.A, userSettings);
                 
-                var getBackdropShape = y.UI;
-                var getPortraitShape = y.xK;
-                var getSquareShape = y.zP;
+                var shapeBuilder = {{shapebuilder_hook}};
+                
+                var getBackdropShape = shapeBuilder.UI;
+                var getPortraitShape = shapeBuilder.xK;
+                var getSquareShape = shapeBuilder.zP;
                 
                 var getShapeFn = getBackdropShape;
                 if (cardSettings.ViewMode === 'Portrait')
@@ -356,7 +359,7 @@
                 
                 var imageHelper = b.Ay;
                 
-                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, imageHelper, p.appRouter, cardSettings);
+                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, imageHelper, appRouterParent.appRouter, cardSettings);
                 itemsContainer.parentContainer = elem;
             }
         }
