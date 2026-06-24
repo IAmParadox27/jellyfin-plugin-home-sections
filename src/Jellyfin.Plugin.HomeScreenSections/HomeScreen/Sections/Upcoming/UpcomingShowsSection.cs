@@ -103,11 +103,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             
             if (averageDays >= 6.0 && averageDays <= 8.0)
             {
-                return GetTranslation("FrequencyWeekly", "Weekly");
+                return GetTranslation("FrequencyWeekly", "1 episode per week");
             }
             if (averageDays < 2.0)
             {
-                return GetTranslation("FrequencyDaily", "Daily");
+                return GetTranslation("FrequencyDaily", "1 episode per day");
             }
             
             return string.Empty;

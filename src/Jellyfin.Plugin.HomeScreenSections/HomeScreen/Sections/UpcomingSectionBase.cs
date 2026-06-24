@@ -103,28 +103,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return fallbackText;
             }
             
-            string countdownText;
-            if (totalDays <= 0)
+            string countdownText = totalDays switch
             {
-                countdownText = GetTranslation("CountdownToday", "Today!");
-            }
-            else if (totalDays < 7)
-            {
-                string dayText = totalDays == 1 ? GetTranslation("CountdownDay", "Day") : GetTranslation("CountdownDays", "Days");
-                countdownText = $"{totalDays} {dayText}";
-            }
-            else if (totalDays < 30)
-            {
-                countdownText = FormatTimeUnit(totalDays / 7, totalDays % 7, "Week", "Day", language, translationManager);
-            }
-            else if (totalDays < 365)
-            {
-                countdownText = FormatTimeUnit(totalDays / 30, (totalDays % 30) / 7, "Month", "Week", language, translationManager);
-            }
-            else
-            {
-                countdownText = FormatTimeUnit(totalDays / 365, (totalDays % 365) / 30, "Year", "Month", language, translationManager);
-            }
+                <= 0 => GetTranslation("CountdownToday", "Today!"),
+                < 7  => $"{totalDays} {GetTranslation(totalDays == 1 ? "CountdownDay" : "CountdownDays", totalDays == 1 ? "day" : "days")}",
+                < 30 => FormatTimeUnit(totalDays / 7, totalDays % 7, "Week", "Day", language, translationManager),
+                < 365 => FormatTimeUnit(totalDays / 30, (totalDays % 30) / 7, "Month", "Week", language, translationManager),
+                _ => FormatTimeUnit(totalDays / 365, (totalDays % 365) / 30, "Year", "Month", language, translationManager)
+            };
 
             return $"{countdownText} - {ArrApiService.FormatDate(releaseDateLocal, config.DateFormat, config.DateDelimiter)}";
         }
