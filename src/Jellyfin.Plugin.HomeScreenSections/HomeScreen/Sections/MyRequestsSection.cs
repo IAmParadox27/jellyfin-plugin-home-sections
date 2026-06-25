@@ -87,6 +87,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 IEnumerable<string?>? jellyfinItemIds = presentRequestedMedia?.Select(x => x.Value<string>("jellyfinMediaId"));
 
+                // Only show items this user actually requested. Without this guard, a user with no
+                // requests produces an empty ItemIds array, which Jellyfin's InternalItemsQuery treats
+                // as "no filter" and returns the entire (recently-added) library for that ParentId.
+                Guid[] requestedItemIds = jellyfinItemIds?
+                    .Where(y => !string.IsNullOrEmpty(y))
+                    .Select(y => Guid.Parse(y!))
+                    .ToArray() ?? Array.Empty<Guid>();
+                if (requestedItemIds.Length == 0)
+                {
+                    return new QueryResult<BaseItemDto>();
+                }
+
                 var config = HomeScreenSectionsPlugin.Instance?.Configuration;
                 var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
                 bool hideWatchedItems = sectionSettings?.HideWatchedItems == true;
@@ -95,7 +107,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 {
                     return m_libraryManager.GetItemList(new InternalItemsQuery(user)
                     {
-                        ItemIds = jellyfinItemIds?.Select(y => Guid.Parse(y ?? Guid.Empty.ToString()))?.ToArray() ?? Array.Empty<Guid>(),
+                        ItemIds = requestedItemIds,
                         Recursive = true,
                         EnableTotalRecordCount = false,
                         ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString())
