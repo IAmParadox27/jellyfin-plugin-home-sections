@@ -408,7 +408,8 @@
                 ResultsPerPage: hssMeta.NumResultsPerPage,
                 LastScrollHeight: 0,
                 ScrollThreshold: 10,
-                PageHash: uuidv4()
+                PageHash: uuidv4(),
+                ScrollHandler: null
             };
             
             // Setup the scrolly event
@@ -418,37 +419,37 @@
                 user: user,
                 userSettings: userSettings
             };
-            
-            window.addEventListener('scroll', function () {
+
+            function hssScrollHandler() {
                 var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
-                
+
                 if (window.HssPageMeta.Finished !== true && window.HssPageMeta.IsLoading !== true && scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < window.scrollY) {
                     window.HssPageMeta.IsLoading = true;
-                    
+
                     document.querySelector('#hssLoadingIndicator').style.display = 'block';
-                    
+
                     // Do the calculation after the scroller is turned on
                     windowHeight = getDocHeight();
                     window.scroll(0, windowHeight - (window.innerHeight + window.HssPageMeta.ScrollThreshold));
-                    
+
                     window.HssPageMeta.LastScrollHeight = window.scrollY;
                     window.HssPageMeta.LastWindowHeight = windowHeight;
-                    
+
                     window.HssPageMeta.ScrollFixerHandle = setInterval(function () {
                         window.scroll(0, window.HssPageMeta.LastScrollHeight);
-                        
+
                         if (getDocHeight() > window.HssPageMeta.LastWindowHeight) {
                             clearInterval(window.HssPageMeta.ScrollFixerHandle);
                             window.HssPageMeta.ScrollFixerHandle = undefined;
                         }
                     }, 1);
-                    
+
                     _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
                         document.querySelector('#hssLoadingIndicator').style.display = 'none';
 
                         window.HssPageMeta.IsLoading = false;
-                        
+
                         if (window.HssPageMeta.ScrollFixerHandle) {
                             clearInterval(window.HssPageMeta.ScrollFixerHandle);
                         }
@@ -463,7 +464,15 @@
                         D.body.clientHeight, D.documentElement.clientHeight
                     );
                 }
-            });
+            }
+            
+            if (window.HssPageMeta.ScrollHandler !== null) {
+                window.removeEventListener('scroll', window.HssPageMeta.ScrollHandler);
+            }
+            
+            window.HssPageMeta.ScrollHandler = hssScrollHandler;
+            
+            window.addEventListener('scroll', hssScrollHandler);
         }
         
         var getSectionsData = {
