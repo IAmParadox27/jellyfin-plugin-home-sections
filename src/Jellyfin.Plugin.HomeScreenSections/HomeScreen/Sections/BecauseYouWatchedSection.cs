@@ -198,9 +198,33 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 	            }.ApplySimilarSettings(item)).Items;
             }).ToList();
             
-            similar.Shuffle();
+            // Scoring system to prefer more similar titles
+            var scoredSimilar = similar.Select(x =>
+            {
+	            int sharedGenreWeight = 5;
+	            
+	            int sharedTags = x.Tags.Count(y => item.Tags.Contains(y));
+	            int sharedGenres = x.Genres.Count(y => item.Genres.Contains(y));
+
+	            if (sharedGenres == 0)
+	            {
+		            return new
+		            {
+			            Item = x,
+			            Score = 0
+		            };
+	            }
+	            
+	            return new
+	            {
+			    	Item = x,
+			    	Score = (sharedGenres * sharedGenreWeight) + sharedTags 
+	            };
+            }).Where(x => x.Score > 0).OrderByDescending(x => x.Score).Take(24).ToList();
             
-			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar.Take(16).ToArray(), dtoOptions, user));
+            scoredSimilar.Shuffle();
+            
+			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(scoredSimilar.Take(16).Select(x => x.Item).ToArray(), dtoOptions, user));
 		}
 		
 		public HomeScreenSectionInfo GetInfo()
