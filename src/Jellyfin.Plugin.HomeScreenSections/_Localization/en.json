@@ -1,4 +1,4 @@
-﻿{
+{
   "BecauseYouWatched": "Because You Watched {0}",
   "ContinueWatching": "Continue Watching",
   "ContinueWatchingNextUp": "Continue Watching / Next Up",
@@ -101,6 +101,13 @@
   "AdminSonarrUrlDesc": "Complete URL for Sonarr to use for upcoming shows sections.",
   "AdminSonarrApiKey": "Sonarr API Key",
   "AdminSonarrApiKeyDesc": "API Key for Sonarr instance.",
+  "AdminSonarrGroupingOptions": "Sonarr Grouping Options",
+  "AdminSonarrGroupNone": "Show all episodes individually (default)",
+  "AdminSonarrGroupNoneDesc": "If selected, every upcoming episode will be displayed as a separate card on the home screen.",
+  "AdminSonarrGroupUpcoming": "Group upcoming episodes by series",
+  "AdminSonarrGroupUpcomingDesc": "If selected, episodes of the same series will be grouped into a range (e.g. S03E01-10) showing the release frequency.",
+  "AdminSonarrGroupUpcomingNextOnly": "Show only the next episode of each series",
+  "AdminSonarrGroupUpcomingNextOnlyDesc": "If selected, only the single next episode will be displayed individually (e.g. S03E01 - [Title]).",
   "AdminRadarrUrl": "Radarr URL",
   "AdminRadarrUrlDesc": "Complete URL for Radarr to use for upcoming movies sections.",
   "AdminRadarrApiKey": "Radarr API Key",
@@ -203,5 +210,16 @@
   "AdminEnableModularHome": "Enable \"Modular Home\". This will change your home screen into a more dynamic screen with options from other plugins to be able to contribute into what you see and are recommended.",
   "AdminEnabledSections": "Enabled Sections",
   "AdminSettingsUpdated": "Settings have been updated, reloading page in 2 seconds.",
-  "AdminReleaseTypeRequired": "At least one release type must be selected for upcoming movies."
+  "AdminReleaseTypeRequired": "At least one release type must be selected for upcoming movies.",
+  "CountdownToday": "Today!",
+  "CountdownDay": "day",
+  "CountdownDays": "days",
+  "CountdownWeek": "week",
+  "CountdownWeeks": "weeks",
+  "CountdownMonth": "month",
+  "CountdownMonths": "months",
+  "CountdownYear": "year",
+  "CountdownYears": "years",
+  "FrequencyWeekly": "1 episode per week",
+  "FrequencyDaily": "1 episode per day"
 }

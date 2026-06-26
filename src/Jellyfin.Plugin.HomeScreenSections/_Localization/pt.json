@@ -1,4 +1,4 @@
-﻿{
+{
   "BecauseYouWatched": "Porque viu {0}",
   "ContinueWatching": "Continuar a ver",
   "ContinueWatchingNextUp": "Continuar a ver / A seguir",
@@ -64,5 +64,23 @@
   "Thriller": "Thriller",
   "TVMovie": "Filme para televisão",
   "War": "Guerra",
-  "Western": "Western"
+  "Western": "Western",
+  "AdminSonarrGroupingOptions": "Opções de Agrupamento do Sonarr",
+  "AdminSonarrGroupNone": "Exibir todos os episódios individualmente (padrão)",
+  "AdminSonarrGroupNoneDesc": "Se selecionado, cada episódio em breve será exibido como um cartão separado no ecrã inicial.",
+  "AdminSonarrGroupUpcoming": "Agrupar próximos episódios por série",
+  "AdminSonarrGroupUpcomingDesc": "Se selecionado, os episódios de uma mesma série serão agrupados num intervalo (ex: S03E01-10) indicando a frequência de lançamento.",
+  "AdminSonarrGroupUpcomingNextOnly": "Exibir apenas o próximo episódio de cada série",
+  "AdminSonarrGroupUpcomingNextOnlyDesc": "Se selecionado, apenas o próximo episódio de cada série será exibido individualmente (ex: S03E01 - [Título]).",
+  "CountdownToday": "Hoje!",
+  "CountdownDay": "dia",
+  "CountdownDays": "dias",
+  "CountdownWeek": "semana",
+  "CountdownWeeks": "semanas",
+  "CountdownMonth": "mês",
+  "CountdownMonths": "meses",
+  "CountdownYear": "ano",
+  "CountdownYears": "anos",
+  "FrequencyWeekly": "1 episódio por semana",
+  "FrequencyDaily": "1 episódio por dia"
 }

@@ -59,6 +59,33 @@
                         </div>
                         <div class="fieldDescription" data-i18n="AdminUpcomingShowsDesc">How far in the future should we look for upcoming episodes?</div>
                     </div>
+                    <div style="margin-top: 15px; margin-bottom: 15px;">
+                        <div class="fieldDescription" style="font-weight: bold; margin-bottom: 8px;" data-i18n="AdminSonarrGroupingOptions">Sonarr Grouping Options</div>
+                        
+                        <div class="radioContainer" style="margin-bottom: 8px;">
+                            <label class="emby-radio-label">
+                                <input type="radio" is="emby-radio" name="sonarrGrouping" id="radSonarrGroupNone" class="emby-radio" />
+                                <span data-i18n="AdminSonarrGroupNone">Show all episodes individually (default)</span>
+                            </label>
+                            <div class="fieldDescription" data-i18n="AdminSonarrGroupNoneDesc" style="margin-left: 28px;">If selected, every upcoming episode will be displayed as a separate card on the home screen.</div>
+                        </div>
+
+                        <div class="radioContainer" style="margin-bottom: 8px;">
+                            <label class="emby-radio-label">
+                                <input type="radio" is="emby-radio" name="sonarrGrouping" id="radSonarrGroupAll" class="emby-radio" />
+                                <span data-i18n="AdminSonarrGroupUpcoming">Group upcoming episodes by series</span>
+                            </label>
+                            <div class="fieldDescription" data-i18n="AdminSonarrGroupUpcomingDesc" style="margin-left: 28px;">If selected, episodes of the same series will be grouped into a range (e.g. S03E01-10) showing the release frequency.</div>
+                        </div>
+
+                        <div class="radioContainer" style="margin-bottom: 8px;">
+                            <label class="emby-radio-label">
+                                <input type="radio" is="emby-radio" name="sonarrGrouping" id="radSonarrGroupNext" class="emby-radio" />
+                                <span data-i18n="AdminSonarrGroupUpcomingNextOnly">Show only the next episode of each series</span>
+                            </label>
+                            <div class="fieldDescription" data-i18n="AdminSonarrGroupUpcomingNextOnlyDesc" style="margin-left: 28px;">If selected, only the single next episode will be displayed individually (e.g. S03E01 - [Title]).</div>
+                        </div>
+                    </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="upcomingMoviesTimeframeValue" data-i18n="AdminUpcomingMoviesTimeframe">Upcoming Movies Timeframe</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
@@ -518,6 +545,11 @@
                     config.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
                 }
 
+                if (serviceConfig.name === 'Sonarr') {
+                    config.GroupUpcoming = document.querySelector('#radSonarrGroupAll').checked;
+                    config.GroupUpcomingNextOnly = document.querySelector('#radSonarrGroupNext').checked;
+                }
+
                 return config;
             }
 
@@ -535,6 +567,19 @@
                     document.querySelector('#radarrConsiderCinemaRelease').checked = arrConfig?.ConsiderCinemaRelease ?? false;
                     document.querySelector('#radarrConsiderPhysicalRelease').checked = arrConfig?.ConsiderPhysicalRelease ?? false;
                     document.querySelector('#radarrConsiderDigitalRelease').checked = arrConfig?.ConsiderDigitalRelease ?? true; // Default
+                }
+
+                if (serviceConfig.name === 'Sonarr') {
+                    const groupUpcoming = arrConfig?.GroupUpcoming ?? false;
+                    const groupUpcomingNextOnly = arrConfig?.GroupUpcomingNextOnly ?? false;
+
+                    if (groupUpcoming) {
+                        document.querySelector('#radSonarrGroupAll').checked = true;
+                    } else if (groupUpcomingNextOnly) {
+                        document.querySelector('#radSonarrGroupNext').checked = true;
+                    } else {
+                        document.querySelector('#radSonarrGroupNone').checked = true;
+                    }
                 }
             }
 
@@ -770,6 +815,7 @@
             }
 
             document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
+
                 setupTabs();
                 loadLibraries();
                 loadConfig();

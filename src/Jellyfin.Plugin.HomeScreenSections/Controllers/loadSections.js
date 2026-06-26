@@ -1,4 +1,4 @@
-﻿function test(elem, apiClient, user, userSettings, page = null) {
+function test(elem, apiClient, user, userSettings, page = null) {
     function isHomePage() {
         var href = (location.href || "");
         var hash = (location.hash || "");
@@ -53,7 +53,7 @@
             var queryParams = {
                 UserId: apiClient.getCurrentUserId(),
                 AdditionalData: sectionInfo.AdditionalData,
-                Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+                Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language') || document.documentElement.lang || navigator.language || 'en'
             };
             
             if (sectionInfo.Section === 'NextUp') {
@@ -465,7 +465,7 @@
         
         var getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
-            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language') || document.documentElement.lang || navigator.language || 'en'
         };
         
         if (window.HssPageMeta.UsePagination) {
