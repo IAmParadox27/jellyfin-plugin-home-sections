@@ -32,6 +32,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly IApplicationPaths m_applicationPaths;
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
 
+        private Dictionary<string, Guid> m_registeredTransforms = new Dictionary<string, Guid>();
+        
         public StartupService(IServerApplicationHost serverApplicationHost, IApplicationPaths applicationPaths, ILogger<HomeScreenSectionsPlugin> logger)
         {
             m_serverApplicationHost = serverApplicationHost;
@@ -64,7 +66,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     string fileName = Path.GetFileName(jsChunk);
                     Regex r = new Regex(@"([^.]+)\.([^.]+)\.chunk.js");
                     
-                    Guid guid = Guid.NewGuid();
+                    Guid guid = m_registeredTransforms.GetValueOrDefault(jsChunk, Guid.NewGuid());
+                    m_registeredTransforms[jsChunk] = guid;
                     m_logger.LogInformation($"Found loadSections in `{fileName}` registering transformation for it with ID '{guid}'");
                     
                     JObject payload = new JObject();
