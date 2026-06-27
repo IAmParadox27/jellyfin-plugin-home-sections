@@ -224,7 +224,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     
                     var episodes = LibraryManager.GetItemList(query);
                     
-                    var lastWatchTime = episodes.Max(y => UserDataManager.GetUserData(user, y)?.LastPlayedDate ?? DateTime.MinValue);
+                    var lastWatchTime = (episodes.Count == 0 ? null : episodes.Max(y => UserDataManager.GetUserData(user, y)?.LastPlayedDate)) ?? DateTime.MinValue;
                     
                     return new
                     {

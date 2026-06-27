@@ -170,7 +170,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 userSectionsData = new UserSectionsData()
                 {
                     UserId = userId,
-                    MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
+                    MaxOrderIndex = groupedOrderedSections.Select(g => g.Key).DefaultIfEmpty(0).Max()
                 };
                 
                 m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData);
