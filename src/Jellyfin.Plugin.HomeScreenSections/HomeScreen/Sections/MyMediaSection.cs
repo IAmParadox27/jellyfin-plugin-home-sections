@@ -102,7 +102,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Landscape,
-                AllowViewModeChange = true // TODO: Change this to allowed view modes
+                AllowViewModeChange = true, // TODO: Change this to allowed view modes
+                PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
             };
         }
     }

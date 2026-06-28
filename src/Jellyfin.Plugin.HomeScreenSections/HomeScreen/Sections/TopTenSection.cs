@@ -119,7 +119,8 @@ public class TopTenSection : IHomeScreenSection
             DisplayTitleText = false,
             ShowDetailsMenu = false,
             ViewMode = SectionViewMode.Portrait,
-            AllowViewModeChange = false
+            AllowViewModeChange = false,
+            PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
         };
     }
 }

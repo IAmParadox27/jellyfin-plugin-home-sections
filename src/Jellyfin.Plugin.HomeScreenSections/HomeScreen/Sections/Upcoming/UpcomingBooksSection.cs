@@ -107,7 +107,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Portrait,
                 AllowViewModeChange = false,
-                ContainerClass = "upcoming-books-section"
+                ContainerClass = "upcoming-books-section",
+                PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
             };
         }
     }

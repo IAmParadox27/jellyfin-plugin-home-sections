@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Model.Plugins;
+﻿using System.Xml.Serialization;
+using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 {
@@ -95,6 +96,50 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public SectionViewMode ViewMode { get; set; } = SectionViewMode.Landscape;
 
         public bool HideWatchedItems { get; set; } = false;
+        
+        [XmlArray("PluginConfigurations")]
+        [XmlArrayItem("Entry")]
+        public PluginConfigurationEntry[] PluginConfigurations { get; set; } = Array.Empty<PluginConfigurationEntry>();
+        
+        public T? GetAdminConfig<T>(string key, T? defaultValue = default)
+        {
+            PluginConfigurationEntry? entry = PluginConfigurations.FirstOrDefault(x => x.Key == key);
+            if (entry?.Value == null) 
+            {
+                return defaultValue;
+            }
+            
+            try
+            {
+                T? result = entry.Type.ToLower() switch
+                {
+                    "boolean" or "bool" or "checkbox" => (T)(object)bool.Parse(entry.Value),
+                    "integer" or "int32" or "int" => (T)(object)int.Parse(entry.Value),
+                    "double" or "number" or "numberbox" => (T)(object)double.Parse(entry.Value),
+                    "decimal" => (T)(object)decimal.Parse(entry.Value),
+                    "string" => (T)(object)entry.Value,
+                    _ => ConvertValue<T>(entry.Value, defaultValue)
+                };
+                
+                return result;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        private static T? ConvertValue<T>(string value, T? defaultValue)
+        {
+            try
+            {
+                return (T?)Convert.ChangeType(value, typeof(T));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
     }
     
     public class ArrConfig

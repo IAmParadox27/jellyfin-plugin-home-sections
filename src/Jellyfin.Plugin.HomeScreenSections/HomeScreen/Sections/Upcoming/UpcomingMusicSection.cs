@@ -108,7 +108,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Square,
                 AllowViewModeChange = false,
-                ContainerClass = "upcoming-music-section"
+                ContainerClass = "upcoming-music-section",
+                PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
             };
         }
     }

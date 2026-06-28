@@ -44,6 +44,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public object? OriginalPayload { get; }
 
         public TranslationMetadata? TranslationMetadata => null;
+
+        public IEnumerable<PluginConfigurationOption> GetPluginConfigurationOptions() => Array.Empty<PluginConfigurationOption>();
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection);
 
@@ -96,6 +98,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public bool AllowHideWatched { get; set; } = false;
         
         public int OrderIndex { get; set; }
+        
+        public required PluginConfigurationOption[] PluginConfigurationOptions { get; set; } = Array.Empty<PluginConfigurationOption>();
     }
 
     public class ModularHomeUserSettings

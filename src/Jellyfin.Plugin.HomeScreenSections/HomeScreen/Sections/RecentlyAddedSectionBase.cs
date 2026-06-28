@@ -57,6 +57,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             m_dtoService = dtoService;
             m_serviceProvider = serviceProvider;
         }
+        
+        public IEnumerable<PluginConfigurationOption> GetPluginConfigurationOptions()
+        {
+            foreach (PluginConfigurationOption option in GetPluginConfigurationOptionsInternal())
+            {
+                yield return option;
+            }
+        }
+        
+        protected virtual IEnumerable<PluginConfigurationOption> GetPluginConfigurationOptionsInternal()
+        {
+            yield break;
+        }
 
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
@@ -88,7 +101,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .Where(x => x.CollectionType == CollectionTypeOptions)
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            IEnumerable<BaseItem> recentlyAddedItems = GetItems(user, dtoOptions, folders, isPlayed);
+            IEnumerable<BaseItem> recentlyAddedItems = GetItems(user, dtoOptions, folders, isPlayed, payload);
             
             return new QueryResult<BaseItemDto>(Array.ConvertAll(recentlyAddedItems.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
@@ -109,6 +122,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             Folder? folder = !string.IsNullOrEmpty(LibraryId)
                 ? itemFolders.FirstOrDefault(x => x.Id.ToString() == LibraryId)
                 : null;
+
+            bool collateLibraries = HomeScreenSectionPayload.GetEffectiveBoolConfig(Section ?? string.Empty, "collateLibraries", true);
             
             folder ??= itemFolders.FirstOrDefault();
             
@@ -141,11 +156,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
                 ViewMode = DefaultViewMode,
-                AllowHideWatched = true
+                AllowHideWatched = true,
+                PluginConfigurationOptions = GetPluginConfigurationOptions().ToArray()
             };
         }
 
-        protected virtual IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed)
+        protected virtual IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed, HomeScreenSectionPayload payload)
         {
             // Default behaviour is to get the 16 most recently added items from each library that matches, then order that by date created and take 16.
             // The reason we do this is to ensure that we always get 16 items, even if there is only 1 library that matches our type.

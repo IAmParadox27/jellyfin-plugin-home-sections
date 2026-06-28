@@ -130,7 +130,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Landscape,
                 AllowViewModeChange = true, // TODO: Change this to allowed view modes
-                AllowHideWatched = true
+                AllowHideWatched = true,
+                PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
             };
         }
     }

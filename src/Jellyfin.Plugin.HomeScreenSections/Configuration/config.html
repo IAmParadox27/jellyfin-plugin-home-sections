@@ -421,8 +421,60 @@
                 </select>
             </td>
         </tr>
+        <tr data-id="pluginConfigurationOptionsWrapper" style="display: none;">
+            <td colspan="8">
+                <table style="width: 100%; padding-left: 100px;">
+                    <thead style="font-weight: bold;">
+                        <tr>
+                            <td style="width: 50%" data-i18n="AdminPerSectionSetting_Configuration">Configuration</td>
+                            <td style="width: 50%" data-i18n="AdminPerSectionSetting_Value">Value</td>
+                        </tr>
+                    </thead>
+                    <tbody data-id="pluginConfigurationOptionsContainer"></tbody>
+                </table>
+            </td>
+        </tr>
     </template>
 
+    <template id="pluginConfigurationOptionTemplate_Checkbox">
+        <tr>
+            <td data-id="label"></td>
+            <td>
+                <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top: 1px;">
+                    <label class="emby-checkbox-label">
+                        <input data-id="value" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
+                        <span class="checkboxLabel"></span>
+                        <span class="checkboxOutline">
+                            <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
+                            <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
+                        </span>
+                    </label>
+                </div>
+            </td>
+        </tr>
+    </template>
+
+    <template id="pluginConfigurationOptionTemplate_Dropdown">
+        <tr>
+            <td data-id="label"></td>
+            <td><select is="emby-select" class="emby-select-withcolor emby-select" style="width: 100%; text-align: center;" data-id="value"></select></td>
+        </tr>
+    </template>
+
+    <template id="pluginConfigurationOptionTemplate_TextBox">
+        <tr>
+            <td data-id="label"></td>
+            <td><input type="text" style="width: 100%; " data-id="value" /></td>
+        </tr>
+    </template>
+
+    <template id="pluginConfigurationOptionTemplate_NumberBox">
+        <tr>
+            <td data-id="label"></td>
+            <td><input type="number" style="width: 100%; " data-id="value" /></td>
+        </tr>
+    </template>
+    
     <script type="text/javascript">
         (() => {
             // Plugin GUID for configuration API
@@ -563,8 +615,11 @@
             }
 
             function addSectionSetting(sectionConfig, sectionInfo) {
+                console.log('Adding section setting for', sectionConfig.name, sectionInfo);
+                
                 const sectionWrapper = document.querySelector('#sectionWrapper');
                 const template = document.querySelector('#sectionConfigTemplate').content.cloneNode(true);
+                const configOptions = template.querySelector('[data-id=pluginConfigurationOptionsContainer]');
 
                 template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
                 template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
@@ -588,6 +643,41 @@
                     hideWatchedCheckbox.setAttribute('disabled', true);
                     hideWatchedLabel.style.opacity = '0.5';
                     hideWatchedLabel.style.cursor = 'default';
+                }
+                
+                sectionInfo.PluginConfigurationOptions.forEach(option => {
+                    const configOptionTemplate = document.querySelector(`#pluginConfigurationOptionTemplate_` + option.Type).content.cloneNode(true);
+                    const label = configOptionTemplate.querySelector('[data-id=label]');
+                    label.innerText = option.Name
+                    label.setAttribute('data-key', option.Key);
+                    label.setAttribute('data-i18n', option.TranslationKey);
+                    
+                    const configEntry = sectionConfig.PluginConfigurations.find((config) => config.Key === option.Key);
+                    
+                    if (option.Type === 'Checkbox') {
+                        const configOptionCheckbox = configOptionTemplate.querySelector('[data-id=value]');
+                        configOptionCheckbox.checked = (configEntry?.Value ?? option.DefaultValue.toString()).toLowerCase() === 'true';
+                    } else if (option.Type === 'Dropdown') {
+                        const configOptionDropdown = configOptionTemplate.querySelector('[data-id=value]');
+                        for (const key in option.DropdownOptions) {
+                            const optionEl = document.createElement('option');
+                            optionEl.value = key;
+                            optionEl.innerText = option.DropdownOptions[key];
+                            optionEl.setAttribute('data-i18n', option.TranslationKey + '_' + key);
+                            configOptionDropdown.appendChild(optionEl);
+                        }
+                        
+                        configOptionDropdown.value = configEntry?.Value ?? option.DefaultValue;
+                    } else {
+                        const configOptionInput = configOptionTemplate.querySelector('[data-id=value]');
+                        configOptionInput.value = configEntry?.Value ?? option.DefaultValue;
+                    }
+
+                    configOptions.appendChild(configOptionTemplate);
+                })
+                
+                if (sectionInfo.PluginConfigurationOptions.length > 0) {
+                    template.querySelector('[data-id=pluginConfigurationOptionsWrapper]').style.display = 'table-row';
                 }
 
                 sectionWrapper.appendChild(template);
@@ -676,7 +766,36 @@
                     SectionSettings: []
                 };
 
-                document.querySelectorAll('#sectionWrapper tr').forEach(row => {
+                document.querySelectorAll('#sectionWrapper tr[data-id=section-config]').forEach(row => {
+                    const rowOptions = $(row).next()[0];
+                    let configEntries = [];
+                    
+                    if (rowOptions) {
+                        rowOptions.querySelectorAll('[data-id=pluginConfigurationOptionsContainer] tr').forEach(option => {
+                            const key = option.querySelector('[data-id=label]').attributes['data-key'].value;
+                            const valueInput = option.querySelector('[data-id=value]');
+                            
+                            let value = undefined;
+                            let type = 'string';
+                            if (valueInput.type === 'checkbox') {
+                                type = 'boolean';
+                                value = valueInput.checked;
+                            } else {
+                                value = valueInput.value;
+                                
+                                if (valueInput.type === 'number') {
+                                    type = 'decimal';
+                                }
+                            }
+                            
+                            configEntries.push({ 
+                                Key: key, 
+                                Value: value,
+                                Type: type
+                            });
+                        })
+                    }
+                    
                     const sectionConfig = {
                         SectionId: row.querySelector('[data-id=hiddenSectionId]').value,
                         Enabled: row.querySelector('[data-id=chkSectionEnabled]').checked,
@@ -686,6 +805,7 @@
                         OrderIndex: row.querySelector('[data-id=txtOrderIndex]').value,
                         ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
                         HideWatchedItems: row.querySelector('[data-id=chkHideWatchedItems]').checked,
+                        PluginConfigurations: configEntries
                     };
                     config.SectionSettings.push(sectionConfig);
                 });
@@ -757,7 +877,8 @@
                                         UpperLimit: sectionType.Limit,
                                         ViewMode: sectionType.ViewMode,
                                         OrderIndex: 999,
-                                        HideWatchedItems: false
+                                        HideWatchedItems: false,
+                                        PluginConfigurations: []
                                     };
                                 }
                                 addSectionSetting(sectionConfig, sectionType);
