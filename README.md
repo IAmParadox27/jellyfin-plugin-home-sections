@@ -38,7 +38,9 @@ These vanilla sections are listed here:
 - Next Up
 	- Same as vanilla Jellyfin
 - Recently Added Media
-	- Mostly the same as vanilla Jellyfin, current exception is that all libraries appear in 1 section rather than unique ones per library. This vanilla behaviour is being worked on and will soon be supported.
+	- Mostly the same as vanilla Jellyfin, current exceptions:
+ 		- all libraries appear in 1 section rather than unique ones per library. This vanilla behaviour is being worked on and will soon be supported.
+   		- it does not currently pick up individual newly episodes
 - Live TV
 	- Mostly the same as vanilla Jellyfin. _Current State is untested since updating to 10.10.3 so may find that there are issues_
 
@@ -81,12 +83,13 @@ The sections that are new for this plugin (and most likely the reason you would 
 
 ### Installation
 1. Add `https://www.iamparadox.dev/jellyfin/plugins/manifest.json` to your plugin repositories.
-2. Install `Home Screen Sections` from the Catalogue.
-3. Restart Jellyfin.
-4. On the user's homepage, open the hamburger menu and you should see a link for settings to "Modular Home". Click this.
-5. At the top there is a button to enable support and it will retrieve all sections that are available on your instance. Select all that apply.
-6. Save the settings. _Please note currently the user is not provided any feedback when the settings are saved_.
-7. Force refresh your webpage (or app) and you should see your new sections instead of the original ones.
+2. Ensure the [prerequisites](#prerequisites) are installed - they are also in the above repository
+3. Install `Home Screen Sections` from the Catalogue.
+4. Restart Jellyfin.
+5. On the user's homepage, open the hamburger menu and you should see a link for settings to "Modular Home". Click this.
+6. At the top there is a button to enable support and it will retrieve all sections that are available on your instance. Select all that apply.
+7. Save the settings. _Please note currently the user is not provided any feedback when the settings are saved_.
+8. [Hard refresh](#faq) your webpage (or app) and you should see your new sections instead of the original ones.
 ## Upcoming Features/Known Issues
 If you find an issue with any of the sections or usage of the plugin, please open an issue on GitHub.
 
@@ -102,17 +105,11 @@ The likelihood is the plugin hasn't been updated for that version of Jellyfin an
 <details>
 	<summary><strong>I've installed the plugins and don't get any options or changes. How do I fix?</strong></summary>
 
-This is common, particularly on a fresh install. The first thing you should try is the following
-1. Launch your browsers developer tools
+This is common, particularly on a fresh install. Clearing the cache should solve that.
 
-![image](https://github.com/user-attachments/assets/e8781a69-464e-430e-a07c-5172a620ef84)
+That can be achived in different ways.
 
-3. Open the **Network** tab across the top bar
-4. Check the **Disable cache** checkbox
-5. Refresh the page **while the dev tools are still open**
-
-![image](https://github.com/user-attachments/assets/6f8c3fc7-89a3-4475-b8a6-cd4a58d51b84)
-
+The easiest way is a hard refresh, this can be done - **on the Jellyfin home page** - via `Ctrl(Cmd) + Shift + R` on most browsers, you can look it up for your browser and and OS.
 </details>
 
 <details>
