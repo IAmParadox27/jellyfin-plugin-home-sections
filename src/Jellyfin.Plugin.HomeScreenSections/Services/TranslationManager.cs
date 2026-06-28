@@ -135,7 +135,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public void UpdateTranslationPack(string language, JObject translationPack)
         {
-            m_translationPacks[language] = translationPack;
+            if (m_translationPacks.TryAdd(language, translationPack))
+            {
+                return;
+            }
+            
+            foreach (KeyValuePair<string, JToken?> keyValue in translationPack)
+            {
+                m_translationPacks[language][keyValue.Key] = keyValue.Value;
+            }
         }
 
         public IDictionary<string, string>? GetTranslationPack(string language)

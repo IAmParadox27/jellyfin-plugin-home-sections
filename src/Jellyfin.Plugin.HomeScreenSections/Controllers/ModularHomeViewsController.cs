@@ -69,7 +69,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 if (!string.IsNullOrWhiteSpace(language) && item.DisplayText != null)
                 {
                     item.DisplayText = m_translationManager.Translate(
-                        item.Section!, language.Trim(), item.DisplayText, section.TranslationMetadata);
+                        item.AdminTranslationKey ?? item.Section!, language.Trim(), "Genre Section", section.TranslationMetadata);
                 }
 
                 items.Add(item);

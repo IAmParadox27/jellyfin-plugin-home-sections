@@ -73,6 +73,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 
     public class HomeScreenSectionInfo
     {
+        public string? AdminTranslationKey { get; set; } = null;
+        
         public string? Section { get; set; }
 
         public string? DisplayText { get; set; }

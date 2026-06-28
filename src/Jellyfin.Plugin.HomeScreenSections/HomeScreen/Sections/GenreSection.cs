@@ -329,6 +329,7 @@ public class GenreSection : IHomeScreenSection
         return new HomeScreenSectionInfo
         {
             Section = Section,
+            AdminTranslationKey = "GenreSectionName",
             DisplayText = DisplayText,
             AdditionalData = AdditionalData,
             Route = Route,
