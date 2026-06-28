@@ -206,5 +206,10 @@
   "AdminReleaseTypeRequired": "At least one release type must be selected for upcoming movies.",
 
   "AdminPerSectionSetting_Configuration": "Configuration",
-  "AdminPerSectionSetting_Value": "Value"
+  "AdminPerSectionSetting_Value": "Value",
+
+  "AdminRecentlyAddedShowsItemTypeDropdown": "Item Type",
+  "AdminRecentlyAddedShowsItemTypeDropdown_Desc": "What type of item do you want to display?",
+  "AdminRecentlyAddedShowsItemTypeDropdown_shows": "Shows",
+  "AdminRecentlyAddedShowsItemTypeDropdown_episodes": "Episodes"
 }

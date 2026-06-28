@@ -1,5 +1,7 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
+using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -41,7 +43,35 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
             m_logger = logger;
         }
 
-        protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed)
+        protected override IEnumerable<PluginConfigurationOption> GetPluginConfigurationOptionsInternal()
+        {
+            yield return PluginConfigurationHelper.CreateDropdown("itemType", "Item Type",
+                "What type of item do you want to display?", new Dictionary<string, string>()
+                {
+                    { "shows", "Shows" },
+                    { "episodes", "Episodes" }
+                }, "AdminRecentlyAddedShowsItemTypeDropdown", "shows", true);
+        }
+
+        protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed, HomeScreenSectionPayload payload)
+        {
+            string itemType = HomeScreenSectionPayload.GetEffectiveStringConfig(Section ?? string.Empty, "itemType", "shows");
+
+            if (itemType == "shows")
+            {
+                return GetShowItems(user, dtoOptions, folders, isPlayed);
+            }
+
+            if (itemType == "episodes")
+            {
+                return GetEpisodeItems(user, dtoOptions, folders, isPlayed);
+            }
+            
+            return Enumerable.Empty<BaseItem>();
+        }
+
+        private IEnumerable<BaseItem> GetShowItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders,
+            bool? isPlayed)
         {
             IEnumerable<BaseItem> candidateShows = folders.SelectMany(x =>
             {
@@ -75,6 +105,37 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 .ToArray()
                 .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
                 .Take(16);
+        }
+
+        private IEnumerable<BaseItem> GetEpisodeItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders,
+            bool? isPlayed)
+        {
+            return folders.SelectMany(x =>
+            {
+                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                if (item is not Folder folder)
+                {
+                    folder = m_libraryManager.GetUserRootFolder();
+                }
+
+                return folder.GetItems(new InternalItemsQuery(user)
+                {
+                    IncludeItemTypes = new[]
+                    {
+                        BaseItemKind.Episode
+                    },
+                    DtoOptions = dtoOptions,
+                    IsPlayed = isPlayed,
+                    OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+                    Limit = 16,
+                    IsMissing = false,
+                    Recursive = true,
+                    ParentId = folder.Id
+                }).Items;
+            }).DistinctBy(x => x.Id)
+            .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
+            .Take(16);
         }
 
         protected override DateTime GetSortDateForItem(BaseItem item, User? user, DtoOptions dtoOptions)
