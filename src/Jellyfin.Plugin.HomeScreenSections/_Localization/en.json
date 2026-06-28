@@ -118,6 +118,8 @@
   "AdminReadarrUrlDesc": "Complete URL for Readarr to use for upcoming books sections.",
   "AdminReadarrApiKey": "Readarr API Key",
   "AdminReadarrApiKeyDesc": "API Key for Readarr instance.",
+  "AdminFilterUpcomingByLibraryAccess": "Filter Upcoming Sections by Library Access",
+  "AdminFilterUpcomingByLibraryAccessDesc": "When enabled, upcoming items are hidden from users who don't have access to the library the items belong to. Relies on matching the *arr root folder path against your Jellyfin library paths, so this only works if Jellyfin and your *arr instances use the same paths.",
 
   "AdminLibreTranslate": "LibreTranslate",
   "AdminLibreTranslateUrl": "LibreTranslate URL",
