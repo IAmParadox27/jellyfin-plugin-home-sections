@@ -184,6 +184,13 @@
                                     <input is="emby-input" type="password" data-id="txtReadarrApiKey" data-i18n-label="AdminReadarrApiKey" label="Readarr API Key" />
                                     <div class="fieldDescription" data-i18n="AdminReadarrApiKeyDesc">API Key for Readarr instance.</div>
                                 </div>
+                                <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top: 1em;">
+                                    <label class="emby-checkbox-label">
+                                        <input id="filterUpcomingByLibraryAccess" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                        <span data-i18n="AdminFilterUpcomingByLibraryAccess">Filter Upcoming Sections by Library Access</span>
+                                    </label>
+                                    <div class="fieldDescription" data-i18n="AdminFilterUpcomingByLibraryAccessDesc">When enabled, upcoming items are hidden from users who don't have access to the library the items belong to. Relies on matching the *arr root folder path against your Jellyfin library paths, so this only works if Jellyfin and your *arr instances use the same paths.</div>
+                                </div>
                             </div>
                         </details>
                         <details style="margin-bottom: 1em;">
@@ -667,6 +674,7 @@
                     ])),
                     DateFormat: document.querySelector('#dateFormat').value,
                     DateDelimiter: document.querySelector('#dateDelimiter').value,
+                    FilterUpcomingByLibraryAccess: document.querySelector('#filterUpcomingByLibraryAccess').checked,
                     DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
                     CacheTimeoutSeconds: document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || 86400,
                     MaxImageCacheEntries: parseInt(document.querySelector('[data-id=txtMaxImageCacheEntries]').value) || 10000,
@@ -716,6 +724,7 @@
                         });
                         document.querySelector('#dateFormat').value = config.DateFormat || 'YYYY/MM/DD';
                         document.querySelector('#dateDelimiter').value = config.DateDelimiter || '/';
+                        document.querySelector('#filterUpcomingByLibraryAccess').checked = config.FilterUpcomingByLibraryAccess !== false;
 
                         document.querySelector('#globalStreamyfinHomeOverride').checked = config.OverrideStreamyfinHome;
                         document.querySelector('#globalDeveloperMode').checked = config.DeveloperMode;

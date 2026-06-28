@@ -24,6 +24,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
     {
         [JsonPropertyName("artistName")]
         public string? ArtistName { get; set; }
+
+        [JsonPropertyName("path")]
+        public string? Path { get; set; }
     }
 
     public class LidarrStatisticsDto

@@ -45,6 +45,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string DateFormat { get; set; } = "YYYY/MM/DD";
 
         public string DateDelimiter { get; set; } = "/";
+
+        public bool FilterUpcomingByLibraryAccess { get; set; } = true;
+
         public bool DeveloperMode { get; set; } = false;
 
         public int CacheBustCounter { get; set; } = 0;
