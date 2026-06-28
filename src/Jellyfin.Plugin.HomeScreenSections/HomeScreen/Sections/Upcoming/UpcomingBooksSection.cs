@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Books";
 
-        public UpcomingBooksSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingBooksSection> logger)
-            : base(userManager, dtoService, arrApiService, imageCacheService, logger)
+        public UpcomingBooksSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingBooksSection> logger)
+            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, logger)
         {
         }
 
@@ -41,6 +41,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 .Where(item => item.Monitored && !item.HasFile && item.ReleaseDate.HasValue)
                 .OrderBy(item => item.ReleaseDate);
         }
+
+        protected override string? GetItemPath(ReadarrCalendarDto item) => item.Author?.Path;
 
         protected override string GetFallbackCoverUrl(ReadarrCalendarDto missingItem)
         {
@@ -87,7 +89,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingBooksSection(UserManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingBooksSection>)Logger)
+            yield return new UpcomingBooksSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingBooksSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
