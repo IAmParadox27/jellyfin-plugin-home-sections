@@ -23,7 +23,31 @@ public static class MiscExtensions
 
     public static VirtualFolderInfo[] FilterToUserPermitted(this IEnumerable<VirtualFolderInfo> folders, ILibraryManager libraryManager, User? user)
     {
-        IEnumerable<VirtualFolderInfo> filtered = folders;
+        IReadOnlyList<BaseItem> collectionFolders = libraryManager.GetItemsResult(new InternalItemsQuery()
+        {
+            IncludeItemTypes = new[]
+            {
+                BaseItemKind.CollectionFolder
+            }
+        }).Items;
+        
+        IEnumerable<VirtualFolderInfo> filtered = folders
+            .Select(x =>
+            {
+                BaseItem? collectionFolder = collectionFolders.FirstOrDefault(y => y.Name == x.Name);
+
+                return new VirtualFolderInfo()
+                {
+                    Name = x.Name,
+                    CollectionType = x.CollectionType,
+                    LibraryOptions = x.LibraryOptions,
+                    Locations = x.Locations,
+                    PrimaryImageItemId = x.PrimaryImageItemId,
+                    RefreshProgress = x.RefreshProgress,
+                    RefreshStatus = x.RefreshStatus,
+                    ItemId = x.ItemId ?? collectionFolder?.Id.ToString() ?? Guid.Empty.ToString()
+                };
+            });
 
         if (user != null)
         {
