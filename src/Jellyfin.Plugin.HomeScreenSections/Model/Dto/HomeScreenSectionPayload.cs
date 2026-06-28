@@ -8,8 +8,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
         public string? AdditionalData { get; set; }
         
-        private static readonly Dictionary<string, object?> m_pluginConfigCache = new Dictionary<string, object?>();
-
         public static T GetEffectiveConfig<T>(string sectionId, string configurationKey, T defaultValue = default(T)!)
         {
             if (string.IsNullOrEmpty(sectionId) || string.IsNullOrEmpty(configurationKey))
@@ -19,20 +17,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
             PluginConfiguration? adminConfig = HomeScreenSectionsPlugin.Instance?.Configuration;
             SectionSettings? sectionSettings = adminConfig?.SectionSettings?.FirstOrDefault(s => s.SectionId == sectionId);
-
-            string cacheKey = $"{sectionId}:{configurationKey}";
-
-            if (m_pluginConfigCache.TryGetValue(cacheKey, out object? cachedValue))
-            {
-                try
-                {
-                    return (T)Convert.ChangeType(cachedValue, typeof(T))!;
-                }
-                catch
-                {
-                    return defaultValue;
-                }
-            }
 
             object? effectiveValue = null;
 
@@ -46,8 +30,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
             }
 
             effectiveValue ??= defaultValue;
-
-            m_pluginConfigCache[cacheKey] = effectiveValue;
 
             try
             {
