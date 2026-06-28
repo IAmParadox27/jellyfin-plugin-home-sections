@@ -89,7 +89,7 @@ The sections that are new for this plugin (and most likely the reason you would 
 5. On the user's homepage, open the hamburger menu and you should see a link for settings to "Modular Home". Click this.
 6. At the top there is a button to enable support and it will retrieve all sections that are available on your instance. Select all that apply.
 7. Save the settings. _Please note currently the user is not provided any feedback when the settings are saved_.
-8. Force refresh your webpage (or app) and you should see your new sections instead of the original ones.
+8. [Hard refresh](#faq) your webpage (or app) and you should see your new sections instead of the original ones.
 ## Upcoming Features/Known Issues
 If you find an issue with any of the sections or usage of the plugin, please open an issue on GitHub.
 
