@@ -24,7 +24,9 @@ namespace Jellyfin.Plugin.HomeScreenSections
         public static HomeScreenSectionsPlugin Instance { get; private set; } = null!;
         
         internal IServiceProvider ServiceProvider { get; set; }
-    
+        
+        internal Dictionary<string, bool> CollectionFolderMixedStatus { get; set; } = new Dictionary<string, bool>();
+        
         public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, IHomeScreenManager homeScreenManager, ITranslationManager translationManager) : base(applicationPaths, xmlSerializer)
         {
             int pluginPageConfigVersion = 1;

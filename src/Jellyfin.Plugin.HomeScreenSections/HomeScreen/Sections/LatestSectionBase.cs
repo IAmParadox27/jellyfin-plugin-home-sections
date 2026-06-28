@@ -79,7 +79,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
             VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                .Where(x => x.CollectionType == CollectionTypeOptions)
+                .Where(x => x.CollectionType == CollectionTypeOptions || x.IsMixedFolder(m_libraryManager))
                 .FilterToUserPermitted(m_libraryManager, user);
 
             List<(BaseItem Item, DateTime? PremiereDate)> selectedItems = new List<(BaseItem, DateTime?)>();

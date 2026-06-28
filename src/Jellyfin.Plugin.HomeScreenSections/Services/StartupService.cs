@@ -11,6 +11,10 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -30,14 +34,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         
         private readonly IServerApplicationHost m_serverApplicationHost;
         private readonly IApplicationPaths m_applicationPaths;
+        private readonly ILibraryManager m_libraryManager;
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
 
         private Dictionary<string, Guid> m_registeredTransforms = new Dictionary<string, Guid>();
-        
-        public StartupService(IServerApplicationHost serverApplicationHost, IApplicationPaths applicationPaths, ILogger<HomeScreenSectionsPlugin> logger)
+
+        public StartupService(IServerApplicationHost serverApplicationHost, 
+            IApplicationPaths applicationPaths, 
+            ILibraryManager libraryManager,
+            ILogger<HomeScreenSectionsPlugin> logger)
         {
             m_serverApplicationHost = serverApplicationHost;
             m_applicationPaths = applicationPaths;
+            m_libraryManager = libraryManager;
             m_logger = logger;
         }
 
@@ -95,6 +104,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                         pluginInterfaceType.GetMethod("RegisterTransformation")?.Invoke(null, new object?[] { payload });
                     }
                 }
+            }
+
+            List<VirtualFolderInfo> libraries = m_libraryManager.GetVirtualFolders();
+
+            foreach (VirtualFolderInfo library in libraries)
+            {
+                HomeScreenSectionsPlugin.Instance.CollectionFolderMixedStatus[library.Name] =
+                    library.IsMixedFolder(m_libraryManager);
             }
         }
 

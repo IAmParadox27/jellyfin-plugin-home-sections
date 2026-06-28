@@ -97,7 +97,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             // === Process Movies ===
             {
                 VirtualFolderInfo[] movieFolders = LibraryManager.GetVirtualFolders()
-                    .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+                    .Where(x => x.CollectionType == CollectionTypeOptions.movies || x.IsMixedFolder(LibraryManager))
                     .FilterToUserPermitted(LibraryManager, user);
 
                 var playedMovies = movieFolders.SelectMany(x =>
@@ -133,7 +133,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             // Phase 1: Get candidates from played episodes
             {
                 VirtualFolderInfo[] tvFolders = LibraryManager.GetVirtualFolders()
-                    .Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
+                    .Where(x => x.CollectionType == CollectionTypeOptions.tvshows || x.IsMixedFolder(LibraryManager))
                     .FilterToUserPermitted(LibraryManager, user);
 
                 var candidateShows = tvFolders.SelectMany(x =>

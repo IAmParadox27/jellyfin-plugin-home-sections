@@ -21,6 +21,47 @@ public static class MiscExtensions
             }) as IEnumerable<BoxSet> ?? Enumerable.Empty<BoxSet>();
     }
 
+    public static bool IsMixedFolder(this VirtualFolderInfo folder, ILibraryManager libraryManager)
+    {
+        if (HomeScreenSectionsPlugin.Instance.CollectionFolderMixedStatus.TryGetValue(folder.Name, out bool mixedFolder))
+        {
+            return mixedFolder;
+        }
+        
+        IReadOnlyList<BaseItem> collectionFolders = libraryManager.GetItemsResult(new InternalItemsQuery()
+        {
+            IncludeItemTypes = new[]
+            {
+                BaseItemKind.CollectionFolder
+            }
+        }).Items;
+        
+        BaseItem? collectionFolder = collectionFolders.FirstOrDefault(x => x.Name == folder.Name);
+
+        bool hasEpisodes = libraryManager.GetItemsResult(new InternalItemsQuery()
+        {
+            IncludeItemTypes = new[]
+            {
+                BaseItemKind.Episode
+            },
+            Limit = 1,
+            ParentId = collectionFolder?.Id ?? Guid.Empty,
+            Recursive = true
+        }).Items.Any();
+        bool hasMovies = libraryManager.GetItemsResult(new InternalItemsQuery()
+        {
+            IncludeItemTypes = new[]
+            {
+                BaseItemKind.Movie
+            },
+            Limit = 1,
+            ParentId = collectionFolder?.Id ?? Guid.Empty,
+            Recursive = true
+        }).Items.Any();
+        
+        return hasEpisodes && hasMovies;
+    }
+
     public static VirtualFolderInfo[] FilterToUserPermitted(this IEnumerable<VirtualFolderInfo> folders, ILibraryManager libraryManager, User? user)
     {
         IReadOnlyList<BaseItem> collectionFolders = libraryManager.GetItemsResult(new InternalItemsQuery()

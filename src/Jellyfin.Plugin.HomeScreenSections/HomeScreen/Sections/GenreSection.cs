@@ -196,7 +196,7 @@ public class GenreSection : IHomeScreenSection
         int scorePerPlay = 1;
 
         VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-            .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+            .Where(x => x.CollectionType == CollectionTypeOptions.movies || x.IsMixedFolder(m_libraryManager))
             .FilterToUserPermitted(m_libraryManager, user);
 
         // Build a list of parent folder IDs for querying

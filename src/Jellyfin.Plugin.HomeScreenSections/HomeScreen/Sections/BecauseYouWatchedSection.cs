@@ -170,7 +170,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
             VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
-	            .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+	            .Where(x => x.CollectionType == CollectionTypeOptions.movies || x.IsMixedFolder(LibraryManager))
 	            .FilterToUserPermitted(LibraryManager, user);
             
             IList<BaseItem>? similar = folders.SelectMany(x =>
