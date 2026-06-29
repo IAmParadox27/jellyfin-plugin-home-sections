@@ -25,14 +25,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected IDtoService DtoService { get; }
         protected ArrApiService ArrApiService { get; }
         protected ImageCacheService ImageCacheService { get; }
+        protected ITranslationManager TranslationManager { get; }
         protected ILogger Logger { get; }
 
-        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger logger)
+        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger logger)
         {
             UserManager = userManager;
             DtoService = dtoService;
             ArrApiService = arrApiService;
             ImageCacheService = imageCacheService;
+            TranslationManager = translationManager;
             Logger = logger;
         }
 
@@ -91,49 +93,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             DateTime releaseDateLocal = releaseDate.ToLocalTime();
             // Calculate the difference in calendar days
             int totalDays = (releaseDateLocal.Date - DateTime.Now.Date).Days;
-
-            var translationManager = (ITranslationManager?)HomeScreenSectionsPlugin.Instance?.ServiceProvider?.GetService(typeof(ITranslationManager));
-
-            string GetTranslation(string key, string fallbackText)
-            {
-                if (translationManager != null)
-                {
-                    return translationManager.Translate(key, language, fallbackText);
-                }
-                return fallbackText;
-            }
             
             string countdownText = totalDays switch
             {
-                <= 0 => GetTranslation("CountdownToday", "Today!"),
-                < 7  => $"{totalDays} {GetTranslation(totalDays == 1 ? "CountdownDay" : "CountdownDays", totalDays == 1 ? "day" : "days")}",
-                < 30 => FormatTimeUnit(totalDays / 7, totalDays % 7, "Week", "Day", language, translationManager),
-                < 365 => FormatTimeUnit(totalDays / 30, (totalDays % 30) / 7, "Month", "Week", language, translationManager),
-                _ => FormatTimeUnit(totalDays / 365, (totalDays % 365) / 30, "Year", "Month", language, translationManager)
+                <= 0 => TranslationManager.Translate("CountdownToday", language, "Today!"),
+                < 7  => $"{totalDays} {TranslationManager.Translate(totalDays == 1 ? "CountdownDay" : "CountdownDays", language, totalDays == 1 ? "day" : "days")}",
+                < 30 => FormatTimeUnit(totalDays / 7, totalDays % 7, "Week", "Day", language),
+                < 365 => FormatTimeUnit(totalDays / 30, (totalDays % 30) / 7, "Month", "Week", language),
+                _ => FormatTimeUnit(totalDays / 365, (totalDays % 365) / 30, "Year", "Month", language)
             };
 
             return $"{countdownText} - {ArrApiService.FormatDate(releaseDateLocal, config.DateFormat, config.DateDelimiter)}";
         }
 
-        private static string FormatTimeUnit(int primaryValue, int secondaryValue, string primaryUnit, string secondaryUnit, string language, ITranslationManager? translationManager)
+        private string FormatTimeUnit(int primaryValue, int secondaryValue, string primaryUnit, string secondaryUnit, string language)
         {
-            string GetTranslation(string key, string fallbackText)
-            {
-                if (translationManager != null)
-                {
-                    return translationManager.Translate(key, language, fallbackText);
-                }
-                return fallbackText;
-            }
-
             string primaryUnitPlural = primaryUnit + "s";
-            string primaryTranslatedUnit = primaryValue == 1 ? GetTranslation($"Countdown{primaryUnit}", primaryUnit) : GetTranslation($"Countdown{primaryUnitPlural}", primaryUnitPlural);
+            string primaryTranslatedUnit = primaryValue == 1 ? TranslationManager.Translate($"Countdown{primaryUnit}", language, primaryUnit) : TranslationManager.Translate($"Countdown{primaryUnitPlural}", language, primaryUnitPlural);
             string primaryText = $"{primaryValue} {primaryTranslatedUnit}";
             
             if (secondaryValue > 0)
             {
                 string secondaryUnitPlural = secondaryUnit + "s";
-                string secondaryTranslatedUnit = secondaryValue == 1 ? GetTranslation($"Countdown{secondaryUnit}", secondaryUnit) : GetTranslation($"Countdown{secondaryUnitPlural}", secondaryUnitPlural);
+                string secondaryTranslatedUnit = secondaryValue == 1 ? TranslationManager.Translate($"Countdown{secondaryUnit}", language, secondaryUnit) : TranslationManager.Translate($"Countdown{secondaryUnitPlural}", language, secondaryUnitPlural);
                 string secondaryText = $"{secondaryValue} {secondaryTranslatedUnit}";
                 return $"{primaryText}, {secondaryText}";
             }

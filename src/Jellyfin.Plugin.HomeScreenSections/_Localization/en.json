@@ -221,5 +221,8 @@
   "CountdownYear": "year",
   "CountdownYears": "years",
   "FrequencyWeekly": "1 episode per week",
-  "FrequencyDaily": "1 episode per day"
+  "FrequencyDaily": "1 episode per day",
+  "TBA": "TBA",
+  "TBD": "TBD",
+  "TDA": "TDA"
 }

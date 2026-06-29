@@ -82,5 +82,8 @@
   "CountdownYear": "ano",
   "CountdownYears": "anos",
   "FrequencyWeekly": "1 episódio por semana",
-  "FrequencyDaily": "1 episódio por dia"
+  "FrequencyDaily": "1 episódio por dia",
+  "TBA": "A ser anunciado",
+  "TBD": "A ser determinado",
+  "TDA": "A ser anunciado"
 }

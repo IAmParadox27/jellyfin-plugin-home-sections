@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Shows";
 
-        public UpcomingShowsSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingShowsSection> logger)
-            : base(userManager, dtoService, arrApiService, imageCacheService, logger)
+        public UpcomingShowsSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger<UpcomingShowsSection> logger)
+            : base(userManager, dtoService, arrApiService, imageCacheService, translationManager, logger)
         {
         }
 
@@ -77,17 +77,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         private string DetermineGroupFrequency(List<SonarrCalendarDto> group, string language)
         {
-            var translationManager = (ITranslationManager?)HomeScreenSectionsPlugin.Instance?.ServiceProvider?.GetService(typeof(ITranslationManager));
-            
-            string GetTranslation(string key, string fallbackText)
-            {
-                if (translationManager != null)
-                {
-                    return translationManager.Translate(key, language, fallbackText);
-                }
-                return fallbackText;
-            }
-
             var intervals = new List<double>();
             for (int i = 0; i < group.Count - 1; i++)
             {
@@ -97,17 +86,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 }
             }
 
-            if (intervals.Count == 0) return string.Empty;
+            if (intervals.Count == 0)
+            {
+                return string.Empty;
+            }
 
             double averageDays = intervals.Average();
             
             if (averageDays >= 6.0 && averageDays <= 8.0)
             {
-                return GetTranslation("FrequencyWeekly", "1 episode per week");
+                return TranslationManager.Translate("FrequencyWeekly", language, "1 episode per week");
             }
             if (averageDays < 2.0)
             {
-                return GetTranslation("FrequencyDaily", "1 episode per day");
+                return TranslationManager.Translate("FrequencyDaily", language, "1 episode per day");
             }
             
             return string.Empty;
@@ -131,7 +123,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             }
             else
             {
-                episodeInfo = $"S{calendarItem.SeasonNumber:D2}E{calendarItem.EpisodeNumber:D2} - {calendarItem.Title}";
+                string episodeTitle = calendarItem.Title;
+                if (string.Equals(episodeTitle, "TBA", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(episodeTitle, "TBD", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(episodeTitle, "TDA", StringComparison.OrdinalIgnoreCase))
+                {
+                    episodeTitle = TranslationManager.Translate(episodeTitle.ToUpperInvariant(), language, episodeTitle);
+                }
+                episodeInfo = $"S{calendarItem.SeasonNumber:D2}E{calendarItem.EpisodeNumber:D2} - {episodeTitle}";
             }
 
             ArrImageDto? posterImage = calendarItem.Series?.Images?.FirstOrDefault(img => 
@@ -175,7 +174,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingShowsSection(UserManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingShowsSection>)Logger)
+            yield return new UpcomingShowsSection(UserManager, DtoService, ArrApiService, ImageCacheService, TranslationManager, (ILogger<UpcomingShowsSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
