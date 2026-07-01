@@ -6,10 +6,9 @@
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11.1'))">10.11.0</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11.0'))">10.11.0</JellyfinNugetVersion>
-        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('12.0.0'))">12.0.0-rc1</JellyfinNugetVersion>
+        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('12.0.0'))">12.0.0-rc2</JellyfinNugetVersion>
         <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11'))">net9.0</TargetFramework>
         <TargetFramework Condition="$(JellyfinVersion.StartsWith('12.'))">net10.0</TargetFramework>
-        <TargetFramework Condition="'$(JellyfinVersion)' == '10.10.7'">net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -33,12 +32,6 @@
       <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
       <PackageReference Include="SkiaSharp" Version="3.116.1" />
-    </ItemGroup>
-    
-    <!-- 10.10.7 Specific Code from non 10.10.7 builds -->
-    <ItemGroup Condition="'$(JellyfinVersion)' != '10.10.7'">
-        <None Include="JellyfinVersionSpecific/10.10.7/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/10.10.7/*.cs" />
     </ItemGroup>
     
     <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
@@ -120,6 +113,5 @@
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections')">
         <Exec Condition="$(JellyfinVersion.StartsWith('12.0'))"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_12\plugins\HomeScreenSections&quot; /y" />
         <Exec Condition="$(JellyfinVersion.StartsWith('10.11'))"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections&quot; /y" />
-        <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />
     </Target>
 </Project>
