@@ -63,7 +63,7 @@
                         <div class="fieldDescription" style="font-weight: bold; margin-bottom: 8px;" data-i18n="AdminSonarrGroupingOptions">Sonarr Grouping Options</div>
                         
                         <div class="radioContainer" style="margin-bottom: 8px;">
-                            <label class="emby-radio-label">
+                            <label class="emby-checkbox-label">
                                 <input type="radio" is="emby-radio" name="sonarrGrouping" id="radSonarrGroupNone" class="emby-radio" />
                                 <span data-i18n="AdminSonarrGroupNone">Show all episodes individually (default)</span>
                             </label>
@@ -71,7 +71,7 @@
                         </div>
 
                         <div class="radioContainer" style="margin-bottom: 8px;">
-                            <label class="emby-radio-label">
+                            <label class="emby-checkbox-label">
                                 <input type="radio" is="emby-radio" name="sonarrGrouping" id="radSonarrGroupAll" class="emby-radio" />
                                 <span data-i18n="AdminSonarrGroupUpcoming">Group upcoming episodes by series</span>
                             </label>
@@ -79,7 +79,7 @@
                         </div>
 
                         <div class="radioContainer" style="margin-bottom: 8px;">
-                            <label class="emby-radio-label">
+                            <label class="emby-checkbox-label">
                                 <input type="radio" is="emby-radio" name="sonarrGrouping" id="radSonarrGroupNext" class="emby-radio" />
                                 <span data-i18n="AdminSonarrGroupUpcomingNextOnly">Show only the next episode of each series</span>
                             </label>
@@ -210,6 +210,13 @@
                                 <div class="inputContainer">
                                     <input is="emby-input" type="password" data-id="txtReadarrApiKey" data-i18n-label="AdminReadarrApiKey" label="Readarr API Key" />
                                     <div class="fieldDescription" data-i18n="AdminReadarrApiKeyDesc">API Key for Readarr instance.</div>
+                                </div>
+                                <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top: 1em;">
+                                    <label class="emby-checkbox-label">
+                                        <input id="filterUpcomingByLibraryAccess" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                        <span data-i18n="AdminFilterUpcomingByLibraryAccess">Filter Upcoming Sections by Library Access</span>
+                                    </label>
+                                    <div class="fieldDescription" data-i18n="AdminFilterUpcomingByLibraryAccessDesc">When enabled, upcoming items are hidden from users who don't have access to the library the items belong to. Relies on matching the *arr root folder path against your Jellyfin library paths, so this only works if Jellyfin and your *arr instances use the same paths.</div>
                                 </div>
                             </div>
                         </details>
@@ -520,298 +527,321 @@
                         }
                     });
 
-                    // Pre-translate the template so future clones are already translated
-                    var template = document.querySelector('#sectionConfigTemplate');
-                    if (template) {
-                        applyTranslations(template.content);
-                    }
-                }).catch(function (error) {
-                    console.warn('Failed to load translations:', error);
+                    // Update dynamic section ordering labels if they are already populated
+                    document.querySelectorAll('#sectionWrapper tr').forEach(row => {
+                        const labelEl = row.querySelector('[data-id="lblSectionName"]');
+                        const sectionId = row.querySelector('[data-id="hiddenSectionId"]').value;
+                        if (labelEl && sectionId) {
+                            labelEl.textContent = pageTranslations[sectionId] || sectionId;
+                        }
+                    });
                 });
-            }
-
-            function createArrConfig(serviceConfig) {
-                const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
-                const config = {
-                    Url: document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value,
-                    ApiKey: document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value,
-                    UpcomingTimeframeValue: parseInt(document.querySelector(timeframeValueSelector).value) || serviceConfig.defaultValue,
-                    UpcomingTimeframeUnit: document.querySelector('#' + serviceConfig.timeframePrefix + 'TimeframeUnit').value
-                };
-
-                if (serviceConfig.name === 'Radarr') {
-                    config.ConsiderCinemaRelease = document.querySelector('#radarrConsiderCinemaRelease').checked;
-                    config.ConsiderPhysicalRelease = document.querySelector('#radarrConsiderPhysicalRelease').checked;
-                    config.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
-                }
-
-                if (serviceConfig.name === 'Sonarr') {
-                    config.GroupUpcoming = document.querySelector('#radSonarrGroupAll').checked;
-                    config.GroupUpcomingNextOnly = document.querySelector('#radSonarrGroupNext').checked;
-                }
-
-                return config;
-            }
-
-            function loadArrConfig(serviceConfig, config) {
-                const arrConfig = config[serviceConfig.name];
-                const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
-                const timeframeUnitSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeUnit';
-
-                document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value = arrConfig?.Url || '';
-                document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value = arrConfig?.ApiKey || '';
-                document.querySelector(timeframeValueSelector).value = arrConfig?.UpcomingTimeframeValue || serviceConfig.defaultValue;
-                document.querySelector(timeframeUnitSelector).value = arrConfig?.UpcomingTimeframeUnit || serviceConfig.defaultUnit;
-
-                if (serviceConfig.name === 'Radarr') {
-                    document.querySelector('#radarrConsiderCinemaRelease').checked = arrConfig?.ConsiderCinemaRelease ?? false;
-                    document.querySelector('#radarrConsiderPhysicalRelease').checked = arrConfig?.ConsiderPhysicalRelease ?? false;
-                    document.querySelector('#radarrConsiderDigitalRelease').checked = arrConfig?.ConsiderDigitalRelease ?? true; // Default
-                }
-
-                if (serviceConfig.name === 'Sonarr') {
-                    const groupUpcoming = arrConfig?.GroupUpcoming ?? false;
-                    const groupUpcomingNextOnly = arrConfig?.GroupUpcomingNextOnly ?? false;
-
-                    if (groupUpcoming) {
-                        document.querySelector('#radSonarrGroupAll').checked = true;
-                    } else if (groupUpcomingNextOnly) {
-                        document.querySelector('#radSonarrGroupNext').checked = true;
-                    } else {
-                        document.querySelector('#radSonarrGroupNone').checked = true;
-                    }
-                }
             }
 
             function setupTabs() {
-                const tabs = document.querySelectorAll('.jellyfin-tab-button');
-                const tabContents = document.querySelectorAll('.jellyfin-tab-content');
-                tabs.forEach(tab => {
-                    tab.addEventListener('click', () => {
-                        tabs.forEach(t => {
-                            t.classList.remove('active');
-                            t.style.color = '#ccc';
-                            t.style.borderBottom = '2px solid transparent';
+                document.querySelectorAll('.jellyfin-tab-button').forEach(button => {
+                    button.addEventListener('click', function () {
+                        // Switch active class on tab buttons
+                        document.querySelectorAll('.jellyfin-tab-button').forEach(btn => {
+                            btn.classList.remove('active');
+                            btn.style.color = '#ccc';
+                            btn.style.borderBottomColor = 'transparent';
                         });
-                        tab.classList.add('active');
-                        tab.style.color = 'var(--primary-accent-color, #fff)';
-                        tab.style.borderBottom = '2px solid var(--primary-accent-color, #fff)';
-                        tabContents.forEach(content => {
-                            content.classList.remove('active');
+                        this.classList.add('active');
+                        this.style.color = '#fff';
+                        this.style.borderBottomColor = '#fff';
+
+                        // Switch active tab content view
+                        document.querySelectorAll('.jellyfin-tab-content').forEach(content => {
                             content.style.display = 'none';
                         });
-                        const activeTab = document.getElementById(tab.dataset.tab);
-                        activeTab.classList.add('active');
-                        activeTab.style.display = 'block';
+                        const tabId = this.getAttribute('data-tab');
+                        document.getElementById(tabId).style.display = 'block';
                     });
                 });
-            }
-
-            function addSectionSetting(sectionConfig, sectionInfo) {
-                const sectionWrapper = document.querySelector('#sectionWrapper');
-                const template = document.querySelector('#sectionConfigTemplate').content.cloneNode(true);
-
-                template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
-                template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
-                template.querySelector('[data-id=chkSectionEnabled]').checked = sectionConfig.Enabled;
-                template.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = sectionConfig.AllowUserOverride;
-                template.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit;
-                template.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit;
-                template.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex;
-
-                const viewModeSelect = template.querySelector('[data-id=viewModeSelect]');
-                viewModeSelect.value = sectionConfig.ViewMode;
-                if (!sectionInfo.AllowViewModeChange) {
-                    viewModeSelect.value = sectionInfo.ViewMode;
-                    viewModeSelect.setAttribute('disabled', true);
-                }
-
-                const hideWatchedCheckbox = template.querySelector('[data-id=chkHideWatchedItems]');
-                const hideWatchedLabel = hideWatchedCheckbox.closest('.emby-checkbox-label');
-                hideWatchedCheckbox.checked = sectionConfig.HideWatchedItems
-                if (!sectionInfo.AllowHideWatched && hideWatchedLabel) {
-                    hideWatchedCheckbox.setAttribute('disabled', true);
-                    hideWatchedLabel.style.opacity = '0.5';
-                    hideWatchedLabel.style.cursor = 'default';
-                }
-
-                sectionWrapper.appendChild(template);
             }
 
             function loadLibraries() {
-                window.ApiClient.getVirtualFolders().then(function (result) {
-                    const moviesSelect = document.querySelector('#defaultMoviesLibrary');
-                    const tvShowsSelect = document.querySelector('#defaultTVShowsLibrary');
-                    const musicSelect = document.querySelector('#defaultMusicLibrary');
-                    const booksSelect = document.querySelector('#defaultBooksLibrary');
-                    const musicVideosSelect = document.querySelector('#defaultMusicVideosLibrary');
+                window.ApiClient.getJSON(ApiClient.getUrl('Library/SelectableLibraries')).then(function (libraries) {
+                    const libraryDropdowns = [
+                        'defaultMoviesLibrary',
+                        'defaultTVShowsLibrary',
+                        'defaultMusicLibrary',
+                        'defaultBooksLibrary',
+                        'defaultMusicVideosLibrary'
+                    ];
 
-                    var defaultLabel = pageTranslations['AdminDefault'] || 'Default';
-                    moviesSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
-                    tvShowsSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
-                    musicSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
-                    booksSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
-                    musicVideosSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
+                    libraryDropdowns.forEach(dropdownId => {
+                        const selectEl = document.getElementById(dropdownId);
+                        if (!selectEl) return;
 
-                    result.forEach(function (folder) {
-                         if (folder.CollectionType === 'movies' || folder.CollectionType === 'tvshows' || folder.CollectionType === 'music' || folder.CollectionType === 'books' ||
-                             folder.CollectionType === 'musicvideos') {
-                             const option = document.createElement('option');
-                             let folderId = folder.ItemId;
-                             if (folderId && !folderId.includes('-')) {
-                                 folderId = folderId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
-                             }
-                             option.value = folderId;
-                             option.textContent = folder.Name;
-
-                             if(folder.CollectionType === 'movies') moviesSelect.appendChild(option);
-                             if(folder.CollectionType === 'tvshows') tvShowsSelect.appendChild(option);
-                             if(folder.CollectionType === 'music') musicSelect.appendChild(option);
-                             if(folder.CollectionType === 'books') booksSelect.appendChild(option);
-                             if(folder.CollectionType === 'musicvideos') musicVideosSelect.appendChild(option);
-                        }
+                        libraries.forEach(library => {
+                            const option = document.createElement('option');
+                            option.value = library.Id;
+                            option.textContent = library.Name;
+                            selectEl.appendChild(option);
+                        });
                     });
-                }).catch(function (error) {
-                    console.error('Failed to load libraries:', error);
                 });
-            }
-
-            function saveConfig(e) {
-                e.preventDefault();
-
-                const hasReleaseCheck =
-                    document.querySelector('#radarrConsiderCinemaRelease').checked ||
-                    document.querySelector('#radarrConsiderPhysicalRelease').checked ||
-                    document.querySelector('#radarrConsiderDigitalRelease').checked;
-
-                if (!hasReleaseCheck) {
-                    Dashboard.alert(pageTranslations['AdminReleaseTypeRequired'] || 'At least one release type must be selected for upcoming movies.');
-                    return;
-                }
-
-                Dashboard.showLoadingMsg();
-                const config = {
-                    Enabled: document.querySelector('#globalEnabledDefault').checked,
-                    LazyLoadEnabled: document.querySelector('#chkLazyLoadEnabled').checked,
-                    NumSectionsPerPage: parseInt(document.querySelector('[data-id=numLazyLoadSections]').value),
-                    AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
-                    LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
-                    LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
-                    JellyseerrUrl: document.querySelector('[data-id=txtJellyseerrUrl]').value,
-                    JellyseerrExternalUrl: document.querySelector('[data-id=txtJellyseerrExternalUrl]').value,
-                    JellyseerrApiKey: document.querySelector('[data-id=txtJellyseerrApiKey]').value,
-                    JellyseerrPreferredLanguages: document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value,
-                    DefaultMoviesLibraryId: document.querySelector('#defaultMoviesLibrary').value,
-                    DefaultTVShowsLibraryId: document.querySelector('#defaultTVShowsLibrary').value,
-                    DefaultMusicLibraryId: document.querySelector('#defaultMusicLibrary').value,
-                    DefaultBooksLibraryId: document.querySelector('#defaultBooksLibrary').value,
-                    DefaultMusicVideosLibraryId: document.querySelector('#defaultMusicVideosLibrary').value,
-                    ...Object.fromEntries(arrServiceConfigs.map(serviceConfig => [
-                        serviceConfig.name,
-                        createArrConfig(serviceConfig)
-                    ])),
-                    DateFormat: document.querySelector('#dateFormat').value,
-                    DateDelimiter: document.querySelector('#dateDelimiter').value,
-                    DeveloperMode: document.querySelector('#globalDeveloperMode').checked,
-                    CacheTimeoutSeconds: document.querySelector('[data-id=txtCacheTimeoutSeconds]').value || 86400,
-                    MaxImageCacheEntries: parseInt(document.querySelector('[data-id=txtMaxImageCacheEntries]').value) || 10000,
-                    MaxImageWidth: parseInt(document.querySelector('[data-id=txtMaxImageWidth]').value) || 600,
-                    ImageJpegQuality: parseInt(document.querySelector('[data-id=txtImageJpegQuality]').value) || 85,
-                    OverrideStreamyfinHome: document.querySelector('#globalStreamyfinHomeOverride').checked,
-                    SectionSettings: []
-                };
-
-                document.querySelectorAll('#sectionWrapper tr').forEach(row => {
-                    const sectionConfig = {
-                        SectionId: row.querySelector('[data-id=hiddenSectionId]').value,
-                        Enabled: row.querySelector('[data-id=chkSectionEnabled]').checked,
-                        AllowUserOverride: row.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
-                        LowerLimit: row.querySelector('[data-id=txtSectionMinLimit]').value,
-                        UpperLimit: row.querySelector('[data-id=txtSectionMaxLimit]').value,
-                        OrderIndex: row.querySelector('[data-id=txtOrderIndex]').value,
-                        ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
-                        HideWatchedItems: row.querySelector('[data-id=chkHideWatchedItems]').checked,
-                    };
-                    config.SectionSettings.push(sectionConfig);
-                });
-
-                window.ApiClient.updatePluginConfiguration(pluginId, config)
-                    .then(Dashboard.processPluginConfigurationUpdateResult)
-                    .catch(e => console.error(e))
-                    .finally(() => Dashboard.hideLoadingMsg());
             }
 
             function loadConfig() {
                 Dashboard.showLoadingMsg();
-                window.ApiClient.getPluginConfiguration(pluginId)
-                    .then(function (config) {
-                        document.querySelector('#globalEnabledDefault').checked = config.Enabled;
-                        document.querySelector('#globalAllowUserOverride').checked = config.AllowUserOverride;
-                        document.querySelector('[data-id=txtLibreTranslateUrl]').value = config.LibreTranslateUrl;
-                        document.querySelector('[data-id=txtLibreTranslateApiKey]').value = config.LibreTranslateApiKey;
-                        document.querySelector('[data-id=txtJellyseerrUrl]').value = config.JellyseerrUrl;
-                        document.querySelector('[data-id=txtJellyseerrExternalUrl]').value = config.JellyseerrExternalUrl;
-                        document.querySelector('[data-id=txtJellyseerrApiKey]').value = config.JellyseerrApiKey;
-                        document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
-                        document.querySelector('#chkLazyLoadEnabled').checked = config.LazyLoadEnabled;
-                        document.querySelector('[data-id=numLazyLoadSections]').value = config.NumSectionsPerPage;
+                window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    document.querySelector('#globalEnabledDefault').checked = config.Enabled;
+                    document.querySelector('#globalAllowUserOverride').checked = config.AllowUserOverride;
 
-                        arrServiceConfigs.forEach(serviceConfig => {
-                            loadArrConfig(serviceConfig, config);
-                        });
-                        document.querySelector('#dateFormat').value = config.DateFormat || 'YYYY/MM/DD';
-                        document.querySelector('#dateDelimiter').value = config.DateDelimiter || '/';
+                    // Lazy load configs
+                    document.querySelector('#chkLazyLoadEnabled').checked = config.LazyLoadEnabled;
+                    document.querySelector('[data-id="numLazyLoadSections"]').value = config.NumSectionsPerPage;
 
-                        document.querySelector('#globalStreamyfinHomeOverride').checked = config.OverrideStreamyfinHome;
-                        document.querySelector('#globalDeveloperMode').checked = config.DeveloperMode;
-                        document.querySelector('[data-id=txtCacheTimeoutSeconds]').value = config.CacheTimeoutSeconds || 86400;
-                        document.querySelector('[data-id=txtMaxImageCacheEntries]').value = config.MaxImageCacheEntries || 10000;
-                        document.querySelector('[data-id=txtMaxImageWidth]').value = config.MaxImageWidth || 600;
-                        document.querySelector('[data-id=txtImageJpegQuality]').value = config.ImageJpegQuality || 85;
+                    // Radarr release type configs
+                    document.querySelector('#radarrConsiderCinemaRelease').checked = config.Radarr.ConsiderCinemaRelease;
+                    document.querySelector('#radarrConsiderPhysicalRelease').checked = config.Radarr.ConsiderPhysicalRelease;
+                    document.querySelector('#radarrConsiderDigitalRelease').checked = config.Radarr.ConsiderDigitalRelease;
 
-                        setTimeout(function() {
-                            if (config.DefaultMoviesLibraryId) {
-                                document.querySelector('#defaultMoviesLibrary').value = config.DefaultMoviesLibraryId;
-                            }
-                            if (config.DefaultTVShowsLibraryId) {
-                                document.querySelector('#defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId;
-                            }
-                            if (config.DefaultMusicLibraryId) {
-                                document.querySelector('#defaultMusicLibrary').value = config.DefaultMusicLibraryId;
-                            }
-                            if (config.DefaultBooksLibraryId) {
-                                document.querySelector('#defaultBooksLibrary').value = config.DefaultBooksLibraryId;
-                            }
-                            if (config.DefaultMusicVideosLibraryId) {
-                                document.querySelector('#defaultMusicVideosLibrary').value = config.DefaultMusicVideosLibraryId;
-                            }
-                        }, 500);
+                    // Cache configs
+                    document.querySelector('[data-id="txtCacheTimeoutSeconds"]').value = config.CacheTimeoutSeconds;
+                    document.querySelector('[data-id="txtMaxImageCacheEntries"]').value = config.MaxImageCacheEntries;
+                    document.querySelector('[data-id="txtMaxImageWidth"]').value = config.MaxImageWidth;
+                    document.querySelector('[data-id="txtImageJpegQuality"]').value = config.ImageJpegQuality;
 
-                        window.ApiClient.ajax({
-                            url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
-                            type: 'GET'
-                        }).then(response => response.json()).then(function (json) {
-                            json.Items.forEach(sectionType => {
-                                let sectionConfig = config.SectionSettings.find(s => s.SectionId === sectionType.Section);
-                                if (!sectionConfig) {
-                                    sectionConfig = {
-                                        SectionId: sectionType.Section,
-                                        Enabled: true,
-                                        AllowUserOverride: true,
-                                        LowerLimit: 1,
-                                        UpperLimit: sectionType.Limit,
-                                        ViewMode: sectionType.ViewMode,
-                                        OrderIndex: 999,
-                                        HideWatchedItems: false
-                                    };
-                                }
-                                addSectionSetting(sectionConfig, sectionType);
-                            });
-                            // Translate dynamically added section rows in case
-                            // translatePage() finished before sections were rendered
-                            applyTranslations(document.querySelector('#sectionWrapper'));
-                        }).finally(() => Dashboard.hideLoadingMsg());
+                    // Developer mode configs
+                    document.querySelector('#globalDeveloperMode').checked = config.DeveloperMode;
+
+                    // Third-party integrations
+                    document.querySelector('#globalStreamyfinHomeOverride').checked = config.OverrideStreamyfinHome;
+
+                    // Default libraries
+                    document.getElementById('defaultMoviesLibrary').value = config.DefaultMoviesLibraryId || "";
+                    document.getElementById('defaultTVShowsLibrary').value = config.DefaultTVShowsLibraryId || "";
+                    document.getElementById('defaultMusicLibrary').value = config.DefaultMusicLibraryId || "";
+                    document.getElementById('defaultBooksLibrary').value = config.DefaultBooksLibraryId || "";
+                    document.getElementById('defaultMusicVideosLibrary').value = config.DefaultMusicVideosLibraryId || "";
+
+                    // Load Arr configs
+                    arrServiceConfigs.forEach(service => {
+                        const valEl = document.getElementById(service.timeframePrefix + 'TimeframeValue');
+                        const unitEl = document.getElementById(service.timeframePrefix + 'TimeframeUnit');
+                        if (valEl && unitEl) {
+                            valEl.value = config[service.name].UpcomingTimeframeValue || service.defaultValue;
+                            unitEl.value = config[service.name].UpcomingTimeframeUnit || service.defaultUnit;
+                        }
+                        
+                        document.querySelector('[data-id="txt' + service.name + 'Url"]').value = config[service.name].Url || "";
+                        document.querySelector('[data-id="txt' + service.name + 'ApiKey"]').value = config[service.name].ApiKey || "";
                     });
+
+                    // Set radio buttons for Sonarr grouping based on current config boolean values
+                    if (config.Sonarr.GroupUpcoming === true) {
+                        document.getElementById('radSonarrGroupAll').checked = true;
+                    } else if (config.Sonarr.GroupUpcomingNextOnly === true) {
+                        document.getElementById('radSonarrGroupNext').checked = true;
+                    } else {
+                        document.getElementById('radSonarrGroupNone').checked = true;
+                    }
+
+                    // LibreTranslate configs
+                    document.querySelector('[data-id="txtLibreTranslateUrl"]').value = config.LibreTranslateUrl || "";
+                    document.querySelector('[data-id="txtLibreTranslateApiKey"]').value = config.LibreTranslateApiKey || "";
+
+                    // Jellyseerr configs
+                    document.querySelector('[data-id="txtJellyseerrUrl"]').value = config.JellyseerrUrl || "";
+                    document.querySelector('[data-id="txtJellyseerrExternalUrl"]').value = config.JellyseerrExternalUrl || "";
+                    document.querySelector('[data-id="txtJellyseerrApiKey"]').value = config.JellyseerrApiKey || "";
+                    document.querySelector('[data-id="txtJellyseerrPreferredLanguages"]').value = config.JellyseerrPreferredLanguages || "en";
+
+                    // Library filter settings
+                    document.querySelector('#filterUpcomingByLibraryAccess').checked = config.FilterUpcomingByLibraryAccess;
+
+                    // Date format settings
+                    document.getElementById('dateFormat').value = config.DateFormat || "YYYY/MM/DD";
+                    document.getElementById('dateDelimiter').value = config.DateDelimiter || "/";
+
+                    // Render sections list
+                    renderSections(config);
+                });
+            }
+
+            function addSectionSetting(sectionConfig, sectionType) {
+                const wrapper = document.querySelector('#sectionWrapper');
+                const template = document.querySelector('#sectionConfigTemplate');
+                const clone = template.content.cloneNode(true);
+
+                // Populate dynamic elements
+                clone.querySelector('[data-id="hiddenSectionId"]').value = sectionConfig.SectionId;
+                clone.querySelector('[data-id="lblSectionName"]').textContent = pageTranslations[sectionConfig.SectionId] || sectionConfig.SectionId;
+                clone.querySelector('[data-id="txtOrderIndex"]').value = sectionConfig.OrderIndex;
+                clone.querySelector('[data-id="chkSectionEnabled"]').checked = sectionConfig.Enabled;
+                clone.querySelector('[data-id="chkSectionUserOverrideAllowed"]').checked = sectionConfig.AllowUserOverride;
+                clone.querySelector('[data-id="chkHideWatchedItems"]').checked = sectionConfig.HideWatchedItems;
+                clone.querySelector('[data-id="txtSectionMinLimit"]').value = sectionConfig.LowerLimit;
+                
+                const maxLimitInput = clone.querySelector('[data-id="txtSectionMaxLimit"]');
+                maxLimitInput.value = sectionConfig.UpperLimit;
+
+                const viewModeSelect = clone.querySelector('[data-id="viewModeSelect"]');
+                viewModeSelect.value = sectionConfig.ViewMode;
+
+                // Configure constraints based on metadata
+                if (sectionType.Limit === 1) {
+                    maxLimitInput.disabled = true;
+                }
+                if (!sectionType.AllowViewModeChange) {
+                    viewModeSelect.disabled = true;
+                }
+
+                wrapper.appendChild(clone);
+            }
+
+            function renderSections(config) {
+                const wrapper = document.querySelector('#sectionWrapper');
+                wrapper.innerHTML = '';
+
+                window.ApiClient.ajax({
+                    url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
+                    type: 'GET'
+                }).then(response => response.json()).then(function (json) {
+                    json.Items.forEach(sectionType => {
+                        let sectionConfig = config.SectionSettings.find(s => s.SectionId === sectionType.Section);
+                        if (!sectionConfig) {
+                            sectionConfig = {
+                                SectionId: sectionType.Section,
+                                Enabled: true,
+                                AllowUserOverride: true,
+                                LowerLimit: 1,
+                                UpperLimit: sectionType.Limit,
+                                ViewMode: sectionType.ViewMode,
+                                OrderIndex: 999,
+                                HideWatchedItems: false
+                            };
+                        }
+                        addSectionSetting(sectionConfig, sectionType);
+                    });
+                    // Translate dynamically added section rows in case
+                    // translatePage() finished before sections were rendered
+                    applyTranslations(document.querySelector('#sectionWrapper'));
+                }).finally(() => Dashboard.hideLoadingMsg());
+            }
+
+            function saveConfig(e) {
+                e.preventDefault();
+                Dashboard.showLoadingMsg();
+
+                window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.Enabled = document.querySelector('#globalEnabledDefault').checked;
+                    config.AllowUserOverride = document.querySelector('#globalAllowUserOverride').checked;
+
+                    // Lazy load configs
+                    config.LazyLoadEnabled = document.querySelector('#chkLazyLoadEnabled').checked;
+                    config.NumSectionsPerPage = document.querySelector('[data-id="numLazyLoadSections"]').value;
+
+                    // Radarr release type configs
+                    config.Radarr.ConsiderCinemaRelease = document.querySelector('#radarrConsiderCinemaRelease').checked;
+                    config.Radarr.ConsiderPhysicalRelease = document.querySelector('#radarrConsiderPhysicalRelease').checked;
+                    config.Radarr.ConsiderDigitalRelease = document.querySelector('#radarrConsiderDigitalRelease').checked;
+
+                    // Cache configs
+                    config.CacheTimeoutSeconds = document.querySelector('[data-id="txtCacheTimeoutSeconds"]').value;
+                    config.MaxImageCacheEntries = document.querySelector('[data-id="txtMaxImageCacheEntries"]').value;
+                    config.MaxImageWidth = document.querySelector('[data-id="txtMaxImageWidth"]').value;
+                    config.ImageJpegQuality = document.querySelector('[data-id="txtImageJpegQuality"]').value;
+
+                    // Developer mode configs
+                    config.DeveloperMode = document.querySelector('#globalDeveloperMode').checked;
+
+                    // Third-party integrations
+                    config.OverrideStreamyfinHome = document.querySelector('#globalStreamyfinHomeOverride').checked;
+
+                    // Default libraries
+                    config.DefaultMoviesLibraryId = document.getElementById('defaultMoviesLibrary').value;
+                    config.DefaultTVShowsLibraryId = document.getElementById('defaultTVShowsLibrary').value;
+                    config.DefaultMusicLibraryId = document.getElementById('defaultMusicLibrary').value;
+                    config.DefaultBooksLibraryId = document.getElementById('defaultBooksLibrary').value;
+                    config.DefaultMusicVideosLibraryId = document.getElementById('defaultMusicVideosLibrary').value;
+
+                    // Save Arr configs
+                    arrServiceConfigs.forEach(service => {
+                        const valEl = document.getElementById(service.timeframePrefix + 'TimeframeValue');
+                        const unitEl = document.getElementById(service.timeframePrefix + 'TimeframeUnit');
+                        if (valEl && unitEl) {
+                            config[service.name].UpcomingTimeframeValue = valEl.value;
+                            config[service.name].UpcomingTimeframeUnit = unitEl.value;
+                        }
+
+                        config[service.name].Url = document.querySelector('[data-id="txt' + service.name + 'Url"]').value;
+                        config[service.name].ApiKey = document.querySelector('[data-id="txt' + service.name + 'ApiKey"]').value;
+                    });
+
+                    // Set Sonarr grouping boolean values based on the checked radio button
+                    if (document.getElementById('radSonarrGroupAll').checked) {
+                        config.Sonarr.GroupUpcoming = true;
+                        config.Sonarr.GroupUpcomingNextOnly = false;
+                    } else if (document.getElementById('radSonarrGroupNext').checked) {
+                        config.Sonarr.GroupUpcoming = false;
+                        config.Sonarr.GroupUpcomingNextOnly = true;
+                    } else {
+                        config.Sonarr.GroupUpcoming = false;
+                        config.Sonarr.GroupUpcomingNextOnly = false;
+                    }
+
+                    // LibreTranslate configs
+                    config.LibreTranslateUrl = document.querySelector('[data-id="txtLibreTranslateUrl"]').value;
+                    config.LibreTranslateApiKey = document.querySelector('[data-id="txtLibreTranslateApiKey"]').value;
+
+                    // Jellyseerr configs
+                    config.JellyseerrUrl = document.querySelector('[data-id="txtJellyseerrUrl"]').value;
+                    config.JellyseerrExternalUrl = document.querySelector('[data-id="txtJellyseerrExternalUrl"]').value;
+                    config.JellyseerrApiKey = document.querySelector('[data-id="txtJellyseerrApiKey"]').value;
+                    config.JellyseerrPreferredLanguages = document.querySelector('[data-id="txtJellyseerrPreferredLanguages"]').value;
+
+                    // Library filter settings
+                    config.FilterUpcomingByLibraryAccess = document.querySelector('#filterUpcomingByLibraryAccess').checked;
+
+                    // Date format settings
+                    config.DateFormat = document.getElementById('dateFormat').value;
+                    config.DateDelimiter = document.getElementById('dateDelimiter').value;
+
+                    // Parse section rows config
+                    const sectionSettings = [];
+                    document.querySelectorAll('#sectionWrapper tr').forEach(row => {
+                        sectionSettings.push({
+                            SectionId: row.querySelector('[data-id="hiddenSectionId"]').value,
+                            Enabled: row.querySelector('[data-id="chkSectionEnabled"]').checked,
+                            AllowUserOverride: row.querySelector('[data-id="chkSectionUserOverrideAllowed"]').checked,
+                            LowerLimit: row.querySelector('[data-id="txtSectionMinLimit"]').value,
+                            UpperLimit: row.querySelector('[data-id="txtSectionMaxLimit"]').value,
+                            OrderIndex: row.querySelector('[data-id="txtOrderIndex"]').value,
+                            ViewMode: row.querySelector('[data-id="viewModeSelect"]').value,
+                            HideWatchedItems: row.querySelector('[data-id="chkHideWatchedItems"]').checked
+                        });
+                    });
+                    config.SectionSettings = sectionSettings;
+
+                    // Submit update to API
+                    window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                        Dashboard.hideLoadingMsg();
+                        
+                        // Increment cache bust counter globally to bust browser transformed index cache on save
+                        config.CacheBustCounter += 1;
+                        window.ApiClient.updatePluginConfiguration(pluginId, config);
+
+                        // If user libraries changed, alert for restart
+                        const restartRequired = 
+                            config.DefaultMoviesLibraryId !== document.getElementById('defaultMoviesLibrary').value ||
+                            config.DefaultTVShowsLibraryId !== document.getElementById('defaultTVShowsLibrary').value ||
+                            config.DefaultMusicLibraryId !== document.getElementById('defaultMusicLibrary').value ||
+                            config.DefaultBooksLibraryId !== document.getElementById('defaultBooksLibrary').value ||
+                            config.DefaultMusicVideosLibraryId !== document.getElementById('defaultMusicVideosLibrary').value;
+
+                        if (restartRequired) {
+                            Dashboard.alert({
+                                message: pageTranslations['AdminRequiresRestart'] || 'Requires Jellyfin restart to take effect.'
+                            });
+                        }
+                    });
+                });
             }
 
             document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
