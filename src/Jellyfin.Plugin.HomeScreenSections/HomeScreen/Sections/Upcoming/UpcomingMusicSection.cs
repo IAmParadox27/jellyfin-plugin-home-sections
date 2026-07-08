@@ -9,93 +9,181 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 {
-    public class UpcomingMusicSection : UpcomingSectionBase<LidarrCalendarDto>
+    public class UpcomingShowsSection : UpcomingSectionBase<SonarrCalendarDto>
     {
-        public override string? Section => "UpcomingMusic";
+        public override string? Section => "UpcomingShows";
         
-        public override string? DisplayText { get; set; } = "Upcoming Music";
+        public override string? DisplayText { get; set; } = "Upcoming Shows";
 
-        public UpcomingMusicSection(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger<UpcomingMusicSection> logger)
-            : base(userManager, dtoService, arrApiService, imageCacheService, translationManager, logger)
+        public UpcomingShowsSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger<UpcomingShowsSection> logger)
+            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, translationManager, logger)
         {
         }
 
         protected override (string? url, string? apiKey) GetServiceConfiguration(PluginConfiguration config)
         {
-            return (config.Lidarr.Url, config.Lidarr.ApiKey);
+            return (config.Sonarr.Url, config.Sonarr.ApiKey);
         }
 
         protected override (int value, TimeframeUnit unit) GetTimeframeConfiguration(PluginConfiguration config)
         {
-            return (config.Lidarr.UpcomingTimeframeValue, config.Lidarr.UpcomingTimeframeUnit);
+            return (config.Sonarr.UpcomingTimeframeValue, config.Sonarr.UpcomingTimeframeUnit);
         }
 
-        protected override LidarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
+        protected override SonarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return ArrApiService.GetArrCalendarAsync<LidarrCalendarDto>(ArrServiceType.Lidarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
+            return ArrApiService.GetArrCalendarAsync<SonarrCalendarDto>(ArrServiceType.Sonarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
-        protected override IOrderedEnumerable<LidarrCalendarDto> FilterAndSortItems(LidarrCalendarDto[] items, string language)
+        protected override IOrderedEnumerable<SonarrCalendarDto> FilterAndSortItems(SonarrCalendarDto[] items, string language)
         {
-            return items
-                .Where(item => item.Monitored && !item.HasFile && item.ReleaseDate.HasValue)
-                .OrderBy(item => item.ReleaseDate);
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var filtered = items.Where(item => item.Monitored && !item.HasFile && item.AirDateUtc.HasValue);
+
+            if (config?.Sonarr?.GroupUpcoming == true)
+            {
+                return filtered
+                    .GroupBy(item => new { item.SeriesId, item.SeasonNumber })
+                    .Select(g => 
+                    {
+                        var orderedGroup = g.OrderBy(e => e.AirDateUtc).ToList();
+                        var firstEpisode = orderedGroup.First();
+                        firstEpisode.TotalEpisodesInGroup = orderedGroup.Count;
+                        if (orderedGroup.Count > 1)
+                        {
+                            firstEpisode.LastEpisodeNumberInGroup = orderedGroup.Last().EpisodeNumber;
+                            firstEpisode.GroupFrequencyText = DetermineGroupFrequency(orderedGroup, language);
+                        }
+                        return firstEpisode;
+                    })
+                    .OrderBy(item => item.AirDateUtc);
+            }
+            else if (config?.Sonarr?.GroupUpcomingNextOnly == true)
+            {
+                var validTitlesFiltered = filtered.Where(item => 
+                    !string.IsNullOrWhiteSpace(item.Title) &&
+                    !string.Equals(item.Title, "TBA", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(item.Title, "TDA", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(item.Title, "TBD", StringComparison.OrdinalIgnoreCase));
+
+                return validTitlesFiltered
+                    .GroupBy(item => new { item.SeriesId, item.SeasonNumber })
+                    .Select(g => g.OrderBy(e => e.AirDateUtc).First())
+                    .OrderBy(item => item.AirDateUtc);
+            }
+
+            return filtered.OrderBy(item => item.AirDateUtc);
         }
 
-        protected override string GetFallbackCoverUrl(LidarrCalendarDto missingItem)
+        private string DetermineGroupFrequency(List<SonarrCalendarDto> group, string language)
         {
-            return $"https://placehold.co/300x300/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\n{missingItem.Artist?.ArtistName}\nImage Not Found")}";
+            var intervals = new List<double>();
+            for (int i = 0; i < group.Count - 1; i++)
+            {
+                if (group[i].AirDateUtc.HasValue && group[i+1].AirDateUtc.HasValue)
+                {
+                    intervals.Add((group[i+1].AirDateUtc.Value - group[i].AirDateUtc.Value).TotalDays);
+                }
+            }
+
+            if (intervals.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            double averageDays = intervals.Average();
+            
+            if (averageDays >= 6.0 && averageDays <= 8.0)
+            {
+                return TranslationManager.Translate("FrequencyWeekly", language, "1 episode per week");
+            }
+            if (averageDays < 2.0)
+            {
+                return TranslationManager.Translate("FrequencyDaily", language, "1 episode per day");
+            }
+            
+            return string.Empty;
         }
 
-        protected override BaseItemDto CreateDto(LidarrCalendarDto calendarItem, PluginConfiguration config, string language)
+        protected override string? GetItemPath(SonarrCalendarDto item) => item.Series?.Path;
+
+        protected override string GetFallbackCoverUrl(SonarrCalendarDto missingItem)
         {
+            return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Series?.Title}\n{missingItem.Title}\nImage Not Found")}";
+        }
 
-            DateTime releaseDate = calendarItem.ReleaseDate ?? DateTime.Now;
-            string countdownText = CalculateCountdown(releaseDate, config, language);
+        protected override BaseItemDto CreateDto(SonarrCalendarDto calendarItem, PluginConfiguration config, string language)
+        {
+            DateTime airDate = calendarItem.AirDateUtc ?? DateTime.Now;
+            string countdownText = CalculateCountdown(airDate, config, language);
 
-            ArrImageDto? albumImage = calendarItem.Images?.FirstOrDefault(img => 
-                string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));
+            string episodeInfo;
+            if (config?.Sonarr?.GroupUpcoming == true && calendarItem.TotalEpisodesInGroup > 1 && calendarItem.LastEpisodeNumberInGroup.HasValue)
+            {
+                string frequencySuffix = !string.IsNullOrEmpty(calendarItem.GroupFrequencyText) ? $" ({calendarItem.GroupFrequencyText})" : "";
+                episodeInfo = $"S{calendarItem.SeasonNumber:D2}E{calendarItem.EpisodeNumber:D2}-{calendarItem.LastEpisodeNumberInGroup:D2}{frequencySuffix}";
+            }
+            else
+            {
+                string episodeTitle = calendarItem.Title;
+                if (string.Equals(episodeTitle, "TBA", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(episodeTitle, "TBD", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(episodeTitle, "TDA", StringComparison.OrdinalIgnoreCase))
+                {
+                    episodeTitle = TranslationManager.Translate(episodeTitle.ToUpperInvariant(), language, episodeTitle);
+                }
+                episodeInfo = $"S{calendarItem.SeasonNumber:D2}E{calendarItem.EpisodeNumber:D2} - {episodeTitle}";
+            }
 
-            string sourceImageUrl = albumImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
+            ArrImageDto? posterImage = calendarItem.Series?.Images?.FirstOrDefault(img => 
+                string.Equals(img.CoverType, "poster", StringComparison.OrdinalIgnoreCase));
+
+            string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
+            // Create provider IDs to store external image URL and metadata
             Dictionary<string, string> providerIds = new Dictionary<string, string>
             {
-                { "LidarrAlbumId", calendarItem.Id.ToString() },
+                { "SonarrSeriesId", calendarItem.SeriesId.ToString() },
+                { "SonarrEpisodeId", calendarItem.Id.ToString() },
+                { "EpisodeInfo", episodeInfo },
                 { "FormattedDate", countdownText },
-                { "LidarrPoster", cachedImageUrl }
+                { "SonarrPoster", cachedImageUrl }
             };
 
             return new BaseItemDto
             {
                 Id = Guid.NewGuid(),
-                Name = calendarItem.Title ?? "Unknown Album",
-                Overview = $"{calendarItem.Artist?.ArtistName ?? "Unknown Artist"} - {calendarItem.AlbumType}",
-                PremiereDate = calendarItem.ReleaseDate,
-                Type = BaseItemKind.MusicAlbum,
+                Name = calendarItem.Series?.Title ?? "Unknown Series",
+                Type = BaseItemKind.Episode,
+                PremiereDate = calendarItem.AirDateUtc,
+                SeriesName = calendarItem.Series?.Title,
+                IndexNumber = calendarItem.EpisodeNumber,
+                ParentIndexNumber = calendarItem.SeasonNumber,
                 ProviderIds = providerIds,
                 UserData = new UserItemDataDto
                 {
-                    Key = $"upcoming-album-{calendarItem.Id}",
+                    Key = $"upcoming-{calendarItem.Id}",
                     PlaybackPositionTicks = 0,
-                    IsFavorite = false,
+                    IsFavorite = false
                 }
             };
         }
 
-        protected override string GetServiceName() => "Lidarr";
-        protected override string GetSectionName() => "upcoming music";
+        protected override string GetServiceName() => "Sonarr";
+
+        protected override string GetSectionName() => "upcoming shows";
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingMusicSection(UserManager, DtoService, ArrApiService, ImageCacheService, TranslationManager, (ILogger<UpcomingMusicSection>)Logger)
+            yield return new UpcomingShowsSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, TranslationManager, (ILogger<UpcomingShowsSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
                 OriginalPayload = OriginalPayload
             };
         }
-
+        
         public override HomeScreenSectionInfo GetInfo()
         {
             return new HomeScreenSectionInfo
@@ -106,9 +194,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 Route = Route,
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Square,
+                ViewMode = SectionViewMode.Portrait,
                 AllowViewModeChange = false,
-                ContainerClass = "upcoming-music-section"
+                ContainerClass = "upcoming-shows-section"
             };
         }
     }
