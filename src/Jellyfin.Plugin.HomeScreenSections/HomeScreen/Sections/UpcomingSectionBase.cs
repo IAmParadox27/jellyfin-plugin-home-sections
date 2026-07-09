@@ -83,6 +83,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     upcomingItems = FilterByLibraryAccess(upcomingItems, payload.UserId);
                 }
 
+                if (config.FilterUpcomingByLibraryAccess)
+                {
+                    upcomingItems = FilterByLibraryAccess(upcomingItems, payload.UserId);
+                }
+
                 Logger.LogDebug("Found {Count} upcoming items after filtering", upcomingItems.Length);
 
                 BaseItemDto[] dtoItems = [.. upcomingItems.Select(item => CreateDto(item, config, language))];
