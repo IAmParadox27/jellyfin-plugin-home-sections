@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Controller.Entities;
+using SkiaSharp;
 
 namespace Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific
 {
@@ -7,6 +8,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific
         public static bool IsPlayedVersionSpecific(this BaseItem item, User user)
         {
             return item.IsPlayed(user);
+        }
+
+        public static SKBitmap? ResizeVersionSpecific(this SKBitmap bitmap, SKImageInfo info)
+        {
+            return bitmap.Resize(info, SKFilterQuality.High);
         }
     }
 }

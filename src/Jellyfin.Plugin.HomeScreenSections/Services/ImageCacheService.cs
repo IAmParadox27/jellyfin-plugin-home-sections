@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Logging;
@@ -301,9 +302,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             int newWidth = maxWidth;
             int newHeight = (int)((float)originalBitmap.Height / originalBitmap.Width * newWidth);
             
-            SKBitmap? resizedBitmap = originalBitmap.Resize(
-                new SKImageInfo(newWidth, newHeight), 
-                SKSamplingOptions.Default);
+            SKBitmap? resizedBitmap = originalBitmap.ResizeVersionSpecific(
+                new SKImageInfo(newWidth, newHeight));
             
             if (resizedBitmap == null)
             {
