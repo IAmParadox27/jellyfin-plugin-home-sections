@@ -408,15 +408,20 @@
                 PageHash: uuidv4()
             };
             
-            // Setup the scrolly event
+            // Setup the scrolly event (replace any prior handler so SPA revisits
+            // to home do not accumulate scroll listeners).
             window.HssPageCache = {
                 elem: elem,
                 apiClient: apiClient,
                 user: user,
                 userSettings: userSettings
             };
-            
-            window.addEventListener('scroll', function () {
+
+            if (window.HssScrollHandler) {
+                window.removeEventListener('scroll', window.HssScrollHandler);
+            }
+
+            window.HssScrollHandler = function () {
                 var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
                 
@@ -460,7 +465,9 @@
                         D.body.clientHeight, D.documentElement.clientHeight
                     );
                 }
-            });
+            };
+
+            window.addEventListener('scroll', window.HssScrollHandler);
         }
         
         var getSectionsData = {
