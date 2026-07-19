@@ -159,7 +159,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
 
-            IGrouping<int, SectionSettings>[] groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
+            // SectionSettings defaults to empty; Max() on empty throws and can take down the
+            // process when this runs on the unhandled MonitorLiveUpdatedSectionsForUser thread
+            // (see #247). Guard both the source sequence and MaxOrderIndex.
+            IEnumerable<SectionSettings> sectionSettings =
+                HomeScreenSectionsPlugin.Instance?.Configuration.SectionSettings
+                ?? Array.Empty<SectionSettings>();
+
+            IGrouping<int, SectionSettings>[] groupedOrderedSections = sectionSettings
                 .OrderBy(x => x.OrderIndex)
                 .GroupBy(x => x.OrderIndex)
                 .ToArray();
@@ -170,7 +177,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 userSectionsData = new UserSectionsData()
                 {
                     UserId = userId,
-                    MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
+                    MaxOrderIndex = groupedOrderedSections.Select(x => x.Key).DefaultIfEmpty(0).Max()
                 };
                 
                 m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData);
