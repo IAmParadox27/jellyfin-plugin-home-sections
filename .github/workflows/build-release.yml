@@ -220,6 +220,11 @@ jobs:
           find release-assets -type f -name 'Release-*.zip' -exec cp {} upload/ \;
           ls -la upload/
 
+          # Pin the release tag to the commit that triggered this workflow.
+          # Without --target, `gh release create` tags the default branch tip,
+          # which can make prerelease/test builds look like they lack feature work.
+          TARGET_SHA="${GITHUB_SHA}"
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists — uploading assets (clobber)"
             gh release upload "$TAG" upload/Release-*.zip --clobber
@@ -227,6 +232,7 @@ jobs:
             gh release create "$TAG" upload/Release-*.zip \
               --title "$TAG" \
               --notes "$CHANGELOG" \
+              --target "$TARGET_SHA" \
               $PRE_FLAG
           fi
 
