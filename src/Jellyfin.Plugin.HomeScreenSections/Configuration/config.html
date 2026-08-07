@@ -382,18 +382,45 @@
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        gap: 6px;
+                        gap: 2px;
                         flex: 0 0 48px;
+                        padding: 8px 0;
                         background: rgba(0, 0, 0, 0.18);
                         border-right: 1px solid rgba(255, 255, 255, 0.08);
                         border-radius: 12px 0 0 12px;
+                    }
+                    #sectionList .section-move-btn {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 28px;
+                        height: 24px;
+                        padding: 0;
+                        border: none;
+                        border-radius: 6px;
+                        background: transparent;
+                        color: #9aa0a6;
+                        cursor: pointer;
+                        line-height: 1;
+                    }
+                    #sectionList .section-move-btn .material-icons {
+                        font-size: 20px;
+                        line-height: 1;
+                    }
+                    #sectionList .section-move-btn:hover:not(:disabled) {
+                        color: #fff;
+                        background-color: rgba(255, 255, 255, 0.10);
+                    }
+                    #sectionList .section-move-btn:disabled {
+                        opacity: 0.28;
+                        cursor: default;
                     }
                     #sectionList .section-drag-handle {
                         display: inline-flex;
                         align-items: center;
                         justify-content: center;
                         width: 36px;
-                        height: 36px;
+                        height: 32px;
                         cursor: grab;
                         color: #9aa0a6;
                         user-select: none;
@@ -580,10 +607,16 @@
     <template id="sectionConfigTemplate">
         <div data-id="section-config" class="section-card" draggable="true" role="listitem">
             <div class="section-card-handle-col">
+                <button type="button" class="section-move-btn" data-id="moveUp" title="Move up" aria-label="Move up">
+                    <span class="material-icons" aria-hidden="true">keyboard_arrow_up</span>
+                </button>
                 <span class="section-drag-handle" data-id="dragHandle" title="Drag to reorder" draggable="false">
                     <span class="material-icons" aria-hidden="true">drag_indicator</span>
                 </span>
-                <button type="button" class="section-info" data-i18n-title="AdminOrderDesc" data-tooltip="Drag sections using the handle on the left to set display order. Top items appear first on the home screen." aria-label="Order info">
+                <button type="button" class="section-move-btn" data-id="moveDown" title="Move down" aria-label="Move down">
+                    <span class="material-icons" aria-hidden="true">keyboard_arrow_down</span>
+                </button>
+                <button type="button" class="section-info" data-i18n-title="AdminOrderDesc" data-tooltip="Drag sections using the handle on the left, or use the arrows, to set display order. Top items appear first on the home screen." aria-label="Order info">
                     <span class="material-icons" aria-hidden="true">info_outline</span>
                 </button>
             </div>
@@ -865,6 +898,41 @@
                     });
             }
 
+            function updateSectionMoveButtons() {
+                const cards = Array.from(getSectionCards());
+                cards.forEach(function (card, index) {
+                    const moveUp = card.querySelector('[data-id=moveUp]');
+                    const moveDown = card.querySelector('[data-id=moveDown]');
+                    if (moveUp) {
+                        moveUp.disabled = index === 0;
+                    }
+                    if (moveDown) {
+                        moveDown.disabled = index === cards.length - 1;
+                    }
+                });
+            }
+
+            function moveSectionCard(card, direction) {
+                const sectionWrapper = document.querySelector('#sectionWrapper');
+                if (!sectionWrapper || !card) {
+                    return;
+                }
+
+                if (direction < 0) {
+                    const prev = card.previousElementSibling;
+                    if (prev) {
+                        sectionWrapper.insertBefore(card, prev);
+                    }
+                } else if (direction > 0) {
+                    const next = card.nextElementSibling;
+                    if (next) {
+                        sectionWrapper.insertBefore(next, card);
+                    }
+                }
+
+                updateSectionMoveButtons();
+            }
+
             function setupSectionRowDrag(card) {
                 const handle = card.querySelector('[data-id=dragHandle]');
                 if (!handle || card.dataset.dragBound === 'true') {
@@ -878,6 +946,23 @@
                 handle.addEventListener('pointerdown', function () {
                     sectionDragState.allowDrag = true;
                 });
+
+                const moveUp = card.querySelector('[data-id=moveUp]');
+                const moveDown = card.querySelector('[data-id=moveDown]');
+                if (moveUp) {
+                    moveUp.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        moveSectionCard(card, -1);
+                    });
+                }
+                if (moveDown) {
+                    moveDown.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        moveSectionCard(card, 1);
+                    });
+                }
 
                 card.addEventListener('dragstart', function (e) {
                     if (!sectionDragState.allowDrag) {
@@ -900,6 +985,7 @@
                     sectionDragState.row = null;
                     sectionDragState.allowDrag = false;
                     clearSectionDragOverClasses();
+                    updateSectionMoveButtons();
                 });
 
                 card.addEventListener('dragover', function (e) {
@@ -941,6 +1027,7 @@
                     }
 
                     clearSectionDragOverClasses();
+                    updateSectionMoveButtons();
                 });
             }
 
@@ -978,6 +1065,19 @@
                 if (dragHandle) {
                     dragHandle.setAttribute('title', dragTitle);
                     dragHandle.setAttribute('aria-label', dragTitle);
+                }
+
+                const moveUpTitle = pageTranslations['AdminMoveUp'] || 'Move up';
+                const moveDownTitle = pageTranslations['AdminMoveDown'] || 'Move down';
+                const moveUpBtn = template.querySelector('[data-id=moveUp]');
+                const moveDownBtn = template.querySelector('[data-id=moveDown]');
+                if (moveUpBtn) {
+                    moveUpBtn.setAttribute('title', moveUpTitle);
+                    moveUpBtn.setAttribute('aria-label', moveUpTitle);
+                }
+                if (moveDownBtn) {
+                    moveDownBtn.setAttribute('title', moveDownTitle);
+                    moveDownBtn.setAttribute('aria-label', moveDownTitle);
                 }
 
                 sectionWrapper.appendChild(template);
@@ -1426,6 +1526,7 @@
                             // Translate dynamically added section rows in case
                             // translatePage() finished before sections were rendered
                             applyTranslations(document.querySelector('#sectionWrapper'));
+                            updateSectionMoveButtons();
 
                             // Baseline for the save-time change summary dialog
                             originalSectionSnapshot = snapshotSectionsFromDom();

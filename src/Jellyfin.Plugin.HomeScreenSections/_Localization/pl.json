@@ -175,9 +175,11 @@
   "AdminAllCachesDesc": "Czyści zarówno pamięć podręczną zasobów statycznych, jak i transformacji index.html.",
 
   "AdminFieldDescriptions": "Opisy pól",
-  "AdminOrderDesc": "Przeciągnij sekcje uchwytem po lewej, aby ustawić kolejność wyświetlania. Elementy na górze pojawiają się pierwsze na ekranie głównym.",
-  "AdminOrderNote": "Przeciągnij sekcje uchwytem po lewej, aby zmienić kolejność.",
+  "AdminOrderDesc": "Przeciągnij sekcje uchwytem po lewej lub użyj strzałek góra/dół, aby ustawić kolejność wyświetlania. Elementy na górze pojawiają się pierwsze na ekranie głównym.",
+  "AdminOrderNote": "Przeciągnij sekcje lub użyj strzałek góra/dół, aby zmienić kolejność.",
   "AdminOrderDragHint": "Przeciągnij, aby zmienić kolejność",
+  "AdminMoveUp": "Przenieś w górę",
+  "AdminMoveDown": "Przenieś w dół",
   "AdminEnabledDesc": "Włącz tę sekcję domyślnie",
   "AdminUserOverrideDesc": "Pozwól użytkownikowi nadpisać tę sekcję",
   "AdminLowerLimitDesc": "Minimalna liczba wystąpień tej sekcji",
