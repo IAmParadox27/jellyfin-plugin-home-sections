@@ -25,8 +25,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         public string? Route => null;
         
         public string? AdditionalData { get; set; }
-        
-        public object? OriginalPayload => null;
+
+        /// <summary>
+        /// Person item used as the section title link target.
+        /// </summary>
+        public object? OriginalPayload { get; set; }
         
         protected abstract IReadOnlyList<string> PersonTypes { get; }
 

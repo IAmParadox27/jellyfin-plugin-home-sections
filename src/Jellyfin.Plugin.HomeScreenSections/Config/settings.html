@@ -11,7 +11,10 @@
 
         <div class="verticalSection verticalSection-extrabottompadding">
             <h3 data-i18n="AdminEnabledSections">Enabled Sections</h3>
-            <div id="enabledSections">
+            <p class="fieldDescription" data-i18n="AdminUserSectionOrderHint" style="margin-top: 0;">
+                Enable sections and use the arrows to set your personal home screen order. Top items appear first.
+            </p>
+            <div id="enabledSections" class="user-section-list">
             </div>
         </div>
 
@@ -20,6 +23,59 @@
         <span data-i18n="AdminSave">Save</span>
     </button>
 </form>
+<style>
+    .user-section-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .user-section-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .user-section-row .user-section-moves {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 0 0 auto;
+    }
+    .user-section-row .user-section-moves button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: #9aa0a6;
+        cursor: pointer;
+    }
+    .user-section-row .user-section-moves button:hover:not(:disabled) {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .user-section-row .user-section-moves button:disabled {
+        opacity: 0.3;
+        cursor: default;
+    }
+    .user-section-row .user-section-moves .material-icons {
+        font-size: 18px;
+    }
+    .user-section-row .checkboxContainer {
+        flex: 1 1 auto;
+        margin: 0;
+    }
+    .user-section-row.is-locked {
+        opacity: 0.55;
+    }
+</style>
 <script defer>
 
     if (window.HomeScreenSectionsUserSettings === undefined) {
@@ -28,6 +84,43 @@
             setup: function () {
                 var uiLanguage = document.documentElement.lang || navigator.language || 'en';
                 var pageTranslations = {};
+
+                function t(key, fallback) {
+                    return pageTranslations[key] || fallback;
+                }
+
+                function updateUserSectionMoveButtons() {
+                    var rows = Array.prototype.slice.call(document.querySelectorAll('#enabledSections .user-section-row'));
+                    rows.forEach(function (row, index) {
+                        var up = row.querySelector('[data-move="up"]');
+                        var down = row.querySelector('[data-move="down"]');
+                        if (up) {
+                            up.disabled = index === 0 || row.classList.contains('is-locked');
+                        }
+                        if (down) {
+                            down.disabled = index === rows.length - 1 || row.classList.contains('is-locked');
+                        }
+                    });
+                }
+
+                function moveUserSectionRow(row, direction) {
+                    var list = document.querySelector('#enabledSections');
+                    if (!list || !row || row.classList.contains('is-locked')) {
+                        return;
+                    }
+                    if (direction < 0) {
+                        var prev = row.previousElementSibling;
+                        if (prev) {
+                            list.insertBefore(row, prev);
+                        }
+                    } else if (direction > 0) {
+                        var next = row.nextElementSibling;
+                        if (next) {
+                            list.insertBefore(next, row);
+                        }
+                    }
+                    updateUserSectionMoveButtons();
+                }
 
                 // Translate static page elements
                 ApiClient.fetch({
@@ -87,13 +180,37 @@
                             }
                         }).then(function (response) {
                             if (response.TotalRecordCount > 0) {
+                                var items = response.Items.slice();
+                                var savedOrder = Array.isArray(settings.SectionOrder) ? settings.SectionOrder : [];
+                                if (savedOrder.length > 0) {
+                                    var rank = {};
+                                    savedOrder.forEach(function (id, idx) {
+                                        if (rank[id] === undefined) {
+                                            rank[id] = idx;
+                                        }
+                                    });
+                                    items.sort(function (a, b) {
+                                        var ra = rank[a.Section];
+                                        var rb = rank[b.Section];
+                                        if (ra === undefined && rb === undefined) {
+                                            return 0;
+                                        }
+                                        if (ra === undefined) {
+                                            return 1;
+                                        }
+                                        if (rb === undefined) {
+                                            return -1;
+                                        }
+                                        return ra - rb;
+                                    });
+                                }
 
-                                let html = '';
-                                for (let i = 0; i < response.TotalRecordCount; ++i) {
-                                    let section = response.Items[i];
+                                var list = document.createElement('div');
+                                list.className = 'user-section-list';
 
-                                    let disabled = !hssMeta.AllowUserOverride;
-                                    let checked = false;
+                                items.forEach(function (section) {
+                                    var disabled = !hssMeta.AllowUserOverride;
+                                    var checked = false;
                                     if (settings.EnabledSections.includes(section.Section)) {
                                         checked = true;
                                     }
@@ -108,14 +225,42 @@
                                         checked = settings.DefaultEnabledSections.includes(section.Section);
                                     }
 
-                                    html += '<label class="checkboxContainer" style="' + (disabled ? 'opacity: 0.5;' : '') + '">';
-                                    html += '<input ' + (disabled ? 'disabled="true"' : '') + ' is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
-                                    html += '<span>' + section.DisplayText + '</span>';
-                                    html += '</label>';
-                                }
+                                    var row = document.createElement('div');
+                                    row.className = 'user-section-row' + (disabled ? ' is-locked' : '');
+                                    row.setAttribute('data-section', section.Section);
 
-                                let elem = document.querySelector('#enabledSections');
-                                elem.innerHTML = html;
+                                    var moves = document.createElement('div');
+                                    moves.className = 'user-section-moves';
+                                    moves.innerHTML =
+                                        '<button type="button" data-move="up" title="' + t('AdminMoveUp', 'Move up') + '" aria-label="' + t('AdminMoveUp', 'Move up') + '">' +
+                                            '<span class="material-icons" aria-hidden="true">keyboard_arrow_up</span></button>' +
+                                        '<button type="button" data-move="down" title="' + t('AdminMoveDown', 'Move down') + '" aria-label="' + t('AdminMoveDown', 'Move down') + '">' +
+                                            '<span class="material-icons" aria-hidden="true">keyboard_arrow_down</span></button>';
+                                    moves.querySelector('[data-move="up"]').addEventListener('click', function () {
+                                        moveUserSectionRow(row, -1);
+                                    });
+                                    moves.querySelector('[data-move="down"]').addEventListener('click', function () {
+                                        moveUserSectionRow(row, 1);
+                                    });
+
+                                    var label = document.createElement('label');
+                                    label.className = 'checkboxContainer';
+                                    label.style.cssText = disabled ? 'opacity: 0.5; margin: 0;' : 'margin: 0;';
+                                    label.innerHTML =
+                                        '<input ' + (disabled ? 'disabled="true"' : '') +
+                                        ' is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' +
+                                        section.Section + '" ' + (checked ? 'checked' : '') + ' />' +
+                                        '<span>' + section.DisplayText + '</span>';
+
+                                    row.appendChild(moves);
+                                    row.appendChild(label);
+                                    list.appendChild(row);
+                                });
+
+                                var elem = document.querySelector('#enabledSections');
+                                elem.innerHTML = '';
+                                elem.appendChild(list);
+                                updateUserSectionMoveButtons();
                             }
                         });
                     });
@@ -131,15 +276,17 @@
 
                         let data = {
                             UserId: ApiClient.getCurrentUserId(),
-                            EnabledSections: []
+                            EnabledSections: [],
+                            SectionOrder: []
                         };
 
-                        let checkboxes = document.querySelectorAll('.sectionEnabledCheckbox');
+                        let rows = document.querySelectorAll('#enabledSections .user-section-row');
+                        rows.forEach(function (row) {
+                            let sectionId = row.getAttribute('data-section');
+                            data.SectionOrder.push(sectionId);
 
-                        checkboxes.forEach(function (checkbox) {
-                            let sectionId = checkbox.getAttribute('data-section');
-
-                            if (checkbox.checked) {
+                            let checkbox = row.querySelector('.sectionEnabledCheckbox');
+                            if (checkbox && checkbox.checked) {
                                 data.EnabledSections.push(sectionId);
                             }
                         });

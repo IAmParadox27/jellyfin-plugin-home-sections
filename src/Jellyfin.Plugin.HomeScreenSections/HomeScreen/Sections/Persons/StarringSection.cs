@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 {
@@ -24,10 +25,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 
         protected override IHomeScreenSection CreateInstance(Person person)
         {
+            DtoOptions dtoOptions = new DtoOptions
+            {
+                Fields = new List<ItemFields>
+                {
+                    ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.DisplayPreferencesId
+                }
+            };
+
             return new StarringSection(m_libraryManager, m_dtoService, m_userManager)
             {
                 AdditionalData = person.Id.ToString(),
                 DisplayText = $"Starring {person.Name}",
+                OriginalPayload = m_dtoService.GetBaseItemDto(person, dtoOptions),
                 TranslationMetadata = new TranslationMetadata()
                 {
                     Type = TranslationType.Pattern,
