@@ -642,6 +642,47 @@
                         #sectionList .section-card-controls {
                             grid-template-columns: repeat(2, minmax(0, 1fr));
                         }
+                        #sectionList .section-card-body {
+                            padding: 12px 12px 14px;
+                            gap: 10px;
+                        }
+                        #sectionList .section-card-handle-col {
+                            flex: 0 0 44px;
+                            padding: 6px 0;
+                        }
+                        #sectionList .section-move-btn {
+                            width: 32px;
+                            height: 28px;
+                        }
+                        #sectionList .section-drag-handle {
+                            width: 32px;
+                            height: 32px;
+                        }
+                        #sectionList .section-field {
+                            padding: 10px 10px;
+                        }
+                        .section-list-toolbar {
+                            padding: 10px;
+                            gap: 8px;
+                        }
+                        .section-list-toolbar-actions {
+                            width: 100%;
+                        }
+                        .section-list-toolbar-actions .emby-button {
+                            flex: 1 1 auto;
+                        }
+                        .section-dirty-hint {
+                            margin-left: 0;
+                            width: 100%;
+                        }
+                    }
+                    @media (max-width: 480px) {
+                        #sectionList .section-card-controls {
+                            grid-template-columns: 1fr;
+                        }
+                        #sectionList .section-card-title {
+                            white-space: normal;
+                        }
                     }
                 </style>
                 <div class="section-list-toolbar">
@@ -658,6 +699,13 @@
                         <button type="button" id="btnUndoSectionReorder" class="raised emby-button" disabled>
                             <span data-i18n="AdminUndoMove">Undo move</span>
                         </button>
+                        <button type="button" id="btnExportSections" class="raised emby-button">
+                            <span data-i18n="AdminExportSections">Export</span>
+                        </button>
+                        <button type="button" id="btnImportSections" class="raised emby-button">
+                            <span data-i18n="AdminImportSections">Import</span>
+                        </button>
+                        <input type="file" id="sectionImportFile" accept="application/json,.json" style="display: none;" />
                     </div>
                     <span id="sectionDirtyHint" class="section-dirty-hint" hidden data-i18n="AdminUnsavedSectionChanges">Unsaved section changes</span>
                 </div>
@@ -1182,6 +1230,125 @@
                 }
             }
 
+            function exportSectionSettings() {
+                const payload = {
+                    exportedAt: new Date().toISOString(),
+                    pluginId: pluginId,
+                    SectionSettings: collectSectionSettingsForSave().map(function (section, index) {
+                        const card = Array.from(getSectionCards()).find(function (c) {
+                            return c.querySelector('[data-id=hiddenSectionId]').value === section.SectionId;
+                        });
+                        return {
+                            SectionId: section.SectionId,
+                            DisplayName: card
+                                ? ((card.querySelector('[data-id=lblSectionName]') || {}).textContent || '').trim()
+                                : section.SectionId,
+                            Enabled: section.Enabled,
+                            AllowUserOverride: section.AllowUserOverride,
+                            HideWatchedItems: section.HideWatchedItems,
+                            LowerLimit: section.LowerLimit,
+                            UpperLimit: section.UpperLimit,
+                            OrderIndex: index,
+                            ViewMode: section.ViewMode
+                        };
+                    })
+                };
+
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'home-screen-sections-config.json';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            }
+
+            function importSectionSettingsFromFile(file) {
+                if (!file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function () {
+                    try {
+                        const data = JSON.parse(String(reader.result || '{}'));
+                        const imported = Array.isArray(data.SectionSettings) ? data.SectionSettings : null;
+                        if (!imported || imported.length === 0) {
+                            Dashboard.alert(t('AdminImportSectionsInvalid', 'Import file is missing SectionSettings.'));
+                            return;
+                        }
+
+                        const byId = {};
+                        imported.forEach(function (section) {
+                            if (section && section.SectionId) {
+                                byId[section.SectionId] = section;
+                            }
+                        });
+
+                        // Apply field values first.
+                        Array.from(getSectionCards()).forEach(function (card) {
+                            const id = card.querySelector('[data-id=hiddenSectionId]').value;
+                            const section = byId[id];
+                            if (!section) {
+                                return;
+                            }
+
+                            const enabled = card.querySelector('[data-id=chkSectionEnabled]');
+                            if (enabled && !enabled.disabled && section.Enabled !== undefined) {
+                                enabled.checked = Boolean(section.Enabled);
+                            }
+                            const override = card.querySelector('[data-id=chkSectionUserOverrideAllowed]');
+                            if (override && section.AllowUserOverride !== undefined) {
+                                override.checked = Boolean(section.AllowUserOverride);
+                            }
+                            const hideWatched = card.querySelector('[data-id=chkHideWatchedItems]');
+                            if (hideWatched && !hideWatched.disabled && section.HideWatchedItems !== undefined) {
+                                hideWatched.checked = Boolean(section.HideWatchedItems);
+                            }
+                            const minInput = card.querySelector('[data-id=txtSectionMinLimit]');
+                            if (minInput && section.LowerLimit !== undefined) {
+                                minInput.value = section.LowerLimit;
+                            }
+                            const maxInput = card.querySelector('[data-id=txtSectionMaxLimit]');
+                            if (maxInput && section.UpperLimit !== undefined) {
+                                maxInput.value = section.UpperLimit;
+                            }
+                            const viewMode = card.querySelector('[data-id=viewModeSelect]');
+                            if (viewMode && !viewMode.disabled && section.ViewMode) {
+                                viewMode.value = section.ViewMode;
+                            }
+                        });
+
+                        // Reorder cards by imported OrderIndex when present.
+                        const orderedIds = imported
+                            .slice()
+                            .sort(function (a, b) {
+                                return (Number(a.OrderIndex) || 0) - (Number(b.OrderIndex) || 0);
+                            })
+                            .map(function (s) { return s.SectionId; })
+                            .filter(Boolean);
+
+                        if (orderedIds.length) {
+                            const beforeIds = captureSectionOrderIds();
+                            applySectionOrderIds(orderedIds);
+                            if (beforeIds.join('|') !== captureSectionOrderIds().join('|')) {
+                                rememberReorderForUndo(beforeIds);
+                            }
+                        }
+
+                        updateSectionMoveButtons();
+                        refreshSectionDirtyState();
+                        Dashboard.alert(t('AdminImportSectionsDone', 'Section settings imported. Review changes and click Save.'));
+                    } catch (err) {
+                        console.error(err);
+                        Dashboard.alert(t('AdminImportSectionsFailed', 'Failed to import section settings. Check the JSON file.'));
+                    }
+                };
+                reader.readAsText(file);
+            }
+
             function setupSectionListExtras() {
                 const search = document.querySelector('#sectionSearch');
                 if (search && search.dataset.bound !== 'true') {
@@ -1211,6 +1378,27 @@
                     undoBtn.dataset.bound = 'true';
                     undoBtn.addEventListener('click', function () {
                         undoLastSectionReorder();
+                    });
+                }
+
+                const exportBtn = document.querySelector('#btnExportSections');
+                if (exportBtn && exportBtn.dataset.bound !== 'true') {
+                    exportBtn.dataset.bound = 'true';
+                    exportBtn.addEventListener('click', exportSectionSettings);
+                }
+
+                const importBtn = document.querySelector('#btnImportSections');
+                const importFile = document.querySelector('#sectionImportFile');
+                if (importBtn && importFile && importBtn.dataset.bound !== 'true') {
+                    importBtn.dataset.bound = 'true';
+                    importBtn.addEventListener('click', function () {
+                        importFile.value = '';
+                        importFile.click();
+                    });
+                    importFile.addEventListener('change', function () {
+                        if (importFile.files && importFile.files[0]) {
+                            importSectionSettingsFromFile(importFile.files[0]);
+                        }
                     });
                 }
 
@@ -1728,6 +1916,20 @@
                 };
             }
 
+            function bustPluginStaticCacheQuietly() {
+                return window.ApiClient.ajax({
+                    url: window.ApiClient.getUrl('HomeScreen/BustCache'),
+                    type: 'POST',
+                    dataType: 'json',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                }).catch(function (error) {
+                    console.warn('Post-save cache bust failed (non-fatal):', error);
+                });
+            }
+
             function persistConfig(config) {
                 Dashboard.showLoadingMsg();
                 window.ApiClient.updatePluginConfiguration(pluginId, config)
@@ -1735,7 +1937,10 @@
                         originalSectionSnapshot = snapshotSectionsFromDom();
                         clearReorderUndo();
                         refreshSectionDirtyState();
-                        return Dashboard.processPluginConfigurationUpdateResult(result);
+                        // Refresh plugin assets so home/order changes show without a manual hard-refresh.
+                        return bustPluginStaticCacheQuietly().then(function () {
+                            return Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
                     })
                     .catch(e => console.error(e))
                     .finally(() => Dashboard.hideLoadingMsg());
@@ -1864,12 +2069,45 @@
                     });
             }
 
+            function setupAdvancedDetailsMemory() {
+                const storageKey = 'hss.admin.advancedDetailsOpen';
+                let saved = {};
+                try {
+                    saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+                } catch (e) {
+                    saved = {};
+                }
+
+                const detailsList = document.querySelectorAll('#global details');
+                detailsList.forEach(function (details, index) {
+                    const key = details.getAttribute('data-details-id')
+                        || (details.querySelector('summary') && details.querySelector('summary').getAttribute('data-i18n'))
+                        || ('details-' + index);
+
+                    details.setAttribute('data-details-id', key);
+                    if (saved[key]) {
+                        details.open = true;
+                    }
+
+                    details.addEventListener('toggle', function () {
+                        try {
+                            const current = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+                            current[key] = details.open;
+                            localStorage.setItem(storageKey, JSON.stringify(current));
+                        } catch (err) {
+                            // Ignore storage failures (private mode, quota, etc.)
+                        }
+                    });
+                });
+            }
+
             document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
                 setupTabs();
                 loadLibraries();
                 loadConfig();
                 translatePage();
                 setupSectionListExtras();
+                setupAdvancedDetailsMemory();
                 document.querySelector('#btnSaveConfigGlobal').addEventListener("click", saveConfig);
                 document.querySelector('#btnSaveConfigSections').addEventListener("click", saveConfig);
 

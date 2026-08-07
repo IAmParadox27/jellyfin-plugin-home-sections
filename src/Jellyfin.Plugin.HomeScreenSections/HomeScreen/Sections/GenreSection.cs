@@ -22,7 +22,12 @@ public class GenreSection : IHomeScreenSection
     public int? Limit => 5;
     public string? Route => null;
     public string? AdditionalData { get; set; }
-    public object? OriginalPayload => null;
+
+    /// <summary>
+    /// Genre item used as the section title link target.
+    /// </summary>
+    public object? OriginalPayload { get; set; }
+
     public TranslationMetadata? TranslationMetadata { get; private set; }
 
     private readonly IUserManager m_userManager;
@@ -81,12 +86,25 @@ public class GenreSection : IHomeScreenSection
             yield break;
         }
 
+        DtoOptions linkDtoOptions = new DtoOptions
+        {
+            Fields = new List<ItemFields>
+            {
+                ItemFields.PrimaryImageAspectRatio,
+                ItemFields.DisplayPreferencesId
+            }
+        };
+
         foreach (string selectedGenre in PickWeightedGenres(userGenreScores, instanceCount))
         {
+            Genre? genreItem = m_libraryManager.GetGenre(selectedGenre);
             yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
             {
                 AdditionalData = selectedGenre,
                 DisplayText = $"{selectedGenre} Movies",
+                OriginalPayload = genreItem != null
+                    ? m_dtoService.GetBaseItemDto(genreItem, linkDtoOptions, user)
+                    : null,
                 TranslationMetadata = new TranslationMetadata()
                 {
                     Type = TranslationType.Pattern,

@@ -107,6 +107,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         public IList<string> LockedSections { get; set; } = new List<string>();
         
         public IList<string> DefaultEnabledSections { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Optional user override of section type display order (section ids, first = top).
+        /// When empty, the admin plugin OrderIndex is used.
+        /// </summary>
+        public IList<string> SectionOrder { get; set; } = new List<string>();
     }
 
     public static class HomeScreenSectionExtensions

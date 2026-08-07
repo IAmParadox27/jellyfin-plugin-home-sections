@@ -116,10 +116,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
 
-            IGrouping<int, SectionSettings>[] groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
-                .OrderBy(x => x.OrderIndex)
-                .GroupBy(x => x.OrderIndex)
-                .ToArray();
+            IGrouping<int, SectionSettings>[] groupedOrderedSections = BuildOrderedSectionGroups(settings);
 
             UserSectionsData? userSectionsData = pageHash != null
                 ? InitializeUserSectionsData(userId, pageHash.Value, groupedOrderedSections)
@@ -129,6 +126,41 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 PopulateOrderGroup(userId, sectionTypes, orderedSections, userSectionsData);
             });
+        }
+
+        /// <summary>
+        /// Groups section settings by display order. Uses the user's SectionOrder when set;
+        /// otherwise falls back to the admin OrderIndex grouping.
+        /// </summary>
+        private static IGrouping<int, SectionSettings>[] BuildOrderedSectionGroups(ModularHomeUserSettings? settings)
+        {
+            List<SectionSettings> adminSettings = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.ToList();
+
+            if (settings?.SectionOrder is { Count: > 0 } userOrder)
+            {
+                Dictionary<string, int> rank = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (int i = 0; i < userOrder.Count; i++)
+                {
+                    string id = userOrder[i];
+                    if (!string.IsNullOrEmpty(id) && !rank.ContainsKey(id))
+                    {
+                        rank[id] = i;
+                    }
+                }
+
+                int next = userOrder.Count;
+                return adminSettings
+                    .OrderBy(s => rank.TryGetValue(s.SectionId, out int r) ? r : next++)
+                    .ThenBy(s => s.OrderIndex)
+                    .Select((s, index) => (Settings: s, Order: index))
+                    .GroupBy(x => x.Order, x => x.Settings)
+                    .ToArray();
+            }
+
+            return adminSettings
+                .OrderBy(x => x.OrderIndex)
+                .GroupBy(x => x.OrderIndex)
+                .ToArray();
         }
 
         private static List<(IHomeScreenSection Section, int ConfiguredOrder)> CollectCohesiveSections(
