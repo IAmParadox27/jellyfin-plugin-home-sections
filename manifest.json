@@ -6,7 +6,7 @@
     "description": "Adds support for server provided home screen sections.\n\nThis is a personal fork build used for testing translations and changes. Install File Transformation and Plugin Pages as well.",
     "owner": "Robert-Hansen",
     "category": "General",
-    "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/plugin-repo/logo.png",
+    "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png",
     "versions": [
       {
         "version": "2.5.13.0",

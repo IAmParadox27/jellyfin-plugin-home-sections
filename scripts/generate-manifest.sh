@@ -9,7 +9,7 @@ PLUGIN_GUID="b8298e01-2697-407a-b44d-aa8dc795e850"
 FILE_TRANSFORMATION_GUID="5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
 PLUGIN_NAME="Home Screen Sections (Fork)"
 OWNER_NAME="${REPO%%/*}"
-IMAGE_URL="https://raw.githubusercontent.com/${REPO}/plugin-repo/logo.png"
+IMAGE_URL="https://raw.githubusercontent.com/${REPO}/main/src/logo.png"
 
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT

@@ -215,12 +215,14 @@ jobs:
   plugin-repo:
     name: Update Jellyfin plugin repository
     needs: [prepare, release]
-    # Also allow regenerating manifest without a new release (when create_release=false but update requested and artifacts exist)
     if: always() && needs.prepare.outputs.update_plugin_repo == 'true' && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source (for script + logo)
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate manifest from GitHub Releases
         env:
@@ -230,38 +232,26 @@ jobs:
           set -euo pipefail
           chmod +x scripts/generate-manifest.sh
           ./scripts/generate-manifest.sh "${{ github.repository }}" manifest.json
-          cp src/logo.png logo.png
           cat manifest.json
 
-      - name: Publish plugin-repo branch
+      - name: Commit manifest to main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          WORK="$(mktemp -d)"
-          cd "$WORK"
-          git init -b plugin-repo
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          cp "${{ github.workspace }}/manifest.json" .
-          cp "${{ github.workspace }}/logo.png" .
-          cat > README.md <<EOF
-          # Jellyfin plugin repository (fork)
-
-          Add this URL in Jellyfin:
-
-          \`https://raw.githubusercontent.com/${{ github.repository }}/plugin-repo/manifest.json\`
-          EOF
-
-          git add manifest.json logo.png README.md
-          git commit -m "Update plugin repository manifest"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          git push -u origin plugin-repo --force
+          git add manifest.json
+          if git diff --cached --quiet; then
+            echo "No manifest changes."
+          else
+            git commit -m "Update plugin repository manifest.json"
+            git push origin main
+          fi
 
           echo ""
           echo "=============================================="
           echo "Add this repository in Jellyfin:"
-          echo "https://raw.githubusercontent.com/${{ github.repository }}/plugin-repo/manifest.json"
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json"
           echo "=============================================="
