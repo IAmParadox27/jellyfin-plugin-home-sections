@@ -12,7 +12,7 @@
 	</a>
 </p>
 
-> Based on [IAmParadox27/jellyfin-plugin-home-sections](https://github.com/IAmParadox27/jellyfin-plugin-home-sections) (GPL-3.0). This is a version of that plugin with some extra stuff. See **[What's new](#whats-new)** below.
+> Based on [IAmParadox27/jellyfin-plugin-home-sections](https://github.com/IAmParadox27/jellyfin-plugin-home-sections) (GPL-3.0). I wanted these features now, so I added them here. See **[What's new](#whats-new)** below.
 
 <details>
 	<summary><h2>Development Update - 20/08/2025</h2></summary>
