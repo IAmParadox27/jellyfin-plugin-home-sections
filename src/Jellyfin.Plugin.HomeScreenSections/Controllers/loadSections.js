@@ -278,16 +278,19 @@
             var layoutManager = {{layoutmanager_hook}}.A;
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
             
-            if (!layoutManager.tv && sectionInfo.Route !== undefined) {
+            // Title is clickable when we have a concrete item payload (e.g. collection/library)
+            // or a named route. Prefer OriginalPayload so collection sections open the full collection.
+            var hasTitleLink = !layoutManager.tv && !!(sectionInfo.OriginalPayload || sectionInfo.Route);
+            if (hasTitleLink) {
                 var route = undefined;
-                if (sectionInfo.OriginalPayload !== undefined) {
+                if (sectionInfo.OriginalPayload) {
                     route = p.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
                         serverId: apiClient.serverId()
                     });
                 } else {
                     route = p.appRouter.getRouteUrl(sectionInfo.Route, {
                         serverId: apiClient.serverId()
-                    })
+                    });
                 }
 
                 html += '<a is="emby-linkbutton" href="' + route + '" class="button-flat button-flat-mini sectionTitleTextButton">';

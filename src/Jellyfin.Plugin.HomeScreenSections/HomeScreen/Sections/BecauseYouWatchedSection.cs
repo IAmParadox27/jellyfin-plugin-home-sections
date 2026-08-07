@@ -29,7 +29,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public string? AdditionalData { get; set; }
 
-		public object? OriginalPayload => null;
+		/// <summary>
+		/// Source movie for the section title link ("Because You Watched X" opens X).
+		/// </summary>
+		public object? OriginalPayload { get; set; }
 
 		public TranslationMetadata? TranslationMetadata { get; private set; }
 		
@@ -67,6 +70,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				{
 					AdditionalData = picked.Id.ToString(),
 					DisplayText = "Because You Watched " + picked.Name,
+					// Make the section title open the source movie.
+					OriginalPayload = user != null
+						? DtoService.GetBaseItemDto(picked, dtoOptions, user)
+						: DtoService.GetBaseItemDto(picked, dtoOptions),
 					TranslationMetadata = new TranslationMetadata()
 					{
 						Type = TranslationType.Pattern,

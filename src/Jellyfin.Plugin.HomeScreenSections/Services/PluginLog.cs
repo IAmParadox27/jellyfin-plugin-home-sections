@@ -93,6 +93,9 @@ internal static partial class PluginLog
     [LoggerMessage(EventId = 1300, Level = LogLevel.Error, Message = "An error occurred while creating section instances for user '{UserId}' and section '{Section}'")]
     public static partial void SectionInstanceError(ILogger logger, Exception exception, Guid userId, string? section);
 
+    [LoggerMessage(EventId = 1301, Level = LogLevel.Debug, Message = "Failed to resolve section title link for AdditionalData '{AdditionalData}' and user '{UserId}'")]
+    public static partial void SectionTitleLinkResolveFailed(ILogger logger, Exception exception, string additionalData, Guid userId);
+
     // --- RecentlyAddedShowsSection ---
     [LoggerMessage(EventId = 1400, Level = LogLevel.Information, Message = "Season '{SeasonName}' has been sorted based on an episode having a date created of: {DateCreated}.")]
     public static partial void SeasonSortedByEpisodeDate(ILogger logger, string seasonName, DateTime? dateCreated);

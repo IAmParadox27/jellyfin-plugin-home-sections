@@ -4,9 +4,19 @@ using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Data;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
+using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Playlists;
+using MediaBrowser.Model.Dto;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Services
@@ -18,16 +28,34 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
         private readonly ITranslationManager m_translationManager;
         private readonly UserSectionsDataCache m_dataCache;
+        private readonly IUserManager m_userManager;
+        private readonly ILibraryManager m_libraryManager;
+        private readonly IDtoService m_dtoService;
+        private readonly CollectionManagerProxy m_collectionManagerProxy;
+        private readonly IPlaylistManager m_playlistManager;
     
-        public HomeScreenSectionService(IHomeScreenManager homeScreenManager,
-            ILogger<HomeScreenSectionsPlugin> logger, ITranslationManager translationManager,
-            UserSectionsDataCache dataCache, IServerConfigurationManager _configurationManager)
+        public HomeScreenSectionService(
+            IHomeScreenManager homeScreenManager,
+            ILogger<HomeScreenSectionsPlugin> logger,
+            ITranslationManager translationManager,
+            UserSectionsDataCache dataCache,
+            IServerConfigurationManager configurationManager,
+            IUserManager userManager,
+            ILibraryManager libraryManager,
+            IDtoService dtoService,
+            CollectionManagerProxy collectionManagerProxy,
+            IPlaylistManager playlistManager)
         {
             m_homeScreenManager = homeScreenManager;
             m_logger = logger;
             m_translationManager = translationManager;
             m_dataCache = dataCache;
-            m_configurationManager = _configurationManager;
+            m_configurationManager = configurationManager;
+            m_userManager = userManager;
+            m_libraryManager = libraryManager;
+            m_dtoService = dtoService;
+            m_collectionManagerProxy = collectionManagerProxy;
+            m_playlistManager = playlistManager;
         }
 
         public IReadOnlyList<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
@@ -50,7 +78,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             if ((isComplete && userSectionsData.SectionsInProgress.IsEmpty) || sectionsToReturn.Count == pageSize)
             {
                 return sectionsToReturn
-                    .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
+                    .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language, userId))
                     .ToList();
             }
 
@@ -315,12 +343,23 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        private HomeScreenSectionInfo SectionToInfo(IHomeScreenSection section, int configuredOrder, string? language)
+        private HomeScreenSectionInfo SectionToInfo(IHomeScreenSection section, int configuredOrder, string? language, Guid userId)
         {
             HomeScreenSectionInfo info = section.AsInfo();
 
             info.OrderIndex = configuredOrder;
             info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => string.Equals(y.SectionId, info.Section, StringComparison.Ordinal))?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+
+            // Plugin-defined sections (e.g. Collection Sections) often only pass the
+            // collection/playlist name in AdditionalData. Resolve that into an item DTO
+            // so the web client can make the section title open the full collection.
+            // Limit to PluginDefinedSection so genre names, etc. are not mis-resolved.
+            if (info.OriginalPayload == null
+                && section is PluginDefinedSection
+                && !string.IsNullOrWhiteSpace(info.AdditionalData))
+            {
+                info.OriginalPayload = TryResolveTitleLinkTarget(info.AdditionalData, userId);
+            }
             
             if (info.DisplayText != null)
             {
@@ -331,6 +370,72 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             
             return info;
+        }
+
+        /// <summary>
+        /// Resolves a section title link target from AdditionalData (item id, collection name, or playlist name).
+        /// Used so Collection Sections (and similar) can open the full collection from the section title.
+        /// </summary>
+        private BaseItemDto? TryResolveTitleLinkTarget(string additionalData, Guid userId)
+        {
+            try
+            {
+                User? user = m_userManager.GetUserById(userId);
+                if (user == null)
+                {
+                    return null;
+                }
+
+                DtoOptions dtoOptions = new DtoOptions
+                {
+                    Fields = new List<ItemFields>
+                    {
+                        ItemFields.PrimaryImageAspectRatio,
+                        ItemFields.DisplayPreferencesId
+                    }
+                };
+
+                // Prefer explicit item id when AdditionalData is a Guid.
+                if (Guid.TryParse(additionalData, out Guid itemId))
+                {
+                    BaseItem? byId = m_libraryManager.GetItemById(itemId);
+                    if (byId != null)
+                    {
+                        return m_dtoService.GetBaseItemDto(byId, dtoOptions, user);
+                    }
+                }
+
+                // Collection Sections registers AdditionalData as the collection/playlist name.
+                BoxSet? collection = m_collectionManagerProxy.GetCollections(user)
+                    .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
+                if (collection != null)
+                {
+                    return m_dtoService.GetBaseItemDto(collection, dtoOptions, user);
+                }
+
+                Playlist? playlist = m_playlistManager.GetPlaylists(userId)
+                    .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
+                if (playlist != null)
+                {
+                    return m_dtoService.GetBaseItemDto(playlist, dtoOptions, user);
+                }
+            }
+            catch (Exception ex) when (
+                ex is InvalidOperationException
+                or ArgumentException
+                or NullReferenceException
+                or KeyNotFoundException
+                or NotSupportedException
+                or FormatException
+                or TimeoutException
+                or IOException
+                or HttpRequestException
+                or System.Reflection.TargetInvocationException)
+            {
+                PluginLog.SectionTitleLinkResolveFailed(m_logger, ex, additionalData, userId);
+            }
+
+            return null;
         }
     }
 

@@ -24,7 +24,12 @@ namespace Jellyfin.Plugin.HomeScreenSections
             
             if (payload != null)
             {
-                homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
+                // Prefer a full item DTO when provided so the web client can open it from the title.
+                object? originalPayload = payload.OriginalPayload is JObject or JArray
+                    ? payload.OriginalPayload
+                    : null;
+
+                homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData, originalPayload)
                 {
                     OnGetResults = sectionPayload =>
                     {

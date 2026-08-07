@@ -17,17 +17,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Route { get; }
         public string? AdditionalData { get; set; }
 
-        public object? OriginalPayload => null;
+        /// <summary>
+        /// Optional item used as the section title link target (e.g. the full BoxSet/Playlist).
+        /// </summary>
+        public object? OriginalPayload { get; set; }
         
         public required GetResultsHandler OnGetResults { get; set; }
         
-        public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null)
+        public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null, object? originalPayload = null)
         {
             Section = sectionUuid;
             DisplayText = displayText;
             Limit = 1;
             Route = route;
             AdditionalData = additionalData;
+            OriginalPayload = originalPayload;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
