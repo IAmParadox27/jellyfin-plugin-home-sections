@@ -9,12 +9,45 @@
     "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png",
     "versions": [
       {
+        "version": "2.5.15.0",
+        "changelog": "Fork release from main: drag-and-drop section settings reorder with change summary dialog; clickable collection section titles.",
+        "targetAbi": "10.11.5.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.15.0/Release-10.11.5.zip",
+        "checksum": "5A9DA510D78630229E5ACB8F7B1159C7",
+        "timestamp": "2026-08-07T21:34:59",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.15.0",
+        "changelog": "Fork release from main: drag-and-drop section settings reorder with change summary dialog; clickable collection section titles.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.15.0/Release-10.11.11.zip",
+        "checksum": "282F97D1B9823BBBC5EE0A9BCDF841D3",
+        "timestamp": "2026-08-07T21:34:59",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.15.0",
+        "changelog": "Fork release from main: drag-and-drop section settings reorder with change summary dialog; clickable collection section titles.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.15.0/Release-10.10.7.zip",
+        "checksum": "555FDDB56CDCE4539E1ABFE3F0BF3460",
+        "timestamp": "2026-08-07T21:34:59",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
         "version": "2.5.14.0",
-        "changelog": "Test build: drag-and-drop section order + save change summary dialog",
+        "changelog": "Test build: drag-and-drop section order + save change summary dialog\n\nBuilt from feature/section-settings-drag-reorder (5e293e9).",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.14.0/Release-10.11.11.zip",
         "checksum": "26C672E66397F200F85270BF0D486D65",
-        "timestamp": "2026-08-07T21:01:20",
+        "timestamp": "2026-08-07T21:08:13",
         "dependencies": [
           "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
         ]
