@@ -25,11 +25,11 @@
     </PropertyGroup>
     
     <ItemGroup>
-      <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
-      <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
+      <PackageReference Include="Lib.Harmony" Version="2.4.2" GeneratePathProperty="true" />
       <PackageReference Include="SkiaSharp" Version="3.116.1" />
     </ItemGroup>
     
