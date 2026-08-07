@@ -178,9 +178,11 @@
   "AdminAllCachesDesc": "Clears both static assets and index.html transformation cache.",
 
   "AdminFieldDescriptions": "Field Descriptions",
-  "AdminOrderDesc": "Drag sections using the handle on the left to set display order. Top items appear first on the home screen.",
-  "AdminOrderNote": "Drag sections using the handle on the left to reorder them.",
+  "AdminOrderDesc": "Drag sections using the handle on the left, or use the up/down arrows, to set display order. Top items appear first on the home screen.",
+  "AdminOrderNote": "Drag sections or use the up/down arrows to reorder them.",
   "AdminOrderDragHint": "Drag to reorder",
+  "AdminMoveUp": "Move up",
+  "AdminMoveDown": "Move down",
   "AdminEnabledDesc": "Enable this section by default",
   "AdminUserOverrideDesc": "Let the user override this section",
   "AdminLowerLimitDesc": "The minimum number of times this section should appear",
