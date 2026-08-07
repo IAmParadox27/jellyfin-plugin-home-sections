@@ -707,11 +707,11 @@
                         </button>
                         <input type="file" id="sectionImportFile" accept="application/json,.json" style="display: none;" />
                     </div>
-                    <span id="sectionDirtyHint" class="section-dirty-hint" hidden data-i18n="AdminUnsavedSectionChanges">Unsaved section changes</span>
+                    <span id="sectionDirtyHint" class="section-dirty-hint" hidden data-i18n="AdminUnsavedSectionChanges" role="status" aria-live="polite">Unsaved section changes</span>
                 </div>
 
                 <div id="sectionList" class="section-list">
-                    <div id="sectionWrapper" class="section-list-items" role="list" aria-label="Sections"></div>
+                    <div id="sectionWrapper" class="section-list-items" role="list" aria-label="Sections" aria-describedby="sectionDirtyHint"></div>
                 </div>
 
                 <br>
@@ -1222,11 +1222,18 @@
                 const hint = document.querySelector('#sectionDirtyHint');
                 if (hint) {
                     hint.hidden = !anyDirty;
+                    hint.setAttribute('aria-hidden', anyDirty ? 'false' : 'true');
                 }
 
                 const saveBtn = document.querySelector('#btnSaveConfigSections');
                 if (saveBtn) {
                     saveBtn.disabled = !anyDirty;
+                    saveBtn.setAttribute('aria-disabled', anyDirty ? 'false' : 'true');
+                }
+
+                const undoBtn = document.querySelector('#btnUndoSectionReorder');
+                if (undoBtn) {
+                    undoBtn.setAttribute('aria-disabled', undoBtn.disabled ? 'true' : 'false');
                 }
             }
 
@@ -1780,12 +1787,14 @@
                 dialog.id = 'sectionChangesDialog';
                 dialog.setAttribute('role', 'dialog');
                 dialog.setAttribute('aria-modal', 'true');
+                dialog.setAttribute('aria-labelledby', 'sectionChangesDialogTitle');
+                dialog.setAttribute('aria-describedby', 'sectionChangesDialogSubtitle sectionChangesDialogList');
                 dialog.innerHTML =
                     '<div class="section-changes-dialog-backdrop" data-id="changesDialogBackdrop"></div>' +
-                    '<div class="section-changes-dialog-panel">' +
-                        '<h2 class="section-changes-dialog-title" data-id="changesDialogTitle"></h2>' +
-                        '<p class="section-changes-dialog-subtitle" data-id="changesDialogSubtitle"></p>' +
-                        '<ul class="section-changes-dialog-list" data-id="changesDialogList"></ul>' +
+                    '<div class="section-changes-dialog-panel" role="document">' +
+                        '<h2 class="section-changes-dialog-title" id="sectionChangesDialogTitle" data-id="changesDialogTitle"></h2>' +
+                        '<p class="section-changes-dialog-subtitle" id="sectionChangesDialogSubtitle" data-id="changesDialogSubtitle"></p>' +
+                        '<ul class="section-changes-dialog-list" id="sectionChangesDialogList" data-id="changesDialogList" tabindex="-1"></ul>' +
                         '<div class="section-changes-dialog-actions">' +
                             '<button type="button" class="raised emby-button" data-id="changesDialogCancel"></button>' +
                             '<button type="button" class="raised button-submit emby-button" data-id="changesDialogConfirm"></button>' +
@@ -1838,6 +1847,7 @@
                     var btnConfirm = dialog.querySelector('[data-id=changesDialogConfirm]');
                     var btnCancel = dialog.querySelector('[data-id=changesDialogCancel]');
                     var backdrop = dialog.querySelector('[data-id=changesDialogBackdrop]');
+                    var previouslyFocused = document.activeElement;
 
                     title.textContent = t('AdminConfirmChangesTitle', 'Confirm changes');
                     subtitle.textContent = t(
@@ -1854,30 +1864,57 @@
                         list.appendChild(item);
                     });
 
+                    function getFocusable() {
+                        return [btnCancel, btnConfirm, list].filter(function (el) {
+                            return el && !el.disabled;
+                        });
+                    }
+
+                    function onKeyDown(e) {
+                        if (e.key === 'Escape') {
+                            onCancel();
+                            return;
+                        }
+                        if (e.key !== 'Tab') {
+                            return;
+                        }
+                        var focusable = getFocusable();
+                        if (!focusable.length) {
+                            return;
+                        }
+                        var first = focusable[0];
+                        var last = focusable[focusable.length - 1];
+                        if (e.shiftKey && document.activeElement === first) {
+                            e.preventDefault();
+                            last.focus();
+                        } else if (!e.shiftKey && document.activeElement === last) {
+                            e.preventDefault();
+                            first.focus();
+                        }
+                    }
+
                     function cleanup(result) {
                         dialog.classList.remove('is-open');
+                        document.removeEventListener('keydown', onKeyDown, true);
+                        if (previouslyFocused && previouslyFocused.focus) {
+                            try { previouslyFocused.focus(); } catch (err) { /* ignore */ }
+                        }
                         btnConfirm.removeEventListener('click', onConfirm);
                         btnCancel.removeEventListener('click', onCancel);
                         backdrop.removeEventListener('click', onCancel);
-                        document.removeEventListener('keydown', onKeyDown);
                         resolve(result);
                     }
 
                     function onConfirm() { cleanup(true); }
                     function onCancel() { cleanup(false); }
-                    function onKeyDown(e) {
-                        if (e.key === 'Escape') {
-                            onCancel();
-                        }
-                    }
 
                     btnConfirm.addEventListener('click', onConfirm);
                     btnCancel.addEventListener('click', onCancel);
                     backdrop.addEventListener('click', onCancel);
-                    document.addEventListener('keydown', onKeyDown);
+                    document.addEventListener('keydown', onKeyDown, true);
 
                     dialog.classList.add('is-open');
-                    btnConfirm.focus();
+                    btnCancel.focus();
                 });
             }
 
