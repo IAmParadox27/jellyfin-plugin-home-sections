@@ -50,12 +50,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             }
             
             User? user = m_userManager.GetUserById(payload.UserId);
+            if (user == null)
+            {
+                return new QueryResult<BaseItemDto>();
+            }
+
+            string jellyseerrDisplayUrlNonNull = jellyseerrDisplayUrl ?? jellyseerrUrl;
             
             HttpClient client = new HttpClient();
             client.BaseAddress = new Uri(jellyseerrUrl);
             client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
             
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
+            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(user.Username)}").GetAwaiter().GetResult();
             string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
 
@@ -110,7 +116,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                     CommunityRating = rating > 0 ? rating : null,
                                     ProviderIds = new Dictionary<string, string>()
                                     {
-                                        { "JellyseerrRoot", jellyseerrDisplayUrl },
+                                        { "JellyseerrRoot", jellyseerrDisplayUrlNonNull },
                                         { "Jellyseerr", item.Value<int>("id").ToString() },
                                         { "JellyseerrPoster", cachedImageUrl }
                                     },

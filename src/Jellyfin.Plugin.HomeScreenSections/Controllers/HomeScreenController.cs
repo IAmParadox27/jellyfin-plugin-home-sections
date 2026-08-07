@@ -311,6 +311,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             }
             
             User? user = userManager.GetUserById(userId);
+            if (user == null)
+            {
+                return BadRequest();
+            }
+
             string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
 
             if (jellyseerrUrl == null)
@@ -322,7 +327,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             client.BaseAddress = new Uri(jellyseerrUrl);
             client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
             
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
+            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(user.Username)}").GetAwaiter().GetResult();
             string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
 
@@ -353,8 +358,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             }
             
             string responseContent = await requestResponse.Content.ReadAsStringAsync();
+            string contentType = requestResponse.Content.Headers.ContentType?.MediaType ?? "application/json";
             
-            return Content(responseContent, requestResponse.Content.Headers.ContentType.MediaType);
+            return Content(responseContent, contentType);
         }
     }
 }

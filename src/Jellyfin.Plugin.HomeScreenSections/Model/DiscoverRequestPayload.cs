@@ -8,7 +8,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
         public Guid UserId { get; set; }
         
         [JsonPropertyName("MediaType")]
-        public string MediaType { get; set; }
+        public string MediaType { get; set; } = string.Empty;
         
         [JsonPropertyName("MediaId")]
         public int MediaId { get; set; }
@@ -17,7 +17,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
     public class JellyseerrRequestPayload
     {
         [JsonPropertyName("mediaType")]
-        public string MediaType { get; set; }
+        public string MediaType { get; set; } = string.Empty;
 
         [JsonPropertyName("mediaId")]
         public int MediaId { get; set; }
@@ -26,7 +26,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model
     public class JellyseerrTvShowRequestPayload
     {
         [JsonPropertyName("mediaType")]
-        public string MediaType { get; set; }
+        public string MediaType { get; set; } = string.Empty;
 
         [JsonPropertyName("mediaId")]
         public int MediaId { get; set; }

@@ -89,10 +89,10 @@
         </ItemGroup>
         <WriteCodeFragment
                 Language="C#"
-                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.g.cs"
+                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.GitBranch.g.cs"
                 AssemblyAttributes="@(AssemblyAttribute)" />
         <ItemGroup>
-            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.g.cs" />
+            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.GitBranch.g.cs" />
         </ItemGroup>
     </Target>
     <Target Name="GenerateAssemblyMetadata_JellyfinVersion" BeforeTargets="BeforeCompile">
@@ -103,10 +103,10 @@
         </ItemGroup>
         <WriteCodeFragment
                 Language="C#"
-                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.g.cs"
+                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.JellyfinVersion.g.cs"
                 AssemblyAttributes="@(AssemblyAttribute)" />
         <ItemGroup>
-            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.g.cs" />
+            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.JellyfinVersion.g.cs" />
         </ItemGroup>
     </Target>
     

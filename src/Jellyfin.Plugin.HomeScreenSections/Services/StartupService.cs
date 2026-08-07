@@ -39,7 +39,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             m_logger = logger;
         }
 
-        public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
             PatchHelpers.SetupPatches();
             
@@ -93,6 +93,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     }
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetStartupTrigger();

@@ -9,7 +9,9 @@ public class ModuleInitializer
 {
     private static Dictionary<string, Assembly> s_dynamicAssemblies = new Dictionary<string, Assembly>();
 
+#pragma warning disable CA2255
     [ModuleInitializer]
+#pragma warning restore CA2255
     public static void Initialize()
     {
         Assembly assembly = typeof(HomeScreenSectionsPlugin).Assembly;

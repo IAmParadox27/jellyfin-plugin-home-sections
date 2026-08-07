@@ -58,6 +58,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             }
             
             User? user = m_userManager.GetUserById(payload.UserId);
+            if (user == null)
+            {
+                return new QueryResult<BaseItemDto>();
+            }
             
             HttpClient client = new HttpClient();
             client.BaseAddress = new Uri(jellyseerrUrl);
