@@ -12,7 +12,7 @@
         <div class="verticalSection verticalSection-extrabottompadding">
             <h3 data-i18n="AdminEnabledSections">Enabled Sections</h3>
             <p class="fieldDescription" data-i18n="AdminUserSectionOrderHint" style="margin-top: 0;">
-                Enable sections and use the arrows to set your personal home screen order. Top items appear first.
+                Enable sections and drag the handle (or use the arrows) to set your personal home screen order. Top items appear first.
             </p>
             <div id="enabledSections" class="user-section-list">
             </div>
@@ -37,6 +37,45 @@
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: opacity 0.15s ease, box-shadow 0.15s ease;
+    }
+    .user-section-row.user-section-dragging {
+        opacity: 0.5;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .user-section-row.user-section-drag-over-above {
+        box-shadow: inset 0 2px 0 0 var(--primary-accent-color, #00a4dc);
+    }
+    .user-section-row.user-section-drag-over-below {
+        box-shadow: inset 0 -2px 0 0 var(--primary-accent-color, #00a4dc);
+    }
+    .user-section-row .user-section-drag-handle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        cursor: grab;
+        color: #9aa0a6;
+        border-radius: 6px;
+        user-select: none;
+        touch-action: none;
+    }
+    .user-section-row .user-section-drag-handle:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .user-section-row .user-section-drag-handle:active {
+        cursor: grabbing;
+    }
+    .user-section-row .user-section-drag-handle .material-icons {
+        font-size: 20px;
+    }
+    .user-section-row.is-locked .user-section-drag-handle {
+        opacity: 0.35;
+        cursor: default;
+        pointer-events: none;
     }
     .user-section-row .user-section-moves {
         display: flex;
@@ -104,7 +143,8 @@
                 }
 
                 function moveUserSectionRow(row, direction) {
-                    var list = document.querySelector('#enabledSections');
+                    var list = document.querySelector('#enabledSections .user-section-list')
+                        || document.querySelector('#enabledSections');
                     if (!list || !row || row.classList.contains('is-locked')) {
                         return;
                     }
@@ -120,6 +160,85 @@
                         }
                     }
                     updateUserSectionMoveButtons();
+                }
+
+                var userDragState = { row: null, allowDrag: false };
+
+                function clearUserDragOver() {
+                    document.querySelectorAll('#enabledSections .user-section-drag-over-above, #enabledSections .user-section-drag-over-below')
+                        .forEach(function (el) {
+                            el.classList.remove('user-section-drag-over-above', 'user-section-drag-over-below');
+                        });
+                }
+
+                function setupUserSectionRowDrag(row) {
+                    if (row.classList.contains('is-locked') || row.dataset.dragBound === 'true') {
+                        return;
+                    }
+                    row.dataset.dragBound = 'true';
+                    row.setAttribute('draggable', 'true');
+
+                    var handle = row.querySelector('.user-section-drag-handle');
+                    if (handle) {
+                        handle.addEventListener('pointerdown', function () {
+                            userDragState.allowDrag = true;
+                        });
+                    }
+
+                    row.addEventListener('dragstart', function (e) {
+                        if (!userDragState.allowDrag) {
+                            e.preventDefault();
+                            return;
+                        }
+                        userDragState.row = row;
+                        row.classList.add('user-section-dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        try {
+                            e.dataTransfer.setData('text/plain', row.getAttribute('data-section') || '');
+                        } catch (err) { /* ignore */ }
+                    });
+
+                    row.addEventListener('dragend', function () {
+                        row.classList.remove('user-section-dragging');
+                        userDragState.row = null;
+                        userDragState.allowDrag = false;
+                        clearUserDragOver();
+                        updateUserSectionMoveButtons();
+                    });
+
+                    row.addEventListener('dragover', function (e) {
+                        if (!userDragState.row || userDragState.row === row) {
+                            return;
+                        }
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        var rect = row.getBoundingClientRect();
+                        var insertBefore = e.clientY < rect.top + rect.height / 2;
+                        clearUserDragOver();
+                        row.classList.add(insertBefore ? 'user-section-drag-over-above' : 'user-section-drag-over-below');
+                    });
+
+                    row.addEventListener('drop', function (e) {
+                        e.preventDefault();
+                        var dragged = userDragState.row;
+                        if (!dragged || dragged === row) {
+                            clearUserDragOver();
+                            return;
+                        }
+                        var list = document.querySelector('#enabledSections .user-section-list');
+                        if (!list) {
+                            return;
+                        }
+                        var rect = row.getBoundingClientRect();
+                        var insertBefore = e.clientY < rect.top + rect.height / 2;
+                        if (insertBefore) {
+                            list.insertBefore(dragged, row);
+                        } else {
+                            list.insertBefore(dragged, row.nextSibling);
+                        }
+                        clearUserDragOver();
+                        updateUserSectionMoveButtons();
+                    });
                 }
 
                 // Translate static page elements
@@ -229,6 +348,12 @@
                                     row.className = 'user-section-row' + (disabled ? ' is-locked' : '');
                                     row.setAttribute('data-section', section.Section);
 
+                                    var handle = document.createElement('span');
+                                    handle.className = 'user-section-drag-handle';
+                                    handle.setAttribute('title', t('AdminOrderDragHint', 'Drag to reorder'));
+                                    handle.setAttribute('aria-label', t('AdminOrderDragHint', 'Drag to reorder'));
+                                    handle.innerHTML = '<span class="material-icons" aria-hidden="true">drag_indicator</span>';
+
                                     var moves = document.createElement('div');
                                     moves.className = 'user-section-moves';
                                     moves.innerHTML =
@@ -252,9 +377,11 @@
                                         section.Section + '" ' + (checked ? 'checked' : '') + ' />' +
                                         '<span>' + section.DisplayText + '</span>';
 
+                                    row.appendChild(handle);
                                     row.appendChild(moves);
                                     row.appendChild(label);
                                     list.appendChild(row);
+                                    setupUserSectionRowDrag(row);
                                 });
 
                                 var elem = document.querySelector('#enabledSections');
