@@ -1,4 +1,4 @@
-{
+﻿{
   "BecauseYouWatched": "Fordi du så {0}",
   "ContinueWatching": "Fortsæt med at se",
   "ContinueWatchingNextUp": "Fortsæt med at se / Næste",
@@ -32,7 +32,6 @@
   "UpcomingMusic": "Kommende musik",
   "UpcomingShows": "Kommende serier",
   "WatchAgain": "Se igen",
-
   "Action": "Action",
   "Adventure": "Eventyr",
   "Animation": "Animation",
@@ -65,7 +64,6 @@
   "TVMovie": "Tv-film",
   "War": "Krig",
   "Western": "Western",
-
   "AdminGlobalSettings": "Globale indstillinger",
   "AdminSectionSettings": "Sektionsindstillinger",
   "AdminDefaultSettings": "Standardindstillinger",
@@ -73,7 +71,6 @@
   "AdminEnabledByDefaultDesc": "Aktivér startsidesektioner som standard for alle brugere?",
   "AdminAllowUserOverride": "Tillad bruger-overskrivning",
   "AdminAllowUserOverrideDesc": "Kan brugere aktivere/deaktivere denne udvidelse for deres egen visning?",
-
   "AdminUpcomingSectionSettings": "Indstillinger for kommende sektioner",
   "AdminUpcomingShowsTimeframe": "Tidsramme for kommende serier",
   "AdminUpcomingMoviesTimeframe": "Tidsramme for kommende film",
@@ -89,13 +86,11 @@
   "AdminYears": "År",
   "AdminDateFormat": "Datoformat",
   "AdminDateFormatDesc": "Hvordan skal datoer vises?",
-
   "AdminAdvancedSettings": "Avancerede indstillinger",
   "AdminLazyLoadSettings": "Indstillinger for udskudt indlæsning",
   "AdminLazyLoadEnabled": "Udskudt indlæsning aktiveret",
   "AdminLazyLoadSectionsLabel": "Antal sektioner der indlæses pr. side",
   "AdminLazyLoadSectionsDesc": "Antallet af sektioner der skal indlæses pr. side.",
-
   "AdminArrApiSettings": "*arr API-indstillinger",
   "AdminSonarrUrl": "Sonarr-URL",
   "AdminSonarrUrlDesc": "Fuld URL til Sonarr til brug for sektioner med kommende serier.",
@@ -120,13 +115,11 @@
   "AdminReadarrApiKeyDesc": "API-nøgle til Readarr-instansen.",
   "AdminFilterUpcomingByLibraryAccess": "Filtrer kommende sektioner efter biblioteksadgang",
   "AdminFilterUpcomingByLibraryAccessDesc": "Når aktiveret, skjules kommende elementer for brugere, der ikke har adgang til det bibliotek, elementerne tilhører. Bygger på at matche *arr-rodmappestien med dine Jellyfin-biblioteksstier, så det kun virker, hvis Jellyfin og dine *arr-instanser bruger de samme stier.",
-
   "AdminLibreTranslate": "LibreTranslate",
   "AdminLibreTranslateUrl": "LibreTranslate-URL",
   "AdminLibreTranslateUrlDesc": "URL til LibreTranslate-instansen der bruges til oversættelser.",
   "AdminLibreTranslateApiKey": "LibreTranslate API-nøgle",
   "AdminLibreTranslateApiKeyDesc": "API-nøgle til LibreTranslate-instansen.",
-
   "AdminJellyseerr": "Jellyseerr",
   "AdminJellyseerrInternalUrl": "Jellyseerr-URL (intern)",
   "AdminJellyseerrInternalUrlDesc": "Intern URL til Jellyseerr til API-anmodninger fra udvidelsens serverside.",
@@ -136,7 +129,6 @@
   "AdminJellyseerrApiKeyDesc": "API-nøgle til Jellyseerr-instansen.",
   "AdminDiscoverLanguageFilter": "Sprogfilter for Opdag-sektioner",
   "AdminDiscoverLanguageFilterDesc": "Foretrukne sprog til filtrering i Opdag-sektionen. (kommasepareret)",
-
   "AdminDefaultLibraries": "Standardbiblioteker",
   "AdminDefaultMoviesLibrary": "Standard filmbibliotek",
   "AdminDefaultTVShowsLibrary": "Standard seriebibliotek",
@@ -146,7 +138,6 @@
   "AdminLibraryDesc": "Vælg det specifikke bibliotek der skal bruges til navigation. Viser alle underliggende biblioteksmapper (ikke grupperede visninger).",
   "AdminRequiresRestart": "Kræver genstart af Jellyfin for at træde i kraft.",
   "AdminDefault": "Standard",
-
   "AdminCache": "Mellemlager",
   "AdminCacheTimeout": "Mellemlager-timeout (sekunder)",
   "AdminCacheTimeoutDesc": "Hvor længe browsere skal gemme udvidelsens ressourcer i mellemlager (standard: 86400 = 24 timer). Sæt til 0 for at deaktivere mellemlagring.",
@@ -156,12 +147,10 @@
   "AdminMaxImageWidthDesc": "Maksimal bredde for mellemlagrede billeder i pixels (standard: 600). Større billeder skaleres for at spare lagerplads og båndbredde.",
   "AdminImageJpegQuality": "JPEG-billedkvalitet",
   "AdminImageJpegQualityDesc": "JPEG-komprimeringskvalitet for mellemlagrede billeder (standard: 85). Højere procent giver bedre kvalitet, men større filer.",
-
   "AdminThirdPartyIntegrations": "Tredjepartsintegrationer",
   "AdminOverrideStreamyfinHome": "Overskriv Streamyfin-startside",
   "AdminOverrideStreamyfinHomeDesc": "Skal anmodninger om Streamyfin-konfigurationen overskrive startsiden med genererede startsidesektioner?",
   "AdminExperimental": "Bemærk: Funktionaliteten bag denne indstilling er i øjeblikket meget eksperimentel, og der er sandsynligvis mere arbejde nødvendigt, før den er færdig.",
-
   "AdminDeveloperSettings": "Udviklerindstillinger",
   "AdminDeveloperMode": "Udviklertilstand",
   "AdminDeveloperModeDesc": "Deaktiver browser-mellemlagring af udvidelsens ressourcer under udvikling.",
@@ -176,7 +165,6 @@
   "AdminCacheBustMixed": "Rydning af mellemlager afsluttet med blandede resultater (se konsollen)",
   "AdminStaticCacheDesc": "Rydder browserens mellemlager kun for CSS/JS-filer.",
   "AdminAllCachesDesc": "Rydder både statiske filer og index.html-transformationsmellemlageret.",
-
   "AdminFieldDescriptions": "Feltbeskrivelser",
   "AdminOrderDesc": "Træk sektioner med håndtaget til venstre, brug op/ned-pilene, eller tryk Alt+↑/↓ for at angive visningsrækkefølgen. Øverste elementer vises først på startskærmen.",
   "AdminOrderNote": "Træk sektioner, brug op/ned-pilene, eller tryk Alt+↑/↓ for at ændre rækkefølgen.",
@@ -193,7 +181,7 @@
   "AdminImportSectionsInvalid": "Importfilen mangler SectionSettings.",
   "AdminImportSectionsDone": "Sektionsindstillinger importeret. Gennemgå ændringerne og klik på Gem.",
   "AdminImportSectionsFailed": "Kunne ikke importere sektionsindstillinger. Tjek JSON-filen.",
-  "AdminUserSectionOrderHint": "Aktivér sektioner, og brug pilene til at angive din personlige rækkefølge. Øverste elementer vises først.",
+  "AdminUserSectionOrderHint": "Aktivér sektioner, og træk håndtaget (eller brug pilene) for at angive din personlige rækkefølge. Øverste elementer vises først.",
   "AdminEnabledDesc": "Aktivér denne sektion som standard",
   "AdminUserOverrideDesc": "Lad brugeren overskrive denne sektion",
   "AdminLowerLimitDesc": "Det minimale antal gange denne sektion skal vises",
@@ -224,7 +212,6 @@
   "AdminChangeSectionField": "\"{0}\": {1} {2} → {3}",
   "AdminChangeSectionAdded": "\"{0}\" blev tilføjet",
   "AdminChangeSectionRemoved": "\"{0}\" blev fjernet",
-
   "AdminModularHomeSettings": "Modulær startside – Indstillinger:",
   "AdminEnableModularHome": "Aktivér \"Modulær startside\". Dette ændrer din startskærm til en mere dynamisk visning, hvor andre udvidelser også kan bidrage med indhold og anbefalinger.",
   "AdminEnabledSections": "Aktiverede sektioner",
