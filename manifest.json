@@ -9,6 +9,39 @@
     "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png",
     "versions": [
       {
+        "version": "2.5.16.0",
+        "changelog": "Fork release from main: section settings UX (search, bulk toggle, arrows, dirty state, undo, export/import), cache bust on save, more clickable titles, per-user section order, advanced details memory, mobile polish.",
+        "targetAbi": "10.11.5.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.16.0/Release-10.11.5.zip",
+        "checksum": "68AE90EA52A674EEB0FE948BAC510BD6",
+        "timestamp": "2026-08-07T21:57:19",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.16.0",
+        "changelog": "Fork release from main: section settings UX (search, bulk toggle, arrows, dirty state, undo, export/import), cache bust on save, more clickable titles, per-user section order, advanced details memory, mobile polish.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.16.0/Release-10.11.11.zip",
+        "checksum": "8B3219F6A82658555327650C45E72197",
+        "timestamp": "2026-08-07T21:57:19",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.16.0",
+        "changelog": "Fork release from main: section settings UX (search, bulk toggle, arrows, dirty state, undo, export/import), cache bust on save, more clickable titles, per-user section order, advanced details memory, mobile polish.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.16.0/Release-10.10.7.zip",
+        "checksum": "2C80D72A8ED86016E45EB0E4FA7650D5",
+        "timestamp": "2026-08-07T21:57:19",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
         "version": "2.5.15.0",
         "changelog": "Fork release from main: drag-and-drop section settings reorder with change summary dialog; clickable collection section titles.",
         "targetAbi": "10.11.5.0",
