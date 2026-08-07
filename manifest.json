@@ -9,8 +9,41 @@
     "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png",
     "versions": [
       {
+        "version": "2.5.18.0",
+        "changelog": "Home Screen Sections 2.5.18.0 - 10 new home rows: Favorites, Surprise Me, Most Played, Recently Played, Kids and Family, Coming Soon (in library), Decade, Studio, Playlists, Finish These Collections. EN/DA strings. PR 22.",
+        "targetAbi": "10.11.5.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.18.0/Release-10.11.5.zip",
+        "checksum": "921452604FF33B71CC4760E0A7B2755B",
+        "timestamp": "2026-08-07T22:51:38",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.18.0",
+        "changelog": "Home Screen Sections 2.5.18.0 - 10 new home rows: Favorites, Surprise Me, Most Played, Recently Played, Kids and Family, Coming Soon (in library), Decade, Studio, Playlists, Finish These Collections. EN/DA strings. PR 22.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.18.0/Release-10.11.11.zip",
+        "checksum": "5991658E9B107CDDC93805BB707A4D61",
+        "timestamp": "2026-08-07T22:51:38",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.18.0",
+        "changelog": "Home Screen Sections 2.5.18.0 - 10 new home rows: Favorites, Surprise Me, Most Played, Recently Played, Kids and Family, Coming Soon (in library), Decade, Studio, Playlists, Finish These Collections. EN/DA strings. PR 22.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.18.0/Release-10.10.7.zip",
+        "checksum": "A75132357E722E8A754282A4EB5B03D4",
+        "timestamp": "2026-08-07T22:51:38",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
         "version": "2.5.17.0",
-        "changelog": "Home Screen Sections fork 2.5.17.0 - polish release. Admin live order preview, import conflict summary, section diagnostics. User Modular Home drag reorder, reset to defaults, save toast. Hardened clickable titles and more routes. Clear section cache on save. A11y pass. Danish strings. README fork comparison. PRs 9-11, 16-17, 19-20. Install: raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json",
+        "changelog": "## What's new in 2.5.17.0\n\nFork polish release: configuration UX, home behaviour, diagnostics, and docs. Builds on **2.5.16.0**.\n\n### Admin — Section Settings\n- Live **home order preview** (\"Home will look like…\") as you reorder sections\n- **Import conflict handling**: summary of matched, unknown (skipped), and missing (unchanged) section IDs\n- Confirm dialog, drag/arrows/keyboard reorder, search, bulk enable/disable, undo, and export/import (from recent releases) remain\n\n### Admin — Global Settings\n- **Section Diagnostics** panel (`GET HomeScreen/Diagnostics`): plugin enabled, section counts, Sonarr/Radarr/Lidarr/Readarr/Jellyseerr and library hints (no library content scan)\n\n### User — Modular Home\n- **Drag-and-drop** personal section order (plus arrows)\n- **Reset to server defaults** (still requires Save)\n- **Save toast** instead of a full page reload\n\n### Home screen\n- **Hardened clickable titles**: validate routes so dead chevrons are avoided\n- More title routes (Live TV, My List, Continue Watching, Next Up combo, collections/playlists/genres)\n- **Clear in-memory section cache** when admin config is saved or cache is busted so the home screen updates immediately\n\n### Accessibility and localization\n- Dialog focus trap, labelled confirm dialog, live dirty-status region\n- Danish (`da`) strings for all new UI; EN/DA key parity checked in CI\n\n### Docs\n- README **What's new in this fork** section comparing this fork to the original IAmParadox27 plugin\n- Catalogue install URL for this fork's `manifest.json`\n\n### Merged since 2.5.16.0\n- #9 Harden section title links\n- #10 Clear in-memory home section cache on save\n- #11 User Modular Home drag-and-drop reorder\n- #16 More clickable section titles (routes)\n- #17 Accessibility pass for section settings dialog\n- #19 Integrate remaining polish (reset, preview, toast, import conflicts, diagnostics)\n- #20 README fork features vs original\n\n### Install\nAdd this repository in Jellyfin:\n\nhttps://raw.githubusercontent.com/R",
         "targetAbi": "10.11.5.0",
         "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.17.0/Release-10.11.5.zip",
         "checksum": "F077F5CAFFC32F34D4B56DC74AF8ADBE",
@@ -21,7 +54,7 @@
       },
       {
         "version": "2.5.17.0",
-        "changelog": "Home Screen Sections fork 2.5.17.0 - polish release. Admin live order preview, import conflict summary, section diagnostics. User Modular Home drag reorder, reset to defaults, save toast. Hardened clickable titles and more routes. Clear section cache on save. A11y pass. Danish strings. README fork comparison. PRs 9-11, 16-17, 19-20. Install: raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json",
+        "changelog": "## What's new in 2.5.17.0\n\nFork polish release: configuration UX, home behaviour, diagnostics, and docs. Builds on **2.5.16.0**.\n\n### Admin — Section Settings\n- Live **home order preview** (\"Home will look like…\") as you reorder sections\n- **Import conflict handling**: summary of matched, unknown (skipped), and missing (unchanged) section IDs\n- Confirm dialog, drag/arrows/keyboard reorder, search, bulk enable/disable, undo, and export/import (from recent releases) remain\n\n### Admin — Global Settings\n- **Section Diagnostics** panel (`GET HomeScreen/Diagnostics`): plugin enabled, section counts, Sonarr/Radarr/Lidarr/Readarr/Jellyseerr and library hints (no library content scan)\n\n### User — Modular Home\n- **Drag-and-drop** personal section order (plus arrows)\n- **Reset to server defaults** (still requires Save)\n- **Save toast** instead of a full page reload\n\n### Home screen\n- **Hardened clickable titles**: validate routes so dead chevrons are avoided\n- More title routes (Live TV, My List, Continue Watching, Next Up combo, collections/playlists/genres)\n- **Clear in-memory section cache** when admin config is saved or cache is busted so the home screen updates immediately\n\n### Accessibility and localization\n- Dialog focus trap, labelled confirm dialog, live dirty-status region\n- Danish (`da`) strings for all new UI; EN/DA key parity checked in CI\n\n### Docs\n- README **What's new in this fork** section comparing this fork to the original IAmParadox27 plugin\n- Catalogue install URL for this fork's `manifest.json`\n\n### Merged since 2.5.16.0\n- #9 Harden section title links\n- #10 Clear in-memory home section cache on save\n- #11 User Modular Home drag-and-drop reorder\n- #16 More clickable section titles (routes)\n- #17 Accessibility pass for section settings dialog\n- #19 Integrate remaining polish (reset, preview, toast, import conflicts, diagnostics)\n- #20 README fork features vs original\n\n### Install\nAdd this repository in Jellyfin:\n\nhttps://raw.githubusercontent.com/R",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.17.0/Release-10.11.11.zip",
         "checksum": "D54D4438880BB3CEE3BE9524F4FE1EEF",
@@ -32,7 +65,7 @@
       },
       {
         "version": "2.5.17.0",
-        "changelog": "Home Screen Sections fork 2.5.17.0 - polish release. Admin live order preview, import conflict summary, section diagnostics. User Modular Home drag reorder, reset to defaults, save toast. Hardened clickable titles and more routes. Clear section cache on save. A11y pass. Danish strings. README fork comparison. PRs 9-11, 16-17, 19-20. Install: raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json",
+        "changelog": "## What's new in 2.5.17.0\n\nFork polish release: configuration UX, home behaviour, diagnostics, and docs. Builds on **2.5.16.0**.\n\n### Admin — Section Settings\n- Live **home order preview** (\"Home will look like…\") as you reorder sections\n- **Import conflict handling**: summary of matched, unknown (skipped), and missing (unchanged) section IDs\n- Confirm dialog, drag/arrows/keyboard reorder, search, bulk enable/disable, undo, and export/import (from recent releases) remain\n\n### Admin — Global Settings\n- **Section Diagnostics** panel (`GET HomeScreen/Diagnostics`): plugin enabled, section counts, Sonarr/Radarr/Lidarr/Readarr/Jellyseerr and library hints (no library content scan)\n\n### User — Modular Home\n- **Drag-and-drop** personal section order (plus arrows)\n- **Reset to server defaults** (still requires Save)\n- **Save toast** instead of a full page reload\n\n### Home screen\n- **Hardened clickable titles**: validate routes so dead chevrons are avoided\n- More title routes (Live TV, My List, Continue Watching, Next Up combo, collections/playlists/genres)\n- **Clear in-memory section cache** when admin config is saved or cache is busted so the home screen updates immediately\n\n### Accessibility and localization\n- Dialog focus trap, labelled confirm dialog, live dirty-status region\n- Danish (`da`) strings for all new UI; EN/DA key parity checked in CI\n\n### Docs\n- README **What's new in this fork** section comparing this fork to the original IAmParadox27 plugin\n- Catalogue install URL for this fork's `manifest.json`\n\n### Merged since 2.5.16.0\n- #9 Harden section title links\n- #10 Clear in-memory home section cache on save\n- #11 User Modular Home drag-and-drop reorder\n- #16 More clickable section titles (routes)\n- #17 Accessibility pass for section settings dialog\n- #19 Integrate remaining polish (reset, preview, toast, import conflicts, diagnostics)\n- #20 README fork features vs original\n\n### Install\nAdd this repository in Jellyfin:\n\nhttps://raw.githubusercontent.com/R",
         "targetAbi": "10.10.7.0",
         "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.17.0/Release-10.10.7.zip",
         "checksum": "F0E217D4ECCE593E895D82283B7C567A",
