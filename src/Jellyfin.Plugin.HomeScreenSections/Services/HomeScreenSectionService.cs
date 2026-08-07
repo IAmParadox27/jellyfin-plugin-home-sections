@@ -402,8 +402,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         }
 
         /// <summary>
-        /// Resolves a section title link target from AdditionalData (item id, collection name, or playlist name).
-        /// Used so Collection Sections (and similar) can open the full collection from the section title.
+        /// Resolves a section title link target from AdditionalData (item id, collection/playlist/genre name).
+        /// Failures return null so the client can render a plain title instead of a broken link.
         /// </summary>
         private BaseItemDto? TryResolveTitleLinkTarget(string additionalData, Guid userId)
         {
@@ -415,46 +415,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     return null;
                 }
 
-                DtoOptions dtoOptions = new DtoOptions
-                {
-                    Fields = new List<ItemFields>
-                    {
-                        ItemFields.PrimaryImageAspectRatio,
-                        ItemFields.DisplayPreferencesId
-                    }
-                };
-
-                // Prefer explicit item id when AdditionalData is a Guid.
-                if (Guid.TryParse(additionalData, out Guid itemId))
-                {
-                    BaseItem? byId = m_libraryManager.GetItemById(itemId);
-                    if (byId != null)
-                    {
-                        return m_dtoService.GetBaseItemDto(byId, dtoOptions, user);
-                    }
-                }
-
-                // Collection Sections registers AdditionalData as the collection/playlist name.
-                BoxSet? collection = m_collectionManagerProxy.GetCollections(user)
-                    .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
-                if (collection != null)
-                {
-                    return m_dtoService.GetBaseItemDto(collection, dtoOptions, user);
-                }
-
-                Playlist? playlist = m_playlistManager.GetPlaylists(userId)
-                    .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
-                if (playlist != null)
-                {
-                    return m_dtoService.GetBaseItemDto(playlist, dtoOptions, user);
-                }
-
-                // Genre name (e.g. Genre section AdditionalData)
-                Genre? genre = m_libraryManager.GetGenre(additionalData);
-                if (genre != null)
-                {
-                    return m_dtoService.GetBaseItemDto(genre, dtoOptions, user);
-                }
+                DtoOptions dtoOptions = CreateTitleLinkDtoOptions();
+                return ResolveTitleLinkById(additionalData, user, dtoOptions)
+                    ?? ResolveTitleLinkByName(additionalData, userId, user, dtoOptions);
             }
             catch (Exception ex) when (
                 ex is InvalidOperationException
@@ -472,6 +435,49 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
 
             return null;
+        }
+
+        private static DtoOptions CreateTitleLinkDtoOptions()
+        {
+            return new DtoOptions
+            {
+                Fields = new List<ItemFields>
+                {
+                    ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.DisplayPreferencesId
+                }
+            };
+        }
+
+        private BaseItemDto? ResolveTitleLinkById(string additionalData, User user, DtoOptions dtoOptions)
+        {
+            if (!Guid.TryParse(additionalData, out Guid itemId))
+            {
+                return null;
+            }
+
+            BaseItem? byId = m_libraryManager.GetItemById(itemId);
+            return byId != null ? m_dtoService.GetBaseItemDto(byId, dtoOptions, user) : null;
+        }
+
+        private BaseItemDto? ResolveTitleLinkByName(string additionalData, Guid userId, User user, DtoOptions dtoOptions)
+        {
+            BoxSet? collection = m_collectionManagerProxy.GetCollections(user)
+                .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
+            if (collection != null)
+            {
+                return m_dtoService.GetBaseItemDto(collection, dtoOptions, user);
+            }
+
+            Playlist? playlist = m_playlistManager.GetPlaylists(userId)
+                .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
+            if (playlist != null)
+            {
+                return m_dtoService.GetBaseItemDto(playlist, dtoOptions, user);
+            }
+
+            Genre? genre = m_libraryManager.GetGenre(additionalData);
+            return genre != null ? m_dtoService.GetBaseItemDto(genre, dtoOptions, user) : null;
         }
     }
 
