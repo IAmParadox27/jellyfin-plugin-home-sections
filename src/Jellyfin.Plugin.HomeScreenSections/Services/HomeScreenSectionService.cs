@@ -382,13 +382,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             info.OrderIndex = configuredOrder;
             info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => string.Equals(y.SectionId, info.Section, StringComparison.Ordinal))?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
 
-            // Plugin-defined sections (e.g. Collection Sections) often only pass the
-            // collection/playlist name in AdditionalData. Resolve that into an item DTO
-            // so the web client can make the section title open the full collection.
-            // Limit to PluginDefinedSection so genre names, etc. are not mis-resolved.
-            if (info.OriginalPayload == null
-                && section is PluginDefinedSection
-                && !string.IsNullOrWhiteSpace(info.AdditionalData))
+            // When a section has no explicit title target, try resolving AdditionalData
+            // as an item id, collection/playlist name, or genre name so the web client
+            // can make the title open the full list. Failures stay null (no broken link).
+            if (info.OriginalPayload == null && !string.IsNullOrWhiteSpace(info.AdditionalData))
             {
                 info.OriginalPayload = TryResolveTitleLinkTarget(info.AdditionalData, userId);
             }
@@ -450,6 +447,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 if (playlist != null)
                 {
                     return m_dtoService.GetBaseItemDto(playlist, dtoOptions, user);
+                }
+
+                // Genre name (e.g. Genre section AdditionalData)
+                Genre? genre = m_libraryManager.GetGenre(additionalData);
+                if (genre != null)
+                {
+                    return m_dtoService.GetBaseItemDto(genre, dtoOptions, user);
                 }
             }
             catch (Exception ex) when (
