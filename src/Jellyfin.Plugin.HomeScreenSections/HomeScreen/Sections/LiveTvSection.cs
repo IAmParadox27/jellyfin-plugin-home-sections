@@ -20,7 +20,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public int? Limit => 1;
 
-		public string? Route => null;
+		public string? Route => "livetv";
 
 		public string? AdditionalData { get; set; }
 

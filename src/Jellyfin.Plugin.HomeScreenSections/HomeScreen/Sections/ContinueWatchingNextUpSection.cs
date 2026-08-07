@@ -15,7 +15,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Section => "ContinueWatchingNextUp";
         public string? DisplayText { get; set; } = "Continue Watching / Next Up";
         public int? Limit => 1;
-        public string? Route => null;
+        public string? Route => "nextup";
         public string? AdditionalData { get; set; }
         public object? OriginalPayload => null;
 

@@ -20,7 +20,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public int? Limit => 1;
 
-		public string? Route => null;
+		// Favorites / My List landing when the title is clicked.
+		public string? Route => "favorites";
 
 		public string? AdditionalData { get; set; }
 

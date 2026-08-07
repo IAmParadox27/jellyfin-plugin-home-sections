@@ -28,7 +28,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public int? Limit => 1;
 
         /// <inheritdoc/>
-        public string? Route => null;
+        /// <remarks>
+        /// Named route for resumable content list; client only renders a link when the route resolves.
+        /// </remarks>
+        public string? Route => "list";
 
         /// <inheritdoc/>
         public string? AdditionalData { get; set; }
