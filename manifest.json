@@ -1,0 +1,57 @@
+[
+  {
+    "guid": "b8298e01-2697-407a-b44d-aa8dc795e850",
+    "name": "Home Screen Sections (Fork)",
+    "overview": "Fork build for testing (includes Danish localization).",
+    "description": "Adds support for server provided home screen sections.\n\nThis is a personal fork build used for testing translations and changes. Install File Transformation and Plugin Pages as well.",
+    "owner": "Robert-Hansen",
+    "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/plugin-repo/logo.png",
+    "versions": [
+      {
+        "version": "2.5.13.0",
+        "changelog": "Fork build: Danish localization + 10.10.7 build fix.",
+        "targetAbi": "10.11.5.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.13.0/Release-10.11.5.zip",
+        "checksum": "AA51DA5FABA9EC176403E6530808304F",
+        "timestamp": "2026-06-28T17:47:13",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.13.0",
+        "changelog": "Fork build: Danish localization + 10.10.7 build fix.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.13.0/Release-10.11.11.zip",
+        "checksum": "A3DABBDEC7004D28A90257B8F35FF0B1",
+        "timestamp": "2026-06-28T17:47:13",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.13.0",
+        "changelog": "Fork build: Danish localization + 10.10.7 build fix.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.13.0/Release-10.10.7.zip",
+        "checksum": "83B3871C0559F9281247E4B42BBB308A",
+        "timestamp": "2026-06-28T17:47:13",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.12.0",
+        "changelog": "Custom fork build with Danish (da) localization.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.12.0/Release-10.11.11.zip",
+        "checksum": "3F8335FFD225DF14668D611FD6E59E94",
+        "timestamp": "2026-06-28T17:47:13",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      }
+    ]
+  }
+]

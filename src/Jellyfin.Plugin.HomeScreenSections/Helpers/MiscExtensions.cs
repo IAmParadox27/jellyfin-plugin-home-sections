@@ -1,6 +1,5 @@
 using System.Reflection;
 using Jellyfin.Data;
-using Jellyfin.Database.Implementations.Enums;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;

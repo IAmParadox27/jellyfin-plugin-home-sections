@@ -1,0 +1,267 @@
+name: Build release
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugin_version:
+        description: "Plugin version (e.g. 2.5.12.0)"
+        required: true
+        default: "2.5.12.0"
+        type: string
+      jellyfin_versions:
+        description: "Comma-separated Jellyfin versions to build for (must match your server version for catalogue install)"
+        required: true
+        default: "10.10.7,10.11.5,10.11.11"
+        type: string
+      create_github_release:
+        description: "Create a GitHub Release with the zip files"
+        required: true
+        default: true
+        type: boolean
+      prerelease:
+        description: "Mark the GitHub Release as prerelease"
+        required: false
+        default: true
+        type: boolean
+      changelog:
+        description: "Release notes / changelog"
+        required: false
+        default: "Custom fork build with Danish (da) localization."
+        type: string
+      update_plugin_repo:
+        description: "Update plugin-repo branch manifest.json (for Jellyfin catalogue)"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+      plugin_version: ${{ steps.set.outputs.plugin_version }}
+      create_release: ${{ steps.set.outputs.create_release }}
+      prerelease: ${{ steps.set.outputs.prerelease }}
+      changelog: ${{ steps.set.outputs.changelog }}
+      update_plugin_repo: ${{ steps.set.outputs.update_plugin_repo }}
+    steps:
+      - name: Compute inputs
+        id: set
+        shell: bash
+        run: |
+          VERSIONS="${{ inputs.jellyfin_versions }}"
+          PLUGIN_VERSION="${{ inputs.plugin_version }}"
+          CREATE_RELEASE="${{ inputs.create_github_release }}"
+          PRERELEASE="${{ inputs.prerelease }}"
+          CHANGELOG="${{ inputs.changelog }}"
+          UPDATE_REPO="${{ inputs.update_plugin_repo }}"
+
+          # Normalize "1.2.3" -> "1.2.3.0"
+          if [[ "$PLUGIN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            PLUGIN_VERSION="${PLUGIN_VERSION}.0"
+          fi
+
+          IFS=',' read -ra PARTS <<< "$VERSIONS"
+          JSON="["
+          FIRST=1
+          for v in "${PARTS[@]}"; do
+            v="$(echo "$v" | xargs)"
+            [[ -z "$v" ]] && continue
+            if [[ $FIRST -eq 1 ]]; then
+              JSON+="\"$v\""
+              FIRST=0
+            else
+              JSON+=",\"$v\""
+            fi
+          done
+          JSON+="]"
+
+          echo "matrix=${JSON}" >> "$GITHUB_OUTPUT"
+          echo "plugin_version=${PLUGIN_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "create_release=${CREATE_RELEASE}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "update_plugin_repo=${UPDATE_REPO}" >> "$GITHUB_OUTPUT"
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Matrix: ${JSON}"
+          echo "Plugin version: ${PLUGIN_VERSION}"
+
+  build:
+    name: Build ${{ matrix.jellyfin_version }}
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        jellyfin_version: ${{ fromJson(needs.prepare.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Set plugin assembly version
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.plugin_version }}"
+          sed -i "s/AssemblyVersion(\"[^\"]*\")/AssemblyVersion(\"${VERSION}\")/" \
+            src/Jellyfin.Plugin.HomeScreenSections/Properties/AssemblyInfo.cs
+          sed -i "s#<Version>[^<]*</Version>#<Version>${VERSION}</Version>#" \
+            src/Jellyfin.Plugin.HomeScreenSections/Jellyfin.Plugin.HomeScreenSections.csproj
+          echo "Building plugin version ${VERSION}"
+          grep AssemblyVersion src/Jellyfin.Plugin.HomeScreenSections/Properties/AssemblyInfo.cs
+
+      - name: Restore & build
+        shell: bash
+        run: |
+          set -euo pipefail
+          JF="${{ matrix.jellyfin_version }}"
+          PROJECT="src/Jellyfin.Plugin.HomeScreenSections/Jellyfin.Plugin.HomeScreenSections.csproj"
+
+          if [[ "$JF" == 10.10.* ]]; then
+            TFM="net8.0"
+          else
+            TFM="net9.0"
+          fi
+
+          echo "JellyfinVersion=${JF} TargetFramework=${TFM}"
+          dotnet restore "$PROJECT" -p:JellyfinVersion="$JF"
+          dotnet build "$PROJECT" -c Release --no-restore -p:JellyfinVersion="$JF"
+
+          OUT_DIR="src/Jellyfin.Plugin.HomeScreenSections/bin/Release/${TFM}"
+          STAGE="artifacts/stage-${JF}"
+          mkdir -p "$STAGE" artifacts
+
+          cp "$OUT_DIR/Jellyfin.Plugin.HomeScreenSections.dll" "$STAGE/"
+          cp "$OUT_DIR/Jellyfin.Plugin.HomeScreenSections.deps.json" "$STAGE/"
+          cp "$OUT_DIR/logo.png" "$STAGE/"
+          if [[ -f "$OUT_DIR/Jellyfin.Plugin.HomeScreenSections.pdb" ]]; then
+            cp "$OUT_DIR/Jellyfin.Plugin.HomeScreenSections.pdb" "$STAGE/"
+          fi
+
+          ZIP_NAME="Release-${JF}.zip"
+          (cd "$STAGE" && zip -9 "../${ZIP_NAME}" ./*)
+          ls -la "artifacts/${ZIP_NAME}"
+          unzip -l "artifacts/${ZIP_NAME}"
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Release-${{ matrix.jellyfin_version }}
+          path: artifacts/Release-${{ matrix.jellyfin_version }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.create_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: Release-*
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.plugin_version }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          CHANGELOG: ${{ needs.prepare.outputs.changelog }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PRE_FLAG=""
+          if [[ "$PRERELEASE" == "true" ]]; then
+            PRE_FLAG="--prerelease"
+          fi
+
+          mkdir -p upload
+          find release-assets -type f -name 'Release-*.zip' -exec cp {} upload/ \;
+          ls -la upload/
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — uploading assets (clobber)"
+            gh release upload "$TAG" upload/Release-*.zip --clobber
+          else
+            gh release create "$TAG" upload/Release-*.zip \
+              --title "$TAG" \
+              --notes "$CHANGELOG" \
+              $PRE_FLAG
+          fi
+
+          echo "Release: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+
+  plugin-repo:
+    name: Update Jellyfin plugin repository
+    needs: [prepare, release]
+    # Also allow regenerating manifest without a new release (when create_release=false but update requested and artifacts exist)
+    if: always() && needs.prepare.outputs.update_plugin_repo == 'true' && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source (for script + logo)
+        uses: actions/checkout@v4
+
+      - name: Generate manifest from GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/generate-manifest.sh
+          ./scripts/generate-manifest.sh "${{ github.repository }}" manifest.json
+          cp src/logo.png logo.png
+          cat manifest.json
+
+      - name: Publish plugin-repo branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          cd "$WORK"
+          git init -b plugin-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          cp "${{ github.workspace }}/manifest.json" .
+          cp "${{ github.workspace }}/logo.png" .
+          cat > README.md <<EOF
+          # Jellyfin plugin repository (fork)
+
+          Add this URL in Jellyfin:
+
+          \`https://raw.githubusercontent.com/${{ github.repository }}/plugin-repo/manifest.json\`
+          EOF
+
+          git add manifest.json logo.png README.md
+          git commit -m "Update plugin repository manifest"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -u origin plugin-repo --force
+
+          echo ""
+          echo "=============================================="
+          echo "Add this repository in Jellyfin:"
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/plugin-repo/manifest.json"
+          echo "=============================================="
