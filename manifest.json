@@ -9,6 +9,17 @@
     "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png",
     "versions": [
       {
+        "version": "2.5.14.0",
+        "changelog": "Test build: drag-and-drop section order + save change summary dialog",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.14.0/Release-10.11.11.zip",
+        "checksum": "26C672E66397F200F85270BF0D486D65",
+        "timestamp": "2026-08-07T21:01:20",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
         "version": "2.5.13.0",
         "changelog": "Fork build: Danish localization + 10.10.7 build fix.",
         "targetAbi": "10.11.5.0",
