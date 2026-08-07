@@ -155,6 +155,10 @@ namespace Jellyfin.Plugin.HomeScreenSections
             }
 
             base.UpdateConfiguration(configuration);
+
+            // Section order/enablement lives in this config — drop in-memory home section pages
+            // so the next home load uses the new settings immediately.
+            ClearUserSectionsDataCache();
         }
 
         /// <summary>
@@ -165,6 +169,25 @@ namespace Jellyfin.Plugin.HomeScreenSections
             var config = base.Configuration;
             config.CacheBustCounter++;
             base.UpdateConfiguration(config);
+            ClearUserSectionsDataCache();
+        }
+
+        /// <summary>
+        /// Clears the in-memory per-user home section page cache.
+        /// </summary>
+        public void ClearUserSectionsDataCache()
+        {
+            try
+            {
+                if (ServiceProvider?.GetService(typeof(Data.UserSectionsDataCache)) is Data.UserSectionsDataCache cache)
+                {
+                    cache.Clear();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Cache clear is best-effort during config updates / early startup.
+            }
         }
 
         /// <summary>
