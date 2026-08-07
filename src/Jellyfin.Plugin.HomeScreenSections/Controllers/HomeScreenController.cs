@@ -134,6 +134,112 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             return Ok(new { newCounter });
         }
 
+        /// <summary>
+        /// Configuration health hints for empty/missing home sections (no user content scanning).
+        /// </summary>
+        [HttpGet("Diagnostics")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize(Roles = "Administrator")]
+        public ActionResult GetDiagnostics()
+        {
+            PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
+            List<object> checks = new List<object>();
+            AppendPluginAndSectionChecks(config, checks);
+            AppendIntegrationChecks(config, checks);
+            AppendLibraryChecks(config, checks);
+            checks.Add(new
+            {
+                id = "registered-types",
+                severity = "info",
+                message = $"{m_homeScreenManager.GetSectionTypes().Count()} section types are registered (built-in + plugins)."
+            });
+
+            return Ok(new
+            {
+                generatedAt = DateTime.UtcNow,
+                pluginEnabled = config.Enabled,
+                checks
+            });
+        }
+
+        private static void AppendPluginAndSectionChecks(PluginConfiguration config, List<object> checks)
+        {
+            if (!config.Enabled)
+            {
+                checks.Add(new { id = "plugin-disabled", severity = "warning", message = "Home Screen Sections is disabled globally." });
+            }
+
+            if (config.SectionSettings == null || config.SectionSettings.Length == 0)
+            {
+                checks.Add(new
+                {
+                    id = "no-section-settings",
+                    severity = "info",
+                    message = "No section settings are stored yet; defaults will be used until you save the Section Settings tab."
+                });
+                return;
+            }
+
+            int enabledCount = config.SectionSettings.Count(s => s.Enabled);
+            if (enabledCount == 0)
+            {
+                checks.Add(new { id = "all-sections-disabled", severity = "warning", message = "All configured sections are disabled in admin settings." });
+            }
+
+            checks.Add(new
+            {
+                id = "enabled-count",
+                severity = "info",
+                message = $"{enabledCount} of {config.SectionSettings.Length} configured sections are enabled."
+            });
+        }
+
+        private static void AppendIntegrationChecks(PluginConfiguration config, List<object> checks)
+        {
+            if (string.IsNullOrWhiteSpace(config.Sonarr?.Url) || string.IsNullOrWhiteSpace(config.Sonarr?.ApiKey))
+            {
+                checks.Add(new { id = "sonarr", severity = "info", message = "Sonarr URL/API key not configured — Upcoming Shows will be empty." });
+            }
+            if (string.IsNullOrWhiteSpace(config.Radarr?.Url) || string.IsNullOrWhiteSpace(config.Radarr?.ApiKey))
+            {
+                checks.Add(new { id = "radarr", severity = "info", message = "Radarr URL/API key not configured — Upcoming Movies will be empty." });
+            }
+            if (string.IsNullOrWhiteSpace(config.Lidarr?.Url) || string.IsNullOrWhiteSpace(config.Lidarr?.ApiKey))
+            {
+                checks.Add(new { id = "lidarr", severity = "info", message = "Lidarr URL/API key not configured — Upcoming Music will be empty." });
+            }
+            if (string.IsNullOrWhiteSpace(config.Readarr?.Url) || string.IsNullOrWhiteSpace(config.Readarr?.ApiKey))
+            {
+                checks.Add(new { id = "readarr", severity = "info", message = "Readarr URL/API key not configured — Upcoming Books will be empty." });
+            }
+            if (string.IsNullOrWhiteSpace(config.JellyseerrUrl) || string.IsNullOrWhiteSpace(config.JellyseerrApiKey))
+            {
+                checks.Add(new { id = "jellyseerr", severity = "info", message = "Jellyseerr not configured — Discover / My Requests sections will be empty." });
+            }
+        }
+
+        private static void AppendLibraryChecks(PluginConfiguration config, List<object> checks)
+        {
+            if (string.IsNullOrWhiteSpace(config.DefaultMoviesLibraryId))
+            {
+                checks.Add(new
+                {
+                    id = "movies-library",
+                    severity = "info",
+                    message = "No default movies library selected — movie section navigation may use the first available library."
+                });
+            }
+            if (string.IsNullOrWhiteSpace(config.DefaultTVShowsLibraryId))
+            {
+                checks.Add(new
+                {
+                    id = "tv-library",
+                    severity = "info",
+                    message = "No default TV shows library selected — TV section navigation may use the first available library."
+                });
+            }
+        }
+
         [HttpGet("CachedImage/{cacheKey}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -304,6 +304,22 @@
                 </fieldset>
 
                 <fieldset class="verticalSection-extrabottompadding">
+                    <legend data-i18n="AdminDiagnostics" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Section Diagnostics</legend>
+                    <div style="padding-left: .5em;">
+                        <p class="fieldDescription" data-i18n="AdminDiagnosticsDesc">
+                            Quick checks for why home sections might be missing or empty. No library content is scanned.
+                        </p>
+                        <div style="display: flex; gap: 1em; align-items: center; flex-wrap: wrap; margin-bottom: 0.75em;">
+                            <button type="button" id="btnRunDiagnostics" class="raised emby-button">
+                                <span data-i18n="AdminRunDiagnostics">Run diagnostics</span>
+                            </button>
+                            <span id="diagnosticsStatus" style="color: #ccc; font-size: 0.9em;"></span>
+                        </div>
+                        <ul id="diagnosticsList" style="margin: 0; padding-left: 1.25em;"></ul>
+                    </div>
+                </fieldset>
+
+                <fieldset class="verticalSection-extrabottompadding">
                     <legend data-i18n="AdminDeveloperSettings" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Developer Settings</legend>
                     <div style="padding-left: .5em;">
                         <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom: 1.5em;">
@@ -416,6 +432,39 @@
                     #btnSaveConfigSections:disabled {
                         opacity: 0.45;
                         cursor: default;
+                    }
+                    .section-order-preview {
+                        margin: 0 0 1em;
+                        padding: 12px 14px;
+                        border-radius: 12px;
+                        background: rgba(0, 164, 220, 0.08);
+                        border: 1px solid rgba(0, 164, 220, 0.25);
+                    }
+                    .section-order-preview-title {
+                        font-weight: 600;
+                        margin-bottom: 0.5em;
+                        color: #e8f6fb;
+                    }
+                    .section-order-preview-list {
+                        margin: 0;
+                        padding-left: 1.4em;
+                        columns: 2;
+                        column-gap: 1.5em;
+                    }
+                    .section-order-preview-list li {
+                        break-inside: avoid;
+                        margin: 0.2em 0;
+                        color: #cfd8dc;
+                        font-size: 0.95em;
+                    }
+                    .section-order-preview-list li.is-disabled-preview {
+                        opacity: 0.45;
+                        text-decoration: line-through;
+                    }
+                    @media (max-width: 720px) {
+                        .section-order-preview-list {
+                            columns: 1;
+                        }
                     }
                     #sectionList .section-card.section-dragging {
                         opacity: 0.5;
@@ -708,6 +757,11 @@
                         <input type="file" id="sectionImportFile" accept="application/json,.json" style="display: none;" />
                     </div>
                     <span id="sectionDirtyHint" class="section-dirty-hint" hidden data-i18n="AdminUnsavedSectionChanges" role="status" aria-live="polite">Unsaved section changes</span>
+                </div>
+
+                <div id="sectionOrderPreview" class="section-order-preview" aria-live="polite">
+                    <div class="section-order-preview-title" data-i18n="AdminHomeOrderPreview">Home will look like:</div>
+                    <ol id="sectionOrderPreviewList" class="section-order-preview-list"></ol>
                 </div>
 
                 <div id="sectionList" class="section-list">
@@ -1101,6 +1155,30 @@
                         moveDown.disabled = !isVisible || visibleIndex === visible.length - 1;
                     }
                 });
+                updateSectionOrderPreview();
+            }
+
+            function updateSectionOrderPreview() {
+                const list = document.querySelector('#sectionOrderPreviewList');
+                if (!list) {
+                    return;
+                }
+                list.innerHTML = '';
+                Array.from(getSectionCards()).forEach(function (card, index) {
+                    if (card.classList.contains('is-filtered-out')) {
+                        return;
+                    }
+                    const name = ((card.querySelector('[data-id=lblSectionName]') || {}).textContent || '').trim()
+                        || card.querySelector('[data-id=hiddenSectionId]').value;
+                    const enabled = !!(card.querySelector('[data-id=chkSectionEnabled]') || {}).checked;
+                    const li = document.createElement('li');
+                    li.textContent = (index + 1) + '. ' + name;
+                    if (!enabled) {
+                        li.classList.add('is-disabled-preview');
+                        li.title = t('AdminDisabledPreview', 'Disabled — will not show on home');
+                    }
+                    list.appendChild(li);
+                });
             }
 
             function moveSectionCard(card, direction) {
@@ -1235,6 +1313,8 @@
                 if (undoBtn) {
                     undoBtn.setAttribute('aria-disabled', undoBtn.disabled ? 'true' : 'false');
                 }
+
+                updateSectionOrderPreview();
             }
 
             function exportSectionSettings() {
@@ -1294,7 +1374,26 @@
                             }
                         });
 
-                        // Apply field values first.
+                        const localIds = Array.from(getSectionCards()).map(function (card) {
+                            return card.querySelector('[data-id=hiddenSectionId]').value;
+                        });
+                        const localIdSet = {};
+                        localIds.forEach(function (id) { localIdSet[id] = true; });
+
+                        const matched = [];
+                        const unknownInFile = [];
+                        Object.keys(byId).forEach(function (id) {
+                            if (localIdSet[id]) {
+                                matched.push(id);
+                            } else {
+                                unknownInFile.push(id);
+                            }
+                        });
+                        const missingInFile = localIds.filter(function (id) {
+                            return !byId[id];
+                        });
+
+                        // Apply field values for matched IDs only.
                         Array.from(getSectionCards()).forEach(function (card) {
                             const id = card.querySelector('[data-id=hiddenSectionId]').value;
                             const section = byId[id];
@@ -1328,18 +1427,21 @@
                             }
                         });
 
-                        // Reorder cards by imported OrderIndex when present.
+                        // Reorder matched IDs; keep local-only sections after imported order.
                         const orderedIds = imported
                             .slice()
                             .sort(function (a, b) {
                                 return (Number(a.OrderIndex) || 0) - (Number(b.OrderIndex) || 0);
                             })
                             .map(function (s) { return s.SectionId; })
-                            .filter(Boolean);
+                            .filter(function (id) { return !!id && localIdSet[id]; });
 
                         if (orderedIds.length) {
                             const beforeIds = captureSectionOrderIds();
-                            applySectionOrderIds(orderedIds);
+                            const remainder = localIds.filter(function (id) {
+                                return orderedIds.indexOf(id) === -1;
+                            });
+                            applySectionOrderIds(orderedIds.concat(remainder));
                             if (beforeIds.join('|') !== captureSectionOrderIds().join('|')) {
                                 rememberReorderForUndo(beforeIds);
                             }
@@ -1347,7 +1449,18 @@
 
                         updateSectionMoveButtons();
                         refreshSectionDirtyState();
-                        Dashboard.alert(t('AdminImportSectionsDone', 'Section settings imported. Review changes and click Save.'));
+
+                        var summary = t('AdminImportSectionsDone', 'Section settings imported. Review changes and click Save.');
+                        summary += '\n\n' + t('AdminImportMatched', 'Matched: {0}').replace('{0}', String(matched.length));
+                        if (unknownInFile.length) {
+                            summary += '\n' + t('AdminImportUnknown', 'Unknown in this server (skipped): {0}')
+                                .replace('{0}', unknownInFile.slice(0, 8).join(', ') + (unknownInFile.length > 8 ? '…' : ''));
+                        }
+                        if (missingInFile.length) {
+                            summary += '\n' + t('AdminImportMissing', 'Not in file (unchanged): {0}')
+                                .replace('{0}', String(missingInFile.length));
+                        }
+                        Dashboard.alert(summary);
                     } catch (err) {
                         console.error(err);
                         Dashboard.alert(t('AdminImportSectionsFailed', 'Failed to import section settings. Check the JSON file.'));
@@ -2138,6 +2251,45 @@
                 });
             }
 
+            function setupDiagnosticsPanel() {
+                const btn = document.querySelector('#btnRunDiagnostics');
+                const list = document.querySelector('#diagnosticsList');
+                const status = document.querySelector('#diagnosticsStatus');
+                if (!btn || !list || btn.dataset.bound === 'true') {
+                    return;
+                }
+                btn.dataset.bound = 'true';
+
+                btn.addEventListener('click', function () {
+                    status.textContent = t('AdminDiagnosticsRunning', 'Running…');
+                    list.innerHTML = '';
+                    window.ApiClient.ajax({
+                        url: window.ApiClient.getUrl('HomeScreen/Diagnostics'),
+                        type: 'GET',
+                        dataType: 'json',
+                        headers: { 'Accept': 'application/json' }
+                    }).then(function (result) {
+                        const checks = (result && result.checks) || [];
+                        if (!checks.length) {
+                            status.textContent = t('AdminDiagnosticsEmpty', 'No issues reported.');
+                            return;
+                        }
+                        status.textContent = t('AdminDiagnosticsCount', '{0} checks').replace('{0}', String(checks.length));
+                        checks.forEach(function (check) {
+                            const li = document.createElement('li');
+                            const severity = (check.severity || 'info').toLowerCase();
+                            li.style.margin = '0.4em 0';
+                            li.style.color = severity === 'warning' ? '#ffb74d' : (severity === 'error' ? '#ef5350' : '#ccc');
+                            li.textContent = '[' + severity + '] ' + (check.message || check.id || '');
+                            list.appendChild(li);
+                        });
+                    }).catch(function (error) {
+                        console.error(error);
+                        status.textContent = t('AdminDiagnosticsFailed', 'Diagnostics failed.');
+                    });
+                });
+            }
+
             document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
                 setupTabs();
                 loadLibraries();
@@ -2145,6 +2297,7 @@
                 translatePage();
                 setupSectionListExtras();
                 setupAdvancedDetailsMemory();
+                setupDiagnosticsPanel();
                 document.querySelector('#btnSaveConfigGlobal').addEventListener("click", saveConfig);
                 document.querySelector('#btnSaveConfigSections').addEventListener("click", saveConfig);
 
