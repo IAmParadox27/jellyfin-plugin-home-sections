@@ -1,3 +1,8 @@
 
 dist/
 
+# Local analyzer helper scripts (not part of the plugin)
+scripts/fix-analyzers.py
+scripts/fix-next-wave.py
+scripts/list-errors.py
+scripts/show-error-lines.py

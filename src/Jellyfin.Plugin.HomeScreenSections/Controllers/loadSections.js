@@ -278,22 +278,31 @@
             var layoutManager = {{layoutmanager_hook}}.A;
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
             
-            // Title is clickable when we have a concrete item payload (e.g. collection/library)
-            // or a named route. Prefer OriginalPayload so collection sections open the full collection.
-            var hasTitleLink = !layoutManager.tv && !!(sectionInfo.OriginalPayload || sectionInfo.Route);
-            if (hasTitleLink) {
-                var route = undefined;
-                if (sectionInfo.OriginalPayload) {
-                    route = p.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
-                        serverId: apiClient.serverId()
-                    });
-                } else {
-                    route = p.appRouter.getRouteUrl(sectionInfo.Route, {
-                        serverId: apiClient.serverId()
-                    });
+            // Title is clickable only when we can build a real non-empty route.
+            // Prefer OriginalPayload (collection/library/item); fall back to named Route.
+            // Never show a chevron for broken/empty links.
+            var titleRoute = undefined;
+            if (!layoutManager.tv) {
+                try {
+                    if (sectionInfo.OriginalPayload) {
+                        titleRoute = p.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
+                            serverId: apiClient.serverId()
+                        });
+                    }
+                    if ((!titleRoute || titleRoute === '#' || titleRoute === 'undefined') && sectionInfo.Route) {
+                        titleRoute = p.appRouter.getRouteUrl(sectionInfo.Route, {
+                            serverId: apiClient.serverId()
+                        });
+                    }
+                } catch (titleLinkError) {
+                    console.warn('Home Screen Sections: failed to resolve title route for', sectionInfo.Section, titleLinkError);
+                    titleRoute = undefined;
                 }
+            }
 
-                html += '<a is="emby-linkbutton" href="' + route + '" class="button-flat button-flat-mini sectionTitleTextButton">';
+            var hasTitleLink = !!(titleRoute && titleRoute !== '#' && titleRoute !== 'undefined' && String(titleRoute).length > 1);
+            if (hasTitleLink) {
+                html += '<a is="emby-linkbutton" href="' + titleRoute + '" class="button-flat button-flat-mini sectionTitleTextButton" title="' + (sectionInfo.DisplayText || '') + '">';
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
                 html += sectionInfo.DisplayText;
                 html += "</h2>";
