@@ -92,7 +92,7 @@ public class PlaylistsSection : IHomeScreenSection
 
         IEnumerable<Playlist> playlists = m_playlistManager.GetPlaylists(user.Id)
             .Where(p => !string.Equals(p.Name, "My List", StringComparison.OrdinalIgnoreCase))
-            .Where(p => p.GetChildren(user, true, new InternalItemsQuery(user)).Any())
+            .Where(p => p.GetChildren(user, true, new InternalItemsQuery(user)).Count > 0)
             .Take(instanceCount);
 
         foreach (Playlist playlist in playlists)
