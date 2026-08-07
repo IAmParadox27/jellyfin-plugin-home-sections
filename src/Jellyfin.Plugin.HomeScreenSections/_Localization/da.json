@@ -1,4 +1,4 @@
-﻿{
+{
   "BecauseYouWatched": "Fordi du så {0}",
   "ContinueWatching": "Fortsæt med at se",
   "ContinueWatchingNextUp": "Fortsæt med at se / Næste",
@@ -215,6 +215,23 @@
   "AdminModularHomeSettings": "Modulær startside – Indstillinger:",
   "AdminEnableModularHome": "Aktivér \"Modulær startside\". Dette ændrer din startskærm til en mere dynamisk visning, hvor andre udvidelser også kan bidrage med indhold og anbefalinger.",
   "AdminEnabledSections": "Aktiverede sektioner",
-  "AdminSettingsUpdated": "Indstillinger er opdateret, siden genindlæses om 2 sekunder.",
-  "AdminReleaseTypeRequired": "Mindst én udgivelsestype skal være valgt for kommende film."
+  "AdminSettingsUpdated": "Indstillinger er opdateret.",
+  "AdminReleaseTypeRequired": "Mindst én udgivelsestype skal være valgt for kommende film.",
+  "AdminImportMatched": "Matchet: {0}",
+  "AdminImportUnknown": "Ukendt på denne server (sprunget over): {0}",
+  "AdminImportMissing": "Ikke i filen (uændret): {0}",
+  "AdminHomeOrderPreview": "Startskærmen vil se sådan ud:",
+  "AdminDisabledPreview": "Deaktiveret — vises ikke på startskærmen",
+  "AdminDiagnostics": "Sektionsdiagnostik",
+  "AdminDiagnosticsDesc": "Hurtige tjek for hvorfor sektioner mangler eller er tomme. Intet biblioteksindhold scannes.",
+  "AdminRunDiagnostics": "Kør diagnostik",
+  "AdminDiagnosticsRunning": "Kører…",
+  "AdminDiagnosticsEmpty": "Ingen problemer rapporteret.",
+  "AdminDiagnosticsCount": "{0} tjek",
+  "AdminDiagnosticsFailed": "Diagnostik mislykkedes.",
+  "AdminResetToDefaults": "Nulstil til serverstandarder",
+  "AdminResetToDefaultsDesc": "Gendan aktiverede sektioner og rækkefølge til serveradministratorens værdier. Du skal stadig klikke på Gem.",
+  "AdminResetToDefaultsDone": "Serverstandarder gendannet. Klik på Gem for at anvende.",
+  "AdminSettingsUpdatedToast": "Indstillinger gemt. Opdater startskærmen for at se rækkefølgeændringer.",
+  "AdminSettingsSaveFailed": "Kunne ikke gemme indstillinger."
 }
