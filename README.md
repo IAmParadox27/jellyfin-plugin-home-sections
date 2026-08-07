@@ -1,16 +1,18 @@
 <h1 align="center">Home Screen Sections</h1>
 <h2 align="center">A Jellyfin Plugin</h2>
 <p align="center">
-	<img alt="Logo" src="https://raw.githubusercontent.com/IAmParadox27/jellyfin-plugin-home-sections/main/src/logo.png" />
+	<img alt="Logo" src="https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png" />
 	<br />
 	<br />
-	<a href="https://github.com/IAmParadox27/jellyfin-plugin-home-sections">
-		<img alt="GPL 3.0 License" src="https://img.shields.io/github/license/IAmParadox27/jellyfin-plugin-home-sections.svg" />
+	<a href="https://github.com/Robert-Hansen/jellyfin-plugin-home-sections">
+		<img alt="GPL 3.0 License" src="https://img.shields.io/github/license/Robert-Hansen/jellyfin-plugin-home-sections.svg" />
 	</a>
-	<a href="https://github.com/IAmParadox27/jellyfin-plugin-home-sections/releases">
-		<img alt="Current Release" src="https://img.shields.io/github/release/IAmParadox27/jellyfin-plugin-home-sections.svg" />
+	<a href="https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases">
+		<img alt="Current Release" src="https://img.shields.io/github/release/Robert-Hansen/jellyfin-plugin-home-sections.svg" />
 	</a>
 </p>
+
+> **This repository** is a maintained fork of [IAmParadox27/jellyfin-plugin-home-sections](https://github.com/IAmParadox27/jellyfin-plugin-home-sections) with extra admin/user UX, clickable section titles, cache fixes, diagnostics, and localization. See **[What's new in this fork](#whats-new-in-this-fork)** below.
 
 <details>
 	<summary><h2>Development Update - 20/08/2025</h2></summary>
@@ -79,16 +81,77 @@ The sections that are new for this plugin (and most likely the reason you would 
   - File Transformation (https://github.com/IAmParadox27/jellyfin-plugin-file-transformation)
   - Plugin Pages (https://github.com/IAmParadox27/jellyfin-plugin-pages)
 
-### Installation
-1. Add `https://www.iamparadox.dev/jellyfin/plugins/manifest.json` to your plugin repositories.
-2. Install `Home Screen Sections` from the Catalogue.
+### Installation (this fork)
+1. In Jellyfin → **Dashboard → Plugins → Repositories**, add:
+   `https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json`
+2. Install **Home Screen Sections** from the Catalogue (pick the build matching your Jellyfin version when available).
 3. Restart Jellyfin.
-4. On the user's homepage, open the hamburger menu and you should see a link for settings to "Modular Home". Click this.
-5. At the top there is a button to enable support and it will retrieve all sections that are available on your instance. Select all that apply.
-6. Save the settings. _Please note currently the user is not provided any feedback when the settings are saved_.
+4. On the user's homepage, open the hamburger menu and you should see a link for settings to **Modular Home**. Click this.
+5. At the top there is a button to enable support and it will retrieve all sections that are available on your instance. Select all that apply (and drag to set your personal order if you like).
+6. Save the settings — you should get a confirmation toast (no full page reload).
 7. Force refresh your webpage (or app) and you should see your new sections instead of the original ones.
+
+Upstream catalogue (original plugin only, without this fork’s UX changes): `https://www.iamparadox.dev/jellyfin/plugins/manifest.json`
+
+## What's new in this fork
+
+Compared with the original [IAmParadox27](https://github.com/IAmParadox27/jellyfin-plugin-home-sections) project, this fork focuses on day-to-day configuration and home-screen polish. Core section types (Discover, Upcoming, Because You Watched, etc.) remain the same.
+
+### Admin · Section Settings
+
+| Area | Original | This fork |
+|------|----------|-----------|
+| Reorder sections | Numeric order fields (1–999) | Drag-and-drop cards, up/down arrows, **Alt+↑/↓** keyboard reorder |
+| Layout | Compact list, tight control row | Modern card list, wider layout so **View Mode** fits on one row |
+| Help text | Long field descriptions under every control | Compact **(i)** info tooltips |
+| Search / bulk | — | Search box; **Enable all** / **Disable all** |
+| Undo / dirty state | — | Undo last move; “unsaved changes” indicator |
+| Save | Silent save | Confirm dialog summarizing order/field changes before save |
+| Export / import | — | JSON export/import of section settings, with **matched / unknown / missing** conflict summary |
+| Live preview | — | “Home will look like…” ordered preview (enabled vs disabled) |
+| After save | Home may stay stale until restart/cache expiry | Section **cache cleared** + static cache bust so home updates immediately |
+
+### Admin · Global Settings
+
+| Area | Original | This fork |
+|------|----------|-----------|
+| Diagnostics | — | **Section Diagnostics** panel (`GET HomeScreen/Diagnostics`): plugin enabled, section counts, Sonarr/Radarr/Lidarr/Readarr/Jellyseerr and library hints (no library content scan) |
+| Cache tools | Bust static / all caches | Same, plus automatic cache bust paths after config save |
+
+### User · Modular Home
+
+| Area | Original | This fork |
+|------|----------|-----------|
+| Personal section order | Checkboxes only (server order) | Drag-and-drop + arrows for **personal** home order (`SectionOrder`) |
+| Reset | — | **Reset to server defaults** (still requires Save) |
+| Save feedback | No feedback; page reloads after 2s | Confirmation toast; **no full page reload** |
+
+### Home screen behaviour
+
+| Area | Original | This fork |
+|------|----------|-----------|
+| Section titles | Plain text (chevron often non-functional) | **Clickable titles** where a real route exists (collections, playlists, genres, Live TV, My List, Continue Watching, Next Up combo, and more) |
+| Invalid routes | Could show a dead chevron | Routes validated / hardened so only real navigations get a link |
+| Cache after admin change | In-memory section list could stay old | Cleared on config save and bust-cache |
+
+### Localization & quality
+
+| Area | Original | This fork |
+|------|----------|-----------|
+| Languages | en, de, pl (and related) | Same, plus **Danish (da)** with CI key-parity checks |
+| CI | Varies by upstream | Release builds for multiple Jellyfin targets; automated tests; stricter analyzers on this fork’s pipeline |
+
+### Not changed vs original
+
+- Same plugin idea: replace the vanilla home with modular “Netflix-style” rows.
+- Same integrations: Jellyseerr Discover / My Requests, *arr upcoming calendars, etc.
+- Same dependency plugins: **File Transformation** and **Plugin Pages**.
+- External section registration API (`PluginInterface.RegisterSection`) is unchanged in spirit — third-party section plugins should still work.
+
+If you only need stock HSS behaviour, use the [upstream project](https://github.com/IAmParadox27/jellyfin-plugin-home-sections). Prefer this fork when you want the configuration UX, clickable titles, and diagnostics described above.
+
 ## Upcoming Features/Known Issues
-If you find an issue with any of the sections or usage of the plugin, please open an issue on GitHub.
+If you find an issue with any of the sections or usage of the plugin, please open an issue on GitHub (on this fork for fork-specific UX; upstream for core section behaviour as appropriate).
 
 ### FAQ
 
