@@ -365,6 +365,58 @@
                         border-color: rgba(255, 255, 255, 0.16);
                         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
                     }
+                    #sectionList .section-card.is-dirty {
+                        border-color: var(--primary-accent-color, #00a4dc);
+                        box-shadow: 0 0 0 1px var(--primary-accent-color, #00a4dc), 0 2px 12px rgba(0, 0, 0, 0.2);
+                    }
+                    #sectionList .section-card.is-filtered-out {
+                        display: none !important;
+                    }
+                    #sectionList .section-card:focus {
+                        outline: none;
+                    }
+                    #sectionList .section-card:focus-visible {
+                        border-color: var(--primary-accent-color, #00a4dc);
+                        box-shadow: 0 0 0 2px rgba(0, 164, 220, 0.35);
+                    }
+                    .section-list-toolbar {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: center;
+                        gap: 10px 12px;
+                        margin: 0 0 1em;
+                        padding: 12px 14px;
+                        border-radius: 12px;
+                        background: rgba(255, 255, 255, 0.04);
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                    }
+                    .section-list-toolbar-search {
+                        flex: 1 1 220px;
+                        min-width: 180px;
+                    }
+                    .section-list-toolbar-search input {
+                        width: 100%;
+                        box-sizing: border-box;
+                    }
+                    .section-list-toolbar-actions {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    .section-list-toolbar-actions .emby-button {
+                        margin: 0;
+                    }
+                    .section-dirty-hint {
+                        margin-left: auto;
+                        font-size: 0.9em;
+                        font-weight: 600;
+                        color: var(--primary-accent-color, #00a4dc);
+                    }
+                    #btnSaveConfigSections:disabled {
+                        opacity: 0.45;
+                        cursor: default;
+                    }
                     #sectionList .section-card.section-dragging {
                         opacity: 0.5;
                         transform: scale(0.99);
@@ -592,12 +644,30 @@
                         }
                     }
                 </style>
+                <div class="section-list-toolbar">
+                    <div class="section-list-toolbar-search">
+                        <input is="emby-input" type="search" id="sectionSearch" class="emby-input" data-i18n-placeholder="AdminSearchSections" placeholder="Search sections..." autocomplete="off" />
+                    </div>
+                    <div class="section-list-toolbar-actions">
+                        <button type="button" id="btnEnableAllSections" class="raised emby-button">
+                            <span data-i18n="AdminEnableAllSections">Enable all</span>
+                        </button>
+                        <button type="button" id="btnDisableAllSections" class="raised emby-button">
+                            <span data-i18n="AdminDisableAllSections">Disable all</span>
+                        </button>
+                        <button type="button" id="btnUndoSectionReorder" class="raised emby-button" disabled>
+                            <span data-i18n="AdminUndoMove">Undo move</span>
+                        </button>
+                    </div>
+                    <span id="sectionDirtyHint" class="section-dirty-hint" hidden data-i18n="AdminUnsavedSectionChanges">Unsaved section changes</span>
+                </div>
+
                 <div id="sectionList" class="section-list">
                     <div id="sectionWrapper" class="section-list-items" role="list" aria-label="Sections"></div>
                 </div>
 
                 <br>
-                <button id="btnSaveConfigSections" is="emby-button" type="submit" class="raised button-submit block emby-button">
+                <button id="btnSaveConfigSections" is="emby-button" type="submit" class="raised button-submit block emby-button" disabled>
                     <span data-i18n="AdminSave">Save</span>
                 </button>
             </div>
@@ -605,7 +675,7 @@
     </div>
 
     <template id="sectionConfigTemplate">
-        <div data-id="section-config" class="section-card" draggable="true" role="listitem">
+        <div data-id="section-config" class="section-card" draggable="true" role="listitem" tabindex="0">
             <div class="section-card-handle-col">
                 <button type="button" class="section-move-btn" data-id="moveUp" title="Move up" aria-label="Move up">
                     <span class="material-icons" aria-hidden="true">keyboard_arrow_up</span>
@@ -750,6 +820,9 @@
             // Snapshot of section settings after load (and after a successful save)
             var originalSectionSnapshot = [];
 
+            // One-level undo for the last reorder (arrow / keyboard / drag)
+            var lastReorderOrderIds = null;
+
             // Applies stored translations to data-i18n and data-i18n-label attributes
             // within the given root element. Safe to call before translations are loaded
             // (no-op when pageTranslations is empty).
@@ -771,6 +844,13 @@
                         if (labelEl) {
                             labelEl.textContent = pageTranslations[key];
                         }
+                    }
+                });
+
+                root.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+                    var key = el.getAttribute('data-i18n-placeholder');
+                    if (pageTranslations[key]) {
+                        el.setAttribute('placeholder', pageTranslations[key]);
                     }
                 });
 
@@ -891,6 +971,67 @@
                 return document.querySelectorAll('#sectionWrapper [data-id="section-config"]');
             }
 
+            function getVisibleSectionCards() {
+                return Array.from(getSectionCards()).filter(function (card) {
+                    return !card.classList.contains('is-filtered-out');
+                });
+            }
+
+            function captureSectionOrderIds() {
+                return Array.from(getSectionCards()).map(function (card) {
+                    return card.querySelector('[data-id=hiddenSectionId]').value;
+                });
+            }
+
+            function applySectionOrderIds(orderIds) {
+                const sectionWrapper = document.querySelector('#sectionWrapper');
+                if (!sectionWrapper || !orderIds || !orderIds.length) {
+                    return;
+                }
+
+                const byId = {};
+                Array.from(getSectionCards()).forEach(function (card) {
+                    const id = card.querySelector('[data-id=hiddenSectionId]').value;
+                    byId[id] = card;
+                });
+
+                orderIds.forEach(function (id) {
+                    if (byId[id]) {
+                        sectionWrapper.appendChild(byId[id]);
+                    }
+                });
+            }
+
+            function updateUndoButton() {
+                const btn = document.querySelector('#btnUndoSectionReorder');
+                if (btn) {
+                    btn.disabled = !lastReorderOrderIds || lastReorderOrderIds.length === 0;
+                }
+            }
+
+            function clearReorderUndo() {
+                lastReorderOrderIds = null;
+                updateUndoButton();
+            }
+
+            function rememberReorderForUndo(previousOrderIds) {
+                lastReorderOrderIds = previousOrderIds ? previousOrderIds.slice() : null;
+                updateUndoButton();
+            }
+
+            function undoLastSectionReorder() {
+                if (!lastReorderOrderIds || !lastReorderOrderIds.length) {
+                    return;
+                }
+
+                const restore = lastReorderOrderIds.slice();
+                lastReorderOrderIds = null;
+                applySectionOrderIds(restore);
+                updateSectionMoveButtons();
+                updateUndoButton();
+                refreshSectionDirtyState();
+            }
+
             function clearSectionDragOverClasses() {
                 document.querySelectorAll('#sectionWrapper .section-drag-over-above, #sectionWrapper .section-drag-over-below')
                     .forEach(card => {
@@ -899,15 +1040,17 @@
             }
 
             function updateSectionMoveButtons() {
-                const cards = Array.from(getSectionCards());
-                cards.forEach(function (card, index) {
+                const visible = getVisibleSectionCards();
+                Array.from(getSectionCards()).forEach(function (card) {
                     const moveUp = card.querySelector('[data-id=moveUp]');
                     const moveDown = card.querySelector('[data-id=moveDown]');
+                    const visibleIndex = visible.indexOf(card);
+                    const isVisible = visibleIndex >= 0;
                     if (moveUp) {
-                        moveUp.disabled = index === 0;
+                        moveUp.disabled = !isVisible || visibleIndex === 0;
                     }
                     if (moveDown) {
-                        moveDown.disabled = index === cards.length - 1;
+                        moveDown.disabled = !isVisible || visibleIndex === visible.length - 1;
                     }
                 });
             }
@@ -918,19 +1061,191 @@
                     return;
                 }
 
+                const visible = getVisibleSectionCards();
+                const index = visible.indexOf(card);
+                if (index < 0) {
+                    return;
+                }
+
+                const beforeIds = captureSectionOrderIds();
+                let moved = false;
+
                 if (direction < 0) {
-                    const prev = card.previousElementSibling;
-                    if (prev) {
-                        sectionWrapper.insertBefore(card, prev);
+                    if (index === 0) {
+                        return;
                     }
+                    sectionWrapper.insertBefore(card, visible[index - 1]);
+                    moved = true;
                 } else if (direction > 0) {
-                    const next = card.nextElementSibling;
-                    if (next) {
-                        sectionWrapper.insertBefore(next, card);
+                    if (index >= visible.length - 1) {
+                        return;
                     }
+                    sectionWrapper.insertBefore(visible[index + 1], card);
+                    moved = true;
+                }
+
+                if (!moved) {
+                    return;
+                }
+
+                const afterIds = captureSectionOrderIds();
+                if (beforeIds.join('|') !== afterIds.join('|')) {
+                    rememberReorderForUndo(beforeIds);
                 }
 
                 updateSectionMoveButtons();
+                refreshSectionDirtyState();
+            }
+
+            function applySectionFilter() {
+                const input = document.querySelector('#sectionSearch');
+                const query = ((input && input.value) || '').trim().toLowerCase();
+
+                Array.from(getSectionCards()).forEach(function (card) {
+                    const name = ((card.querySelector('[data-id=lblSectionName]') || {}).textContent || '').trim().toLowerCase();
+                    const matches = !query || name.indexOf(query) !== -1;
+                    card.classList.toggle('is-filtered-out', !matches);
+                });
+
+                updateSectionMoveButtons();
+            }
+
+            function setAllSectionsEnabled(enabled) {
+                Array.from(getSectionCards()).forEach(function (card) {
+                    if (card.classList.contains('is-filtered-out')) {
+                        return;
+                    }
+                    const checkbox = card.querySelector('[data-id=chkSectionEnabled]');
+                    if (checkbox && !checkbox.disabled) {
+                        checkbox.checked = enabled;
+                    }
+                });
+                refreshSectionDirtyState();
+            }
+
+            function sectionSnapshotsEqual(a, b) {
+                if (!a || !b) {
+                    return false;
+                }
+                return a.SectionId === b.SectionId
+                    && Boolean(a.Enabled) === Boolean(b.Enabled)
+                    && Boolean(a.AllowUserOverride) === Boolean(b.AllowUserOverride)
+                    && Boolean(a.HideWatchedItems) === Boolean(b.HideWatchedItems)
+                    && Number(a.LowerLimit) === Number(b.LowerLimit)
+                    && Number(a.UpperLimit) === Number(b.UpperLimit)
+                    && Number(a.OrderIndex) === Number(b.OrderIndex)
+                    && String(a.ViewMode || '') === String(b.ViewMode || '');
+            }
+
+            function refreshSectionDirtyState() {
+                const current = snapshotSectionsFromDom();
+                const originalById = {};
+                (originalSectionSnapshot || []).forEach(function (section) {
+                    originalById[section.SectionId] = section;
+                });
+
+                let anyDirty = false;
+                Array.from(getSectionCards()).forEach(function (card, index) {
+                    const sectionId = card.querySelector('[data-id=hiddenSectionId]').value;
+                    const currentSection = current.find(function (s) { return s.SectionId === sectionId; })
+                        || {
+                            SectionId: sectionId,
+                            OrderIndex: index,
+                            Enabled: card.querySelector('[data-id=chkSectionEnabled]').checked,
+                            AllowUserOverride: card.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
+                            HideWatchedItems: card.querySelector('[data-id=chkHideWatchedItems]').checked,
+                            LowerLimit: parseInt(card.querySelector('[data-id=txtSectionMinLimit]').value, 10) || 0,
+                            UpperLimit: parseInt(card.querySelector('[data-id=txtSectionMaxLimit]').value, 10) || 0,
+                            ViewMode: card.querySelector('[data-id=viewModeSelect]').value
+                        };
+                    const original = originalById[sectionId];
+                    const dirty = !original || !sectionSnapshotsEqual(original, currentSection);
+                    card.classList.toggle('is-dirty', dirty);
+                    if (dirty) {
+                        anyDirty = true;
+                    }
+                });
+
+                // Also treat order-only mismatches covered above via OrderIndex.
+                if (!anyDirty && originalSectionSnapshot && originalSectionSnapshot.length !== current.length) {
+                    anyDirty = true;
+                }
+
+                const hint = document.querySelector('#sectionDirtyHint');
+                if (hint) {
+                    hint.hidden = !anyDirty;
+                }
+
+                const saveBtn = document.querySelector('#btnSaveConfigSections');
+                if (saveBtn) {
+                    saveBtn.disabled = !anyDirty;
+                }
+            }
+
+            function setupSectionListExtras() {
+                const search = document.querySelector('#sectionSearch');
+                if (search && search.dataset.bound !== 'true') {
+                    search.dataset.bound = 'true';
+                    search.addEventListener('input', applySectionFilter);
+                    search.addEventListener('search', applySectionFilter);
+                }
+
+                const enableAll = document.querySelector('#btnEnableAllSections');
+                if (enableAll && enableAll.dataset.bound !== 'true') {
+                    enableAll.dataset.bound = 'true';
+                    enableAll.addEventListener('click', function () {
+                        setAllSectionsEnabled(true);
+                    });
+                }
+
+                const disableAll = document.querySelector('#btnDisableAllSections');
+                if (disableAll && disableAll.dataset.bound !== 'true') {
+                    disableAll.dataset.bound = 'true';
+                    disableAll.addEventListener('click', function () {
+                        setAllSectionsEnabled(false);
+                    });
+                }
+
+                const undoBtn = document.querySelector('#btnUndoSectionReorder');
+                if (undoBtn && undoBtn.dataset.bound !== 'true') {
+                    undoBtn.dataset.bound = 'true';
+                    undoBtn.addEventListener('click', function () {
+                        undoLastSectionReorder();
+                    });
+                }
+
+                const sectionWrapper = document.querySelector('#sectionWrapper');
+                if (sectionWrapper && sectionWrapper.dataset.changeBound !== 'true') {
+                    sectionWrapper.dataset.changeBound = 'true';
+                    sectionWrapper.addEventListener('change', function () {
+                        refreshSectionDirtyState();
+                    });
+                    sectionWrapper.addEventListener('input', function (e) {
+                        if (e.target && (e.target.matches('input[type="number"]') || e.target.matches('select'))) {
+                            refreshSectionDirtyState();
+                        }
+                    });
+                }
+
+                const sectionsTab = document.querySelector('#sections');
+                if (sectionsTab && sectionsTab.dataset.keyboardBound !== 'true') {
+                    sectionsTab.dataset.keyboardBound = 'true';
+                    sectionsTab.addEventListener('keydown', function (e) {
+                        if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) {
+                            return;
+                        }
+
+                        const card = e.target.closest('[data-id="section-config"]');
+                        if (!card || !sectionWrapper || !sectionWrapper.contains(card)) {
+                            return;
+                        }
+
+                        // Don't hijack while typing in number fields without Alt intent — Alt is required.
+                        e.preventDefault();
+                        moveSectionCard(card, e.key === 'ArrowUp' ? -1 : 1);
+                        card.focus({ preventScroll: false });
+                    });
+                }
             }
 
             function setupSectionRowDrag(card) {
@@ -971,6 +1286,7 @@
                     }
 
                     sectionDragState.row = card;
+                    sectionDragState.orderBeforeDrag = captureSectionOrderIds();
                     card.classList.add('section-dragging');
                     e.dataTransfer.effectAllowed = 'move';
                     try {
@@ -982,10 +1298,17 @@
 
                 card.addEventListener('dragend', function () {
                     card.classList.remove('section-dragging');
+                    const beforeIds = sectionDragState.orderBeforeDrag;
+                    const afterIds = captureSectionOrderIds();
+                    if (beforeIds && beforeIds.join('|') !== afterIds.join('|')) {
+                        rememberReorderForUndo(beforeIds);
+                    }
                     sectionDragState.row = null;
                     sectionDragState.allowDrag = false;
+                    sectionDragState.orderBeforeDrag = null;
                     clearSectionDragOverClasses();
                     updateSectionMoveButtons();
+                    refreshSectionDirtyState();
                 });
 
                 card.addEventListener('dragover', function (e) {
@@ -1028,6 +1351,7 @@
 
                     clearSectionDragOverClasses();
                     updateSectionMoveButtons();
+                    refreshSectionDirtyState();
                 });
             }
 
@@ -1409,6 +1733,8 @@
                 window.ApiClient.updatePluginConfiguration(pluginId, config)
                     .then(function (result) {
                         originalSectionSnapshot = snapshotSectionsFromDom();
+                        clearReorderUndo();
+                        refreshSectionDirtyState();
                         return Dashboard.processPluginConfigurationUpdateResult(result);
                     })
                     .catch(e => console.error(e))
@@ -1526,10 +1852,14 @@
                             // Translate dynamically added section rows in case
                             // translatePage() finished before sections were rendered
                             applyTranslations(document.querySelector('#sectionWrapper'));
+                            applyTranslations(document.querySelector('.section-list-toolbar'));
+                            setupSectionListExtras();
                             updateSectionMoveButtons();
+                            clearReorderUndo();
 
-                            // Baseline for the save-time change summary dialog
+                            // Baseline for the save-time change summary dialog + dirty state
                             originalSectionSnapshot = snapshotSectionsFromDom();
+                            refreshSectionDirtyState();
                         }).finally(() => Dashboard.hideLoadingMsg());
                     });
             }
@@ -1539,6 +1869,7 @@
                 loadLibraries();
                 loadConfig();
                 translatePage();
+                setupSectionListExtras();
                 document.querySelector('#btnSaveConfigGlobal').addEventListener("click", saveConfig);
                 document.querySelector('#btnSaveConfigSections').addEventListener("click", saveConfig);
 
