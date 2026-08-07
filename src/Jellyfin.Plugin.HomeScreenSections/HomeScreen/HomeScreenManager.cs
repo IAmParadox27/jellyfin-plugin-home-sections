@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
+using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Extra;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded;
@@ -90,6 +91,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             
             RegisterResultsDelegate<GenreSection>();
             RegisterResultsDelegate<MyRequestsSection>();
+
+            // Extra library rows
+            RegisterResultsDelegate<FavoritesSection>();
+            RegisterResultsDelegate<RandomUnwatchedSection>();
+            RegisterResultsDelegate<TrendingSection>();
+            RegisterResultsDelegate<RecentlyPlayedSection>();
+            RegisterResultsDelegate<KidsSection>();
+            RegisterResultsDelegate<ComingSoonInLibrarySection>();
+            RegisterResultsDelegate<DecadeSection>();
+            RegisterResultsDelegate<StudioSection>();
+            RegisterResultsDelegate<PlaylistsSection>();
+            RegisterResultsDelegate<UnwatchedCollectionsSection>();
             
             // Removed from public access while its still in dev.
             //RegisterResultsDelegate<DirectedBySection>();
