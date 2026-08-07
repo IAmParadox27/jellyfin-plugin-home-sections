@@ -7,6 +7,28 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
     {
         // The GUID here represents the page hash
         public ConcurrentDictionary<Guid, UserSectionsData> Cache { get; set; } = new ConcurrentDictionary<Guid, UserSectionsData>();
+
+        /// <summary>
+        /// Drop all cached home-section pages so the next home load rebuilds order/content.
+        /// </summary>
+        public void Clear()
+        {
+            Cache.Clear();
+        }
+
+        /// <summary>
+        /// Drop cached pages for a single user.
+        /// </summary>
+        public void ClearForUser(Guid userId)
+        {
+            foreach (KeyValuePair<Guid, UserSectionsData> entry in Cache.ToArray())
+            {
+                if (entry.Value.UserId == userId)
+                {
+                    Cache.TryRemove(entry.Key, out _);
+                }
+            }
+        }
     }
 
     public class UserSectionsData
