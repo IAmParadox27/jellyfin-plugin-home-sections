@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Model;
 using MediaBrowser.Model.Plugins;
@@ -55,7 +55,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public QueryResult<HomeScreenSectionInfo> GetSectionTypes([FromQuery] string? language = null)
         {
-            // Todo add reading whether the section is enabled or disabled by the user.
+            // NOTE: add reading whether the section is enabled or disabled by the user.
             List<HomeScreenSectionInfo> items = new List<HomeScreenSectionInfo>();
 
             IEnumerable<IHomeScreenSection> sections = m_homeScreenManager.GetSectionTypes();
@@ -111,7 +111,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         public ActionResult<IDictionary<string, string>> GetTranslations([FromQuery] string language = "en")
         {
             var translations = m_translationManager.GetTranslationPack(language.Trim());
-            return Ok(translations ?? new Dictionary<string, string>());
+            return Ok(translations ?? new Dictionary<string, string>(StringComparer.Ordinal));
         }
 
         /// <summary>
@@ -142,7 +142,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return NotFound("Pages is null or empty");
             }
 
-            PluginPageInfo? view = pages.FirstOrDefault(pageInfo => pageInfo?.Name == viewName, null);
+            PluginPageInfo? view = pages.FirstOrDefault(pageInfo => string.Equals(pageInfo?.Name, viewName, StringComparison.Ordinal), null);
 
             if (view == null)
             {
@@ -153,7 +153,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
             if (stream == null)
             {
-                m_logger.LogError("Failed to get resource {Resource}", view.EmbeddedResourcePath);
+                PluginLog.FailedGetResource(m_logger, view.EmbeddedResourcePath);
                 return NotFound();
             }
 

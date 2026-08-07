@@ -27,19 +27,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             try
             {
-                m_logger.LogInformation("Starting image cache cleanup");
+                PluginLog.ImageCacheCleanupStarted(m_logger);
                 progress?.Report(0);
                 
                 m_imageCacheService.ClearExpiredCache();
                 
                 progress?.Report(100);
-                m_logger.LogInformation("Image cache cleanup completed");
+                PluginLog.ImageCacheCleanupCompleted(m_logger);
                 
                 return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                m_logger.LogError(ex, "Error during image cache cleanup");
+                PluginLog.ImageCacheCleanupError(m_logger, ex);
                 throw;
             }
         }

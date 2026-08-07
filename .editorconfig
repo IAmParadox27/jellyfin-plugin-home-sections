@@ -1,0 +1,75 @@
+# Analyzer + style configuration
+# TreatWarningsAsErrors is on — diagnostics at "warning" fail the build.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{csproj,props,targets,json,yml,yaml,md,sh}]
+indent_size = 2
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+
+dotnet_style_null_propagation = true:warning
+dotnet_style_coalesce_expression = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_prefer_null_check_over_type_check = true:warning
+
+# --- Enforced and fixed ---
+dotnet_diagnostic.CA1873.severity = warning
+dotnet_diagnostic.CA1805.severity = warning
+dotnet_diagnostic.CA1847.severity = warning
+dotnet_diagnostic.CA1852.severity = warning
+dotnet_diagnostic.CA1711.severity = warning
+dotnet_diagnostic.MA0002.severity = warning
+dotnet_diagnostic.MA0017.severity = warning
+dotnet_diagnostic.MA0026.severity = warning
+dotnet_diagnostic.CA1305.severity = warning
+dotnet_diagnostic.MA0011.severity = warning
+
+# --- Next wave (fixed) ---
+dotnet_diagnostic.MA0006.severity = warning
+dotnet_diagnostic.MA0009.severity = warning
+dotnet_diagnostic.MA0023.severity = warning
+dotnet_diagnostic.MA0074.severity = warning
+dotnet_diagnostic.CA1310.severity = warning
+dotnet_diagnostic.CA1860.severity = warning
+dotnet_diagnostic.CA1854.severity = warning
+dotnet_diagnostic.CA1822.severity = warning
+dotnet_diagnostic.CA1864.severity = warning
+dotnet_diagnostic.CA1869.severity = warning
+dotnet_diagnostic.CA1826.severity = warning
+dotnet_diagnostic.CA2201.severity = warning
+dotnet_diagnostic.CA1849.severity = warning
+dotnet_diagnostic.CA1859.severity = warning
+dotnet_diagnostic.CA2254.severity = warning
+dotnet_diagnostic.CA1848.severity = warning
+dotnet_diagnostic.IDE0011.severity = warning
+dotnet_diagnostic.IDE0019.severity = warning
+dotnet_diagnostic.IDE0270.severity = warning
+
+# JSON interop keys (external config shape, not C# symbols)
+dotnet_diagnostic.CA1507.severity = suggestion
+
+# --- Structural (fixed) ---
+dotnet_diagnostic.MA0051.severity = warning
+dotnet_diagnostic.CA1051.severity = warning
+dotnet_diagnostic.CA1031.severity = warning
+dotnet_diagnostic.MA0016.severity = warning
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1416.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA2255.severity = none
+dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.MA0048.severity = none
+dotnet_diagnostic.IDE0007.severity = none
+dotnet_diagnostic.IDE0008.severity = none

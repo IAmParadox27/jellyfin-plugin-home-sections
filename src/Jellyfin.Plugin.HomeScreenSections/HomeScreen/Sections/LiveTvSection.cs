@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-	internal class LiveTvSection : IHomeScreenSection
+	internal sealed class LiveTvSection : IHomeScreenSection
 	{
 		public string? Section => "LiveTV";
 

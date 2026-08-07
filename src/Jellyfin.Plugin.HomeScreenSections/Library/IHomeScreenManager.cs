@@ -64,9 +64,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
     {
         public TranslationType Type { get; set; } = TranslationType.FullText;
 
-        public string? AdditionalContent { get; set; } = null;
+        public string? AdditionalContent { get; set; }
         
-        public bool TranslateAdditionalContent { get; set; } = false;
+        public bool TranslateAdditionalContent { get; set; }
     }
 
     public class HomeScreenSectionInfo
@@ -83,7 +83,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         
         public string? ContainerClass { get; set; }
 
-        public SectionViewMode? ViewMode { get; set; } = null;
+        public SectionViewMode? ViewMode { get; set; }
 
         public bool DisplayTitleText { get; set; } = true;
         
@@ -93,7 +93,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
         
         public bool AllowViewModeChange { get; set; } = true;
 
-        public bool AllowHideWatched { get; set; } = false;
+        public bool AllowHideWatched { get; set; }
         
         public int OrderIndex { get; set; }
     }
@@ -102,11 +102,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
     {
         public Guid UserId { get; set; }
 
-        public List<string> EnabledSections { get; set; } = new List<string>();
+        public IList<string> EnabledSections { get; set; } = new List<string>();
         
-        public List<string> LockedSections { get; set; } = new List<string>();
+        public IList<string> LockedSections { get; set; } = new List<string>();
         
-        public List<string> DefaultEnabledSections { get; set; } = new List<string>();
+        public IList<string> DefaultEnabledSections { get; set; } = new List<string>();
     }
 
     public static class HomeScreenSectionExtensions

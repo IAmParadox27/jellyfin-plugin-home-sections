@@ -28,9 +28,18 @@ public static class LibreTranslateHelper
 
                 return responseObj.Value<string>("translatedText");
             }
-            catch
+            catch (HttpRequestException)
             {
-                // ignored
+                // Translation is best-effort; fall back to original text.
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            catch (Newtonsoft.Json.JsonException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
             }
         }
 

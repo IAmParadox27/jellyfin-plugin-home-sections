@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Model.Tasks;
@@ -33,7 +33,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             string? gitBranch = Assembly.GetExecutingAssembly()
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
-                .FirstOrDefault(x => x.Key == "GitBranch")?.Value;
+                .FirstOrDefault(x => string.Equals(x.Key, "GitBranch", StringComparison.Ordinal))?.Value;
 
             if (!string.IsNullOrEmpty(gitBranch))
             {
@@ -46,7 +46,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 string treesJsonRaw = await treesResponse.Content.ReadAsStringAsync(cancellationToken);
 
                 JObject treesObj = JObject.Parse(treesJsonRaw);
-                IEnumerable<JObject>? data = treesObj.Value<JArray>("tree")?.OfType<JObject>().Where(x => x.Value<string>("path")?.StartsWith(c_locPath) ?? false);
+                IEnumerable<JObject>? data = treesObj.Value<JArray>("tree")?.OfType<JObject>().Where(x => x.Value<string>("path")?.StartsWith(c_locPath, StringComparison.Ordinal) ?? false);
                 if (data != null)
                 {
                     string[] blobUrls = data.Select(x => x.Value<string>("path")).Where(x => x != null).Select(x => x!).ToArray();

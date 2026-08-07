@@ -27,7 +27,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public abstract string? AdditionalData { get; set; }
 
-        public virtual object? OriginalPayload { get; set; } = null;
+        public virtual object? OriginalPayload { get; set; }
 
         protected abstract BaseItemKind SectionItemKind { get; }
 
@@ -39,11 +39,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected abstract SectionViewMode DefaultViewMode { get; }
         
-        protected readonly IUserViewManager m_userViewManager;
-        protected readonly IUserManager m_userManager;
-        protected readonly ILibraryManager m_libraryManager;
-        protected readonly IDtoService m_dtoService;
-        private readonly IServiceProvider m_serviceProvider;
+        protected IUserViewManager m_userViewManager { get; }
+        protected IUserManager m_userManager { get; }
+        protected ILibraryManager m_libraryManager { get; }
+        protected IDtoService m_dtoService { get; }
+        private IServiceProvider ServiceProvider { get; }
 
         protected RecentlyAddedSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
@@ -55,7 +55,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             m_userManager = userManager;
             m_libraryManager = libraryManager;
             m_dtoService = dtoService;
-            m_serviceProvider = serviceProvider;
+            ServiceProvider = serviceProvider;
         }
 
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -80,7 +80,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             };
             
             PluginConfiguration? config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            SectionSettings? sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+            SectionSettings? sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
             
@@ -107,7 +107,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .ToArray();
             
             Folder? folder = !string.IsNullOrEmpty(LibraryId)
-                ? itemFolders.FirstOrDefault(x => x.Id.ToString() == LibraryId)
+                ? itemFolders.FirstOrDefault(x => string.Equals(x.Id.ToString(), LibraryId, StringComparison.Ordinal))
                 : null;
             
             folder ??= itemFolders.FirstOrDefault();
@@ -121,7 +121,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
             }
 
-            RecentlyAddedSectionBase instance = (ActivatorUtilities.CreateInstance(m_serviceProvider, GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedSectionBase)!;
+            RecentlyAddedSectionBase instance = (ActivatorUtilities.CreateInstance(ServiceProvider, GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedSectionBase)!;
             
             instance.AdditionalData = AdditionalData;
             instance.DisplayText = DisplayText;

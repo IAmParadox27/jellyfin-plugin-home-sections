@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -28,9 +28,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public string? Route => null;
         
-        public string? AdditionalData { get; set; } = null;
+        public string? AdditionalData { get; set; }
         
-        public object? OriginalPayload { get; } = null;
+        public object? OriginalPayload { get; }
 
         public MyRequestsSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService)
         {
@@ -41,17 +41,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            DtoOptions? dtoOptions = new DtoOptions 
-            { 
-                Fields = new[] 
-                { 
-                    ItemFields.PrimaryImageAspectRatio, 
-                    ItemFields.MediaSourceCount
-                }
-            };
+            DtoOptions dtoOptions = CreateDtoOptions();
 
             string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
-
             if (string.IsNullOrEmpty(jellyseerrUrl))
             {
                 return new QueryResult<BaseItemDto>();
@@ -63,70 +55,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
             
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(jellyseerrUrl);
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(user.Username)}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")?.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
-
+            using HttpClient client = CreateJellyseerrClient(jellyseerrUrl);
+            int? jellyseerrUserId = ResolveJellyseerrUserId(client, user.Username);
             if (jellyseerrUserId == null)
             {
                 return new QueryResult<BaseItemDto>();
             }
-            
-            HttpResponseMessage requestsResponse = client.GetAsync($"/api/v1/user/{jellyseerrUserId}/requests?take=100").GetAwaiter().GetResult();
 
-            if (requestsResponse.IsSuccessStatusCode)
-            {
-                string jsonRaw = requestsResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                JObject? jsonResponse = JObject.Parse(jsonRaw);
-                IEnumerable<JObject>? presentRequestedMedia = jsonResponse.Value<JArray>("results")?.OfType<JObject>()
-                    .Where(x => x.Value<JObject>("media")?.Value<string>("jellyfinMediaId") != null)
-                    .Select(x => x.Value<JObject>("media")!);
-
-                VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                    .FilterToUserPermitted(m_libraryManager, user);
-
-                IEnumerable<string?>? jellyfinItemIds = presentRequestedMedia?.Select(x => x.Value<string>("jellyfinMediaId"));
-
-                // Only show items this user actually requested. Without this guard, a user with no
-                // requests produces an empty ItemIds array, which Jellyfin's InternalItemsQuery treats
-                // as "no filter" and returns the entire (recently-added) library for that ParentId.
-                Guid[] requestedItemIds = jellyfinItemIds?
-                    .Where(y => !string.IsNullOrEmpty(y))
-                    .Select(y => Guid.Parse(y!))
-                    .ToArray() ?? Array.Empty<Guid>();
-                if (requestedItemIds.Length == 0)
-                {
-                    return new QueryResult<BaseItemDto>();
-                }
-
-                var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-                var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-                bool hideWatchedItems = sectionSettings?.HideWatchedItems == true;
-
-                IEnumerable<BaseItem> items = folders.SelectMany(x =>
-                {
-                    return m_libraryManager.GetItemList(new InternalItemsQuery(user)
-                    {
-                        ItemIds = requestedItemIds,
-                        Recursive = true,
-                        EnableTotalRecordCount = false,
-                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString())
-                    });
-                }).OrderByDescending(item => item.DateCreated);
-            // Filter watched items after query since IsPlayed parameter doesn't work with specific ItemIds for TV shows
-            if (hideWatchedItems)
-            {
-                items = items.Where(item => !item.IsPlayedVersionSpecific(user));
-            }
-                
-                return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
-            }
-            
-            return new QueryResult<BaseItemDto>();
+            return FetchRequestedItems(client, jellyseerrUserId.Value, user, dtoOptions);
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
@@ -145,9 +81,105 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Landscape,
-                AllowViewModeChange = true, // TODO: Change this to allowed view modes
+                AllowViewModeChange = true, // NOTE: Change this to allowed view modes
                 AllowHideWatched = true
             };
+        }
+
+        private static DtoOptions CreateDtoOptions()
+        {
+            return new DtoOptions
+            {
+                Fields = new[]
+                {
+                    ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.MediaSourceCount
+                }
+            };
+        }
+
+        private static HttpClient CreateJellyseerrClient(string jellyseerrUrl)
+        {
+            HttpClient client = new HttpClient();
+            client.BaseAddress = new Uri(jellyseerrUrl);
+            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
+            return client;
+        }
+
+        private static int? ResolveJellyseerrUserId(HttpClient client, string username)
+        {
+            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(username)}").GetAwaiter().GetResult();
+            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            return JObject.Parse(userResponseRaw).Value<JArray>("results")?.OfType<JObject>()
+                .FirstOrDefault(x => string.Equals(x.Value<string>("jellyfinUsername"), username, StringComparison.Ordinal))
+                ?.Value<int>("id");
+        }
+
+        private QueryResult<BaseItemDto> FetchRequestedItems(HttpClient client, int jellyseerrUserId, User user, DtoOptions dtoOptions)
+        {
+            HttpResponseMessage requestsResponse = client.GetAsync($"/api/v1/user/{jellyseerrUserId}/requests?take=100").GetAwaiter().GetResult();
+
+            if (!requestsResponse.IsSuccessStatusCode)
+            {
+                return new QueryResult<BaseItemDto>();
+            }
+
+            string jsonRaw = requestsResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            JObject? jsonResponse = JObject.Parse(jsonRaw);
+            IEnumerable<JObject>? presentRequestedMedia = jsonResponse.Value<JArray>("results")?.OfType<JObject>()
+                .Where(x => x.Value<JObject>("media")?.Value<string>("jellyfinMediaId") != null)
+                .Select(x => x.Value<JObject>("media")!);
+
+            Guid[] requestedItemIds = ResolveRequestedItemIds(presentRequestedMedia);
+            if (requestedItemIds.Length == 0)
+            {
+                return new QueryResult<BaseItemDto>();
+            }
+
+            IEnumerable<BaseItem> items = LoadRequestedLibraryItems(user, requestedItemIds);
+            return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
+        }
+
+        private static Guid[] ResolveRequestedItemIds(IEnumerable<JObject>? presentRequestedMedia)
+        {
+            IEnumerable<string?>? jellyfinItemIds = presentRequestedMedia?.Select(x => x.Value<string>("jellyfinMediaId"));
+
+            // Only show items this user actually requested. Without this guard, a user with no
+            // requests produces an empty ItemIds array, which Jellyfin's InternalItemsQuery treats
+            // as "no filter" and returns the entire (recently-added) library for that ParentId.
+            return jellyfinItemIds?
+                .Where(y => !string.IsNullOrEmpty(y))
+                .Select(y => Guid.Parse(y!))
+                .ToArray() ?? Array.Empty<Guid>();
+        }
+
+        private IEnumerable<BaseItem> LoadRequestedLibraryItems(User user, Guid[] requestedItemIds)
+        {
+            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+                .FilterToUserPermitted(m_libraryManager, user);
+
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
+            bool hideWatchedItems = sectionSettings?.HideWatchedItems == true;
+
+            IEnumerable<BaseItem> items = folders.SelectMany(x =>
+            {
+                return m_libraryManager.GetItemList(new InternalItemsQuery(user)
+                {
+                    ItemIds = requestedItemIds,
+                    Recursive = true,
+                    EnableTotalRecordCount = false,
+                    ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString())
+                });
+            }).OrderByDescending(item => item.DateCreated);
+
+            // Filter watched items after query since IsPlayed parameter doesn't work with specific ItemIds for TV shows
+            if (hideWatchedItems)
+            {
+                items = items.Where(item => !item.IsPlayedVersionSpecific(user));
+            }
+
+            return items;
         }
     }
 }

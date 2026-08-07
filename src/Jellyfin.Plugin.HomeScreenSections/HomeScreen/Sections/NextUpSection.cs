@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Route => "nextup";
 
         /// <inheritdoc/>
-        public string? AdditionalData { get; set; } = null;
+        public string? AdditionalData { get; set; }
 
         public object? OriginalPayload => null;
         
@@ -92,13 +92,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             bool enableRewatching = true; // Enabled by default
             if (queryCollection.TryGetValue("EnableRewatching", out StringValues enableRewatchingValue))
             {
-                enableRewatching = enableRewatchingValue.FirstOrDefault() == "true";
+                enableRewatching = string.Equals(enableRewatchingValue.FirstOrDefault(), "true", StringComparison.Ordinal);
             }
             
             DateTime nextUpDateCutoff = DateTime.MinValue;
             if (queryCollection.TryGetValue("NextUpDateCutoff", out StringValues nextUpDateCutoffValue))
             {
-                if (DateTime.TryParse(nextUpDateCutoffValue.FirstOrDefault(), out DateTime nextUpDateCutoffParsed))
+                if (DateTime.TryParse(
+                        nextUpDateCutoffValue.FirstOrDefault(),
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out DateTime nextUpDateCutoffParsed))
                 {
                     nextUpDateCutoff = nextUpDateCutoffParsed;
                 }

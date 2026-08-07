@@ -30,7 +30,7 @@ public class TopTenSection : IHomeScreenSection
     public string? DisplayText { get; set; } = "Top Ten";
     public int? Limit => 2;
     public string? Route => null;
-    public string? AdditionalData { get; set; } = null;
+    public string? AdditionalData { get; set; }
     public object? OriginalPayload => null;
     
     private TopTenType Type { get; set; }
@@ -64,16 +64,16 @@ public class TopTenSection : IHomeScreenSection
 
         User user = m_userManager.GetUserById(payload.UserId)!;
         
-        // TODO: Add config variable for collection name.
+        // NOTE: Add config variable for collection name.
         BoxSet? collection = m_collectionManager.GetCollections(user)
-            .FirstOrDefault(x => x.Name == "Top Ten");
+            .FirstOrDefault(x => string.Equals(x.Name, "Top Ten", StringComparison.Ordinal));
 
         TopTenType type = Enum.Parse<TopTenType>(payload.AdditionalData ?? "Movies");
         
-        IReadOnlyList<BaseItem> items =  collection?.GetChildren(user, true, null) ?? new List<BaseItem>();
-        items = items.Where(x => (x is Movie && type == TopTenType.Movies) || (x is Series && type == TopTenType.Shows)).ToList();
-        
-        items = items.Take(Math.Min(items.Count, 10)).ToList();
+        List<BaseItem> items = (collection?.GetChildren(user, true, null) ?? Enumerable.Empty<BaseItem>())
+            .Where(x => (x is Movie && type == TopTenType.Movies) || (x is Series && type == TopTenType.Shows))
+            .Take(10)
+            .ToList();
         
         return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items, dtoOptions, user));
     }

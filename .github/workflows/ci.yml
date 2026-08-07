@@ -22,6 +22,8 @@ jobs:
             8.0.x
             9.0.x
 
+      # Analyzers + TreatWarningsAsErrors come from src/Directory.Build.props
+      # (Meziantou.Analyzer + .NET analyzers). Build fails on enforced rules.
       - name: Build plugin (10.11.11)
         run: >
           dotnet build

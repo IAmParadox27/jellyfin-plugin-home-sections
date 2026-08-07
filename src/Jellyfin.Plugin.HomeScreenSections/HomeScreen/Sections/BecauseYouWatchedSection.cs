@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
@@ -14,7 +14,6 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
@@ -58,20 +57,100 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				? null
 				: UserManager.GetUserById(userId.Value);
 
-			DtoOptions? dtoOptions = new DtoOptions 
-			{ 
-				Fields = new[] 
-				{ 
-					ItemFields.PrimaryImageAspectRatio, 
+			DtoOptions dtoOptions = CreateBasicDtoOptions();
+			List<BaseItem> recentlyPlayedMovies = GetRecentlyPlayedMovies(user, dtoOptions);
+			recentlyPlayedMovies.Shuffle();
+
+			foreach (BaseItem picked in PickMoviesAvoidingCollections(user, recentlyPlayedMovies, instanceCount))
+			{
+				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy)
+				{
+					AdditionalData = picked.Id.ToString(),
+					DisplayText = "Because You Watched " + picked.Name,
+					TranslationMetadata = new TranslationMetadata()
+					{
+						Type = TranslationType.Pattern,
+						AdditionalContent = picked.Name
+					}
+				};
+			}
+		}
+
+		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+		{
+			Stopwatch sw = Stopwatch.StartNew();
+			User user = UserManager.GetUserById(payload.UserId)!;
+			DtoOptions dtoOptions = CreateResultsDtoOptions();
+
+			// Keep the GetItemById call from the original method for equivalent side effects.
+			// ApplySimilarSettings historically used the per-folder parent item (local shadowing).
+			_ = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
+
+			var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+			var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
+			// If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
+			bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
+
+			List<BaseItem> similar = GetSimilarMovies(user, dtoOptions, isPlayed);
+			similar.Shuffle();
+
+			_ = sw.Elapsed;
+			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar.Take(16).ToArray(), dtoOptions, user));
+		}
+		
+		public HomeScreenSectionInfo GetInfo()
+		{
+			return new HomeScreenSectionInfo
+			{
+				Section = Section,
+				DisplayText = DisplayText,
+				AdditionalData = AdditionalData,
+				Route = Route,
+				Limit = Limit ?? 1,
+				OriginalPayload = OriginalPayload,
+				ViewMode = SectionViewMode.Landscape,
+				AllowHideWatched = true
+			};
+		}
+
+		private static DtoOptions CreateBasicDtoOptions()
+		{
+			return new DtoOptions
+			{
+				Fields = new[]
+				{
+					ItemFields.PrimaryImageAspectRatio,
 					ItemFields.MediaSourceCount
 				}
 			};
+		}
 
+		private static DtoOptions CreateResultsDtoOptions()
+		{
+			return new DtoOptions
+			{
+				Fields = new[]
+				{
+					ItemFields.PrimaryImageAspectRatio,
+					ItemFields.MediaSourceCount
+				},
+				ImageTypes = new[]
+				{
+					ImageType.Thumb,
+					ImageType.Backdrop,
+					ImageType.Primary,
+				},
+				ImageTypeLimit = 1
+			};
+		}
+
+		private List<BaseItem> GetRecentlyPlayedMovies(User? user, DtoOptions dtoOptions)
+		{
 			VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
 				.Where(x => x.CollectionType == CollectionTypeOptions.movies)
 				.FilterToUserPermitted(LibraryManager, user);
 
-			List<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
+			return folders.SelectMany(x =>
 			{
 				var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
@@ -94,128 +173,76 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 					DtoOptions = dtoOptions
 				}).Items;
 			}).ToList();
-			
-			recentlyPlayedMovies.Shuffle();
-			
-			List<BaseItem> pickedMovies = new List<BaseItem>();
+		}
 
+		private IEnumerable<BaseItem> PickMoviesAvoidingCollections(User? user, List<BaseItem> recentlyPlayedMovies, int instanceCount)
+		{
+			List<BaseItem> pickedMovies = new List<BaseItem>();
 			Queue<BaseItem> queue = new Queue<BaseItem>(recentlyPlayedMovies);
+
 			while (pickedMovies.Count < instanceCount && queue.Count > 0)
 			{
 				BaseItem elementToConsider = queue.Dequeue();
-				
-				if (user != null)
+
+				if (user != null && IsMovieInCollectionWithPicked(user, elementToConsider, pickedMovies))
 				{
-					var collections = CollectionManagerProxy.GetCollections(user)
-						.Select(y => (y, y.GetChildren(user, true, null)))
-						.Where(y => y.Item2
-							.OfType<Movie>().Contains(elementToConsider as Movie));
-
-					bool isPicked = false;
-					foreach ((BoxSet Item, IEnumerable<BaseItem> Children) collection in collections)
-					{
-						if (collection.Children.OfType<Movie>().Any(y => pickedMovies?.Select(z => z.Id).Contains(y.Id) ?? true))
-						{
-							isPicked = true;
-							break;
-						}
-					}
-
-					if (isPicked)
-					{
-						continue;
-					}
+					continue;
 				}
 
 				pickedMovies.Add(elementToConsider);
-				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy)
-				{
-					AdditionalData = elementToConsider.Id.ToString(),
-					DisplayText = "Because You Watched " + elementToConsider.Name,
-					TranslationMetadata = new TranslationMetadata()
-					{
-						Type = TranslationType.Pattern,
-						AdditionalContent = elementToConsider.Name
-					}
-				};
+				yield return elementToConsider;
 			}
 		}
 
-		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+		private bool IsMovieInCollectionWithPicked(User user, BaseItem elementToConsider, List<BaseItem> pickedMovies)
 		{
-			Stopwatch sw = Stopwatch.StartNew();
-			User user = UserManager.GetUserById(payload.UserId)!;
-			
-			DtoOptions? dtoOptions = new DtoOptions
+			var collections = CollectionManagerProxy.GetCollections(user)
+				.Select(y => (y, y.GetChildren(user, true, null)))
+				.Where(y => y.Item2
+					.OfType<Movie>().Contains(elementToConsider as Movie));
+
+			foreach ((BoxSet Item, IEnumerable<BaseItem> Children) collection in collections)
 			{
-				Fields = new[]
+				if (collection.Children.OfType<Movie>().Any(y => pickedMovies?.Select(z => z.Id).Contains(y.Id) ?? true))
 				{
-					ItemFields.PrimaryImageAspectRatio,
-					ItemFields.MediaSourceCount
-				},
-				ImageTypes = new[]
-				{
-					ImageType.Thumb,
-					ImageType.Backdrop,
-					ImageType.Primary,
-				},
-				ImageTypeLimit = 1
-			};
+					return true;
+				}
+			}
 
-			BaseItem? item = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
-
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-			var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
-            VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
-	            .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-	            .FilterToUserPermitted(LibraryManager, user);
-            
-            IList<BaseItem>? similar = folders.SelectMany(x =>
-            {
-	            var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-	            if (item is not Folder folder)
-	            {
-		            folder = LibraryManager.GetUserRootFolder();
-	            }
-
-	            return folder.GetItems(new InternalItemsQuery(user)
-	            {
-		            IncludeItemTypes = new[]
-		            {
-			            BaseItemKind.Movie
-		            },
-		            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-		            User = user,
-		            IsPlayed = isPlayed,
-		            DtoOptions = dtoOptions,
-		            Limit = 24,
-		            Recursive = true,
-		            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-	            }.ApplySimilarSettings(item)).Items;
-            }).ToList();
-            
-            similar.Shuffle();
-            
-			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar.Take(16).ToArray(), dtoOptions, user));
+			return false;
 		}
-		
-		public HomeScreenSectionInfo GetInfo()
+
+		private List<BaseItem> GetSimilarMovies(User user, DtoOptions dtoOptions, bool? isPlayed)
 		{
-			return new HomeScreenSectionInfo
+			// Preserve original shadowing: ApplySimilarSettings uses per-folder parent `item`.
+			VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+				.Where(x => x.CollectionType == CollectionTypeOptions.movies)
+				.FilterToUserPermitted(LibraryManager, user);
+
+			return folders.SelectMany(x =>
 			{
-				Section = Section,
-				DisplayText = DisplayText,
-				AdditionalData = AdditionalData,
-				Route = Route,
-				Limit = Limit ?? 1,
-				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape,
-                AllowHideWatched = true
-			};
+				var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+				if (item is not Folder folder)
+				{
+					folder = LibraryManager.GetUserRootFolder();
+				}
+
+				return folder.GetItems(new InternalItemsQuery(user)
+				{
+					IncludeItemTypes = new[]
+					{
+						BaseItemKind.Movie
+					},
+					OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
+					User = user,
+					IsPlayed = isPlayed,
+					DtoOptions = dtoOptions,
+					Limit = 24,
+					Recursive = true,
+					ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+				}.ApplySimilarSettings(item)).Items;
+			}).ToList();
 		}
 	}
 }

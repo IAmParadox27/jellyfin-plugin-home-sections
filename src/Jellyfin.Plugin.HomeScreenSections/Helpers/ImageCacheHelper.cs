@@ -30,12 +30,42 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                     return $"/HomeScreen/CachedImage/{cacheKey}";
                 }
 
-                logger?.LogWarning("Failed to cache image from {SourceUrl}, using original URL", sourceUrl);
+                if (logger != null)
+                {
+                    PluginLog.ImageCacheFallback(logger, sourceUrl);
+                }
                 return sourceUrl;
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
-                logger?.LogError(ex, "Error caching image from {SourceUrl}", sourceUrl);
+                if (logger != null)
+                {
+                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
+                }
+                return sourceUrl;
+            }
+            catch (IOException ex)
+            {
+                if (logger != null)
+                {
+                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
+                }
+                return sourceUrl;
+            }
+            catch (TaskCanceledException ex)
+            {
+                if (logger != null)
+                {
+                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
+                }
+                return sourceUrl;
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (logger != null)
+                {
+                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
+                }
                 return sourceUrl;
             }
         }

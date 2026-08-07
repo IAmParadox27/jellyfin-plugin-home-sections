@@ -31,7 +31,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Route => null;
 
         /// <inheritdoc/>
-        public string? AdditionalData { get; set; } = null;
+        public string? AdditionalData { get; set; }
 
         public object? OriginalPayload => null;
         

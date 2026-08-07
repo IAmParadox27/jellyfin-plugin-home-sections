@@ -12,6 +12,7 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -23,7 +24,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
     /// </summary>
     public class HomeScreenManager : IHomeScreenManager
     {
-        private Dictionary<string, IHomeScreenSection> m_delegates = new Dictionary<string, IHomeScreenSection>();
+        private Dictionary<string, IHomeScreenSection> m_delegates = new Dictionary<string, IHomeScreenSection>(StringComparer.Ordinal);
         private Dictionary<Guid, bool> m_userFeatureEnabledStates = new Dictionary<Guid, bool>();
 
         private readonly IServiceProvider m_serviceProvider;
@@ -111,9 +112,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> InvokeResultsDelegate(string key, HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            if (m_delegates.ContainsKey(key))
+            if (m_delegates.TryGetValue(key, out IHomeScreenSection? section))
             {
-                return m_delegates[key].GetResults(payload, queryCollection);
+                return section.GetResults(payload, queryCollection);
             }
 
             return new QueryResult<BaseItemDto>(Array.Empty<BaseItemDto>());
@@ -141,13 +142,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
 
             if (handler.Section != null)
             {
-                if (!m_delegates.ContainsKey(handler.Section))
+                if (!m_delegates.TryAdd(handler.Section, handler))
                 {
-                    m_delegates.Add(handler.Section, handler);
-                }
-                else
-                {
-                    throw new Exception($"Section type '{handler.Section}' has already been registered to type '{m_delegates[handler.Section].GetType().FullName}'.");
+                    throw new InvalidOperationException($"Section type '{handler.Section}' has already been registered to type '{m_delegates[handler.Section].GetType().FullName}'.");
                 }
             }
         }
@@ -155,12 +152,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public bool GetUserFeatureEnabled(Guid userId)
         {
-            if (m_userFeatureEnabledStates.ContainsKey(userId))
+            if (m_userFeatureEnabledStates.TryGetValue(userId, out bool enabled))
             {
-                return m_userFeatureEnabledStates[userId];
+                return enabled;
             }
 
-            m_userFeatureEnabledStates.Add(userId, false);
+            m_userFeatureEnabledStates[userId] = false;
 
             return false;
         }
@@ -168,11 +165,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public void SetUserFeatureEnabled(Guid userId, bool enabled)
         {
-            if (!m_userFeatureEnabledStates.ContainsKey(userId))
-            {
-                m_userFeatureEnabledStates.Add(userId, enabled);
-            }
-
             m_userFeatureEnabledStates[userId] = enabled;
 
             string userFeatureEnabledPath = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, "userFeatureEnabled.json");
@@ -209,7 +201,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             // If there are none enabled by the user then add all the default enabled settings.
             if (settings?.EnabledSections.Count == 0)
             {
-                settings.EnabledSections.AddRange(HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => x.Enabled).Select(x => x.SectionId));
+                foreach (string sectionId in HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
+                             .Where(x => x.Enabled)
+                             .Select(x => x.SectionId))
+                {
+                    settings.EnabledSections.Add(sectionId);
+                }
             }
 
             if (settings != null)
@@ -235,30 +232,39 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public bool UpdateUserSettings(Guid userId, ModularHomeUserSettings userSettings)
         {
-            m_logger.LogInformation($"Updating user settings for user {userId}");
-            m_logger.LogInformation($"Json of user settings received from browser: {JsonConvert.SerializeObject(userSettings)}");
+            PluginLog.UpdatingUserSettings(m_logger, userId);
+            if (m_logger.IsEnabled(LogLevel.Information))
+            {
+                string userSettingsJson = JsonConvert.SerializeObject(userSettings);
+                PluginLog.UserSettingsJsonReceived(m_logger, userSettingsJson);
+            }
             
             string pluginSettings = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, c_settingsFile);
-            m_logger.LogInformation($"Plugin settings file: {pluginSettings}");
+            PluginLog.PluginSettingsFile(m_logger, pluginSettings);
             
             FileInfo fInfo = new FileInfo(pluginSettings);
             
-            m_logger.LogInformation($"Creating directory: '{fInfo.Directory?.FullName}' if it doesn't exist.");
+            PluginLog.CreatingSettingsDirectory(m_logger, fInfo.Directory?.FullName);
             fInfo.Directory?.Create();
 
             JArray settings = new JArray();
             List<ModularHomeUserSettings?> newSettings = new List<ModularHomeUserSettings?>();
 
-            m_logger.LogInformation($"Checking if user settings already exist for user {userId} and reading it if so.");
+            PluginLog.CheckingExistingUserSettings(m_logger, userId);
             if (File.Exists(pluginSettings))
             {
-                m_logger.LogInformation($"User settings file exists.");
+                PluginLog.UserSettingsFileExists(m_logger);
                 settings = JArray.Parse(File.ReadAllText(pluginSettings));
                 
-                m_logger.LogInformation($"Parsed user settings: {settings.ToString(Formatting.None)}");
+                if (m_logger.IsEnabled(LogLevel.Information))
+                {
+                    string settingsJson = settings.ToString(Formatting.None);
+                    PluginLog.ParsedUserSettings(m_logger, settingsJson);
+                }
+
                 newSettings = settings.Select(x => JsonConvert.DeserializeObject<ModularHomeUserSettings>(x.ToString())).ToList()!;
                 
-                m_logger.LogInformation($"Removing all existing user settings for user {userId} and adding the new one.");
+                PluginLog.RemovingExistingUserSettings(m_logger, userId);
                 newSettings.RemoveAll(x => x != null && x.UserId.Equals(userId));
 
                 newSettings.Add(userSettings);
@@ -266,18 +272,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 settings.Clear();
             }
 
-            m_logger.LogInformation($"Adding user settings for user {userId} to the settings array.");
+            PluginLog.AddingUserSettings(m_logger, userId);
             foreach (ModularHomeUserSettings? userSetting in newSettings)
             {
                 settings.Add(JObject.FromObject(userSetting ?? new ModularHomeUserSettings()));
             }
 
-            m_logger.LogInformation($"Writing user settings to file: {pluginSettings}");
+            PluginLog.WritingUserSettings(m_logger, pluginSettings);
             File.WriteAllText(pluginSettings, settings.ToString(Formatting.Indented));
 
-            m_logger.LogInformation($"Content of written settings json: {File.ReadAllText(pluginSettings)}");
+            if (m_logger.IsEnabled(LogLevel.Information))
+            {
+                string writtenJson = File.ReadAllText(pluginSettings);
+                PluginLog.WrittenSettingsContent(m_logger, writtenJson);
+            }
             
-            m_logger.LogInformation($"User settings updated.");
+            PluginLog.UserSettingsUpdated(m_logger);
             return true;
         }
     }

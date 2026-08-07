@@ -60,9 +60,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
-            Dictionary<string, string> providerIds = new Dictionary<string, string>
-            {
-                { "ReadarrBookId", calendarItem.Id.ToString() },
+            Dictionary<string, string> providerIds = new Dictionary<string, string>(StringComparer.Ordinal) {
+                { "ReadarrBookId", calendarItem.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "FormattedDate", countdownText },
                 { "ReadarrPoster", cachedImageUrl }
             };

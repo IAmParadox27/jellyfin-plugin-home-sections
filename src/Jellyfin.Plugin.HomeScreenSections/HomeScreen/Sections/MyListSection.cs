@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-	internal class MyListSection : IHomeScreenSection
+	internal sealed class MyListSection : IHomeScreenSection
 	{
 		public string? Section => "MyList";
 
@@ -64,7 +64,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			User user = UserManager.GetUserById(payload.UserId)!;
 
 			IEnumerable<Playlist> playlists = PlaylistManager.GetPlaylists(user.Id);
-			Playlist? myListPlaylist = playlists.FirstOrDefault(x => x.Name == "My List");
+			Playlist? myListPlaylist = playlists.FirstOrDefault(x => string.Equals(x.Name, "My List", StringComparison.Ordinal));
 
 			List<BaseItem> results = new List<BaseItem>();
 

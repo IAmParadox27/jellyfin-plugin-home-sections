@@ -14,6 +14,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
     public class ArrApiService
     {
+        private static readonly System.Text.Json.JsonSerializerOptions s_calendarJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         private readonly ILogger<ArrApiService> m_logger;
         private readonly HttpClient m_httpClient;
 
@@ -31,69 +36,89 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(apiKey))
             {
-                m_logger.LogWarning("{ServiceName} URL or API key not configured", serviceName);
+                PluginLog.ArrUrlOrKeyMissing(m_logger, serviceName);
                 return null;
             }
 
             try
             {
-                string startParam = startDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                string endParam = endDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                (string? queryParams, string? apiVersion) = serviceType switch
-                {
-                    ArrServiceType.Sonarr => ($"includeSeries=true&start={startParam}&end={endParam}", "v3"),
-                    ArrServiceType.Radarr => ($"start={startParam}&end={endParam}", "v3"),
-                    ArrServiceType.Lidarr => ($"start={startParam}&end={endParam}", "v1"),
-                    ArrServiceType.Readarr => ($"includeAuthor=true&start={startParam}&end={endParam}", "v1"),
-                    _ => ($"start={startParam}&end={endParam}", "v3")
-                };
-                string requestUrl = $"{url.TrimEnd('/')}/api/{apiVersion}/calendar?{queryParams}";
-
-                using HttpRequestMessage request = new(HttpMethod.Get, requestUrl);
-                request.Headers.Add("X-API-KEY", apiKey);
-
-                m_logger.LogDebug("Fetching {ServiceName} calendar from {Url}", serviceName, requestUrl);
-
-                HttpResponseMessage response = await m_httpClient.SendAsync(request);
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    m_logger.LogError("Failed to fetch {ServiceName} calendar. Status: {StatusCode}, Reason: {ReasonPhrase}", 
-                        serviceName, response.StatusCode, response.ReasonPhrase);
-                    return null;
-                }
-
-                string jsonContent = await response.Content.ReadAsStringAsync();
-                
-                if (string.IsNullOrEmpty(jsonContent))
-                {
-                    m_logger.LogWarning("Empty response from {ServiceName} calendar API", serviceName);
-                    return [];
-                }
-
-                T[]? calendarItems = JsonSerializer.Deserialize<T[]>(jsonContent, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                m_logger.LogDebug("Successfully fetched {Count} calendar items from {ServiceName}", calendarItems?.Length ?? 0, serviceName);
-                return calendarItems ?? [];
+                return await FetchCalendarItemsAsync<T>(serviceType, url, apiKey, serviceName, startDate, endDate);
             }
             catch (HttpRequestException ex)
             {
-                m_logger.LogError(ex, "HTTP error while fetching {ServiceName} calendar", serviceName);
+                PluginLog.ArrCalendarHttpError(m_logger, ex, serviceName);
+                return null;
+            }
+            catch (TaskCanceledException ex)
+            {
+                PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
                 return null;
             }
             catch (JsonException ex)
             {
-                m_logger.LogError(ex, "JSON parsing error while processing {ServiceName} calendar response", serviceName);
+                PluginLog.ArrCalendarJsonError(m_logger, ex, serviceName);
                 return null;
             }
-            catch (Exception ex)
+            catch (NotSupportedException ex)
             {
-                m_logger.LogError(ex, "Unexpected error while fetching {ServiceName} calendar", serviceName);
+                PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
                 return null;
             }
+            catch (InvalidOperationException ex)
+            {
+                PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
+                return null;
+            }
+        }
+
+        private async Task<T[]?> FetchCalendarItemsAsync<T>(
+            ArrServiceType serviceType,
+            string url,
+            string apiKey,
+            string? serviceName,
+            DateTime startDate,
+            DateTime endDate)
+        {
+            string requestUrl = BuildCalendarRequestUrl(serviceType, url, startDate, endDate);
+
+            using HttpRequestMessage request = new(HttpMethod.Get, requestUrl);
+            request.Headers.Add("X-API-KEY", apiKey);
+
+            PluginLog.FetchingArrCalendar(m_logger, serviceName, requestUrl);
+
+            HttpResponseMessage response = await m_httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                PluginLog.ArrCalendarHttpFailed(m_logger, serviceName, response.StatusCode, response.ReasonPhrase);
+                return null;
+            }
+
+            string jsonContent = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(jsonContent))
+            {
+                PluginLog.ArrCalendarEmpty(m_logger, serviceName);
+                return [];
+            }
+
+            T[]? calendarItems = JsonSerializer.Deserialize<T[]>(jsonContent, s_calendarJsonOptions);
+            PluginLog.ArrCalendarFetched(m_logger, calendarItems?.Length ?? 0, serviceName);
+            return calendarItems ?? [];
+        }
+
+        private static string BuildCalendarRequestUrl(ArrServiceType serviceType, string url, DateTime startDate, DateTime endDate)
+        {
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+            string startParam = startDate.ToString("yyyy-MM-ddTHH:mm:ssZ", culture);
+            string endParam = endDate.ToString("yyyy-MM-ddTHH:mm:ssZ", culture);
+            (string queryParams, string apiVersion) = serviceType switch
+            {
+                ArrServiceType.Sonarr => ($"includeSeries=true&start={startParam}&end={endParam}", "v3"),
+                ArrServiceType.Radarr => ($"start={startParam}&end={endParam}", "v3"),
+                ArrServiceType.Lidarr => ($"start={startParam}&end={endParam}", "v1"),
+                ArrServiceType.Readarr => ($"includeAuthor=true&start={startParam}&end={endParam}", "v1"),
+                _ => ($"start={startParam}&end={endParam}", "v3")
+            };
+            return $"{url.TrimEnd('/')}/api/{apiVersion}/calendar?{queryParams}";
         }
 
         private static (string? url, string? apiKey, string serviceName) GetServiceConfig(ArrServiceType serviceType)
@@ -122,14 +147,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public static string FormatDate(DateTime date, string format, string delimiter)
         {
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
             return format.ToUpperInvariant() switch
             {
-                "YYYY/MM/DD" => date.ToString($"yyyy{delimiter}MM{delimiter}dd"),
-                "DD/MM/YYYY" => date.ToString($"dd{delimiter}MM{delimiter}yyyy"),
-                "MM/DD/YYYY" => date.ToString($"MM{delimiter}dd{delimiter}yyyy"),
-                "DD/MM" => date.ToString($"dd{delimiter}MM"),
-                "MM/DD" => date.ToString($"MM{delimiter}dd"),
-                _ => date.ToString($"yyyy{delimiter}MM{delimiter}dd")
+                "YYYY/MM/DD" => date.ToString($"yyyy{delimiter}MM{delimiter}dd", culture),
+                "DD/MM/YYYY" => date.ToString($"dd{delimiter}MM{delimiter}yyyy", culture),
+                "MM/DD/YYYY" => date.ToString($"MM{delimiter}dd{delimiter}yyyy", culture),
+                "DD/MM" => date.ToString($"dd{delimiter}MM", culture),
+                "MM/DD" => date.ToString($"MM{delimiter}dd", culture),
+                _ => date.ToString($"yyyy{delimiter}MM{delimiter}dd", culture)
             };
         }
     }

@@ -30,7 +30,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             m_configurationManager = _configurationManager;
         }
 
-        public List<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
+        public IReadOnlyList<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
         {
             if (!m_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? userSectionsData))
             {
@@ -44,8 +44,73 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             // Check if the userSectionsData has the data we're after
             int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
 
+            List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionsToReturn = CollectCohesiveSections(userSectionsData, orderedKeys, out bool isComplete);
+            
+            sectionsToReturn = sectionsToReturn.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            if ((isComplete && userSectionsData.SectionsInProgress.IsEmpty) || sectionsToReturn.Count == pageSize)
+            {
+                return sectionsToReturn
+                    .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
+                    .ToList();
+            }
+
+            // Return nothing if we don't have the complete picture.
+            return null;
+        }
+
+        public IReadOnlyList<HomeScreenSectionInfo>? MonitorLiveUpdatedSectionsForUser(Guid userId, string? language, int page, int? pageSize = null, Guid? pageHash = null)
+        {
+            if (pageHash == null)
+            {
+                pageHash = Guid.NewGuid();
+                
+                CacheSectionsForUser(userId, pageHash.Value);
+
+                int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
+                return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
+            }
+
+            EnsureCacheStarted(userId, pageHash.Value);
+            WaitUntilCachePresent(pageHash.Value);
+            WaitUntilCacheHasStartedWork(pageHash.Value);
+
+            return WaitForPageSections(userId, language, page, pageSize, pageHash.Value);
+        }
+    
+        public void CacheSectionsForUser(Guid userId, Guid? pageHash = null)
+        {
+            if (m_dataCache.Cache.ContainsKey(pageHash ?? Guid.Empty))
+            {
+                return;
+            }
+            
+            ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
+
+            List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
+
+            IGrouping<int, SectionSettings>[] groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
+                .OrderBy(x => x.OrderIndex)
+                .GroupBy(x => x.OrderIndex)
+                .ToArray();
+
+            UserSectionsData? userSectionsData = pageHash != null
+                ? InitializeUserSectionsData(userId, pageHash.Value, groupedOrderedSections)
+                : null;
+            
+            Parallel.ForEach(groupedOrderedSections, orderedSections =>
+            {
+                PopulateOrderGroup(userId, sectionTypes, orderedSections, userSectionsData);
+            });
+        }
+
+        private static List<(IHomeScreenSection Section, int ConfiguredOrder)> CollectCohesiveSections(
+            UserSectionsData userSectionsData,
+            int[] orderedKeys,
+            out bool isComplete)
+        {
             List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionsToReturn = new List<(IHomeScreenSection, int)>();
-            bool isComplete = true;
+            isComplete = true;
+
             for (int i = 0; i < orderedKeys.Length; i++)
             {
                 int key = orderedKeys[i];
@@ -71,61 +136,52 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     break;
                 }
             }
-            
-            sectionsToReturn = sectionsToReturn.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            if ((isComplete && !userSectionsData.SectionsInProgress.Any()) || sectionsToReturn.Count == pageSize)
-            {
-                return sectionsToReturn
-                    .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
-                    .ToList();
-            }
 
-            // Return nothing if we don't have the complete picture.
-            return null;
+            return sectionsToReturn;
         }
 
-        public List<HomeScreenSectionInfo>? MonitorLiveUpdatedSectionsForUser(Guid userId, string? language, int page, int? pageSize = null, Guid? pageHash = null)
+        private void EnsureCacheStarted(Guid userId, Guid pageHash)
         {
-            if (pageHash == null)
+            if (!m_dataCache.Cache.ContainsKey(pageHash))
             {
-                pageHash = Guid.NewGuid();
-                
-                CacheSectionsForUser(userId, pageHash.Value);
-
-                int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
-                return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
-            }
-
-            if (!m_dataCache.Cache.ContainsKey(pageHash.Value))
-            {
-                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash.Value));
+                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash));
                 cacheThread.Start();
             }
+        }
 
+        private void WaitUntilCachePresent(Guid pageHash)
+        {
             SpinWait spinWait = new SpinWait();
-            while (!m_dataCache.Cache.ContainsKey(pageHash.Value))
+            while (!m_dataCache.Cache.ContainsKey(pageHash))
             {
                 spinWait.SpinOnce();
             }
-            spinWait.Reset();
+        }
 
+        private void WaitUntilCacheHasStartedWork(Guid pageHash)
+        {
+            SpinWait spinWait = new SpinWait();
             // If there's no data at all then we wait until its started.
-            while (!m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash.Value].OrderedSections.Any())
+            while (m_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty && m_dataCache.Cache[pageHash].OrderedSections.IsEmpty)
             {
                 spinWait.SpinOnce();
             }
-            
+        }
+
+        private IReadOnlyList<HomeScreenSectionInfo>? WaitForPageSections(Guid userId, string? language, int page, int? pageSize, Guid pageHash)
+        {
             // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
             // If its still in progress then we'll wait for it to finish.
-            UserSectionsData cache = m_dataCache.Cache[pageHash.Value];
+            UserSectionsData cache = m_dataCache.Cache[pageHash];
             int lowestSectionIndex = Math.Min(
-                m_dataCache.Cache[pageHash.Value].OrderedSections.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].OrderedSections.Min(x => x.Key) 
+                !m_dataCache.Cache[pageHash].OrderedSections.IsEmpty
+                    ? m_dataCache.Cache[pageHash].OrderedSections.Min(x => x.Key) 
                     : int.MaxValue,
-                m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].SectionsInProgress.Min(x => x.Key) 
+                !m_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty
+                    ? m_dataCache.Cache[pageHash].SectionsInProgress.Min(x => x.Key) 
                     : int.MaxValue);
 
+            SpinWait spinWait = new SpinWait();
             for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
             {
                 if (cache.OrderIndicesWithoutSections.Any(x => x.Contains(i)))
@@ -138,7 +194,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     spinWait.SpinOnce();
                 }
                 
-                List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value);
+                IReadOnlyList<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash);
                 if (sections != null)
                 {
                     return sections;
@@ -147,101 +203,116 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             return null;
         }
-    
-        public void CacheSectionsForUser(Guid userId, Guid? pageHash = null)
+
+        private UserSectionsData InitializeUserSectionsData(Guid userId, Guid pageHash, IGrouping<int, SectionSettings>[] groupedOrderedSections)
         {
-            if (m_dataCache.Cache.ContainsKey(pageHash ?? Guid.Empty))
+            UserSectionsData userSectionsData = new UserSectionsData()
+            {
+                UserId = userId,
+                MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
+            };
+            
+            m_dataCache.Cache.TryAdd(pageHash, userSectionsData);
+
+            foreach (int orderIndex in groupedOrderedSections.Select(x => x.Key).OrderBy(x => x))
+            {
+                userSectionsData.SectionsInProgress.TryAdd(orderIndex, true);
+            }
+
+            FillOrderIndicesWithoutSections(userSectionsData);
+            return userSectionsData;
+        }
+
+        private static void FillOrderIndicesWithoutSections(UserSectionsData userSectionsData)
+        {
+            int[] sectionIndices = userSectionsData.SectionsInProgress.Keys.OrderBy(x => x).ToArray();
+            for (int i = 1; i < sectionIndices.Length; i++)
+            {
+                int prevIndex = sectionIndices[i - 1];
+                int currentIndex = sectionIndices[i];
+
+                if (currentIndex - prevIndex > 1)
+                {
+                    userSectionsData.OrderIndicesWithoutSections.Add(new IntRange()
+                    {
+                        Start = prevIndex + 1, 
+                        End = currentIndex - 1
+                    });
+                }
+            }
+        }
+
+        private void PopulateOrderGroup(
+            Guid userId,
+            List<IHomeScreenSection> sectionTypes,
+            IGrouping<int, SectionSettings> orderedSections,
+            UserSectionsData? userSectionsData)
+        {
+            ConcurrentBag<IHomeScreenSection?> tmpPluginSections = new ConcurrentBag<IHomeScreenSection?>(); // we want these randomly distributed among each other.
+
+            Parallel.ForEach(orderedSections, sectionSettings =>
+            {
+                CreateSectionInstances(userId, sectionTypes, sectionSettings, tmpPluginSections);
+            });
+
+            List<IHomeScreenSection> sectionList = tmpPluginSections.Where(x => x != null).Select(x => x!).ToList();
+            sectionList.Shuffle();
+
+            if (userSectionsData != null)
+            {
+                userSectionsData.OrderedSections.TryAdd(orderedSections.Key, sectionList);
+                userSectionsData.SectionsInProgress.Remove(orderedSections.Key, out _);
+            }
+        }
+
+        private void CreateSectionInstances(
+            Guid userId,
+            List<IHomeScreenSection> sectionTypes,
+            SectionSettings sectionSettings,
+            ConcurrentBag<IHomeScreenSection?> tmpPluginSections)
+        {
+            IHomeScreenSection? sectionType =
+                sectionTypes.FirstOrDefault(x => string.Equals(x.Section, sectionSettings.SectionId, StringComparison.Ordinal));
+
+            if (sectionType == null)
             {
                 return;
             }
-            
-            ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
 
-            List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
-
-            IGrouping<int, SectionSettings>[] groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
-                .OrderBy(x => x.OrderIndex)
-                .GroupBy(x => x.OrderIndex)
-                .ToArray();
-
-            UserSectionsData? userSectionsData = null;
-            if (pageHash != null)
+            int instanceCount = 1;
+            if (sectionType.Limit > 1)
             {
-                userSectionsData = new UserSectionsData()
-                {
-                    UserId = userId,
-                    MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
-                };
-                
-                m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData);
+                Random rnd = new Random();
+                instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
+            }
 
-                foreach (int orderIndex in groupedOrderedSections.Select(x => x.Key).OrderBy(x => x))
-                {
-                    userSectionsData.SectionsInProgress.TryAdd(orderIndex, true);
-                }
+            try
+            {
+                IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
 
-                int[] sectionIndices = userSectionsData.SectionsInProgress.Keys.OrderBy(x => x).ToArray();
-                for (int i = 1; i < sectionIndices.Length; i++)
+                foreach (IHomeScreenSection sectionInstance in instances)
                 {
-                    int prevIndex = sectionIndices[i - 1];
-                    int currentIndex = sectionIndices[i];
-
-                    if (currentIndex - prevIndex > 1)
-                    {
-                        userSectionsData.OrderIndicesWithoutSections.Add(new IntRange()
-                        {
-                            Start = prevIndex + 1, 
-                            End = currentIndex - 1
-                        });
-                    }
+                    tmpPluginSections.Add(sectionInstance);
                 }
             }
-            
-            Parallel.ForEach(groupedOrderedSections, orderedSections =>
+            // Isolate section failures so one bad section cannot take down the whole home screen (#128).
+            catch (Exception e) when (
+                e is InvalidOperationException
+                or ArgumentException
+                or NullReferenceException
+                or KeyNotFoundException
+                or NotSupportedException
+                or NotImplementedException
+                or FormatException
+                or TimeoutException
+                or IOException
+                or HttpRequestException
+                or System.Reflection.TargetInvocationException
+                or System.Text.Json.JsonException
+                or Newtonsoft.Json.JsonException)
             {
-                ConcurrentBag<IHomeScreenSection?> tmpPluginSections = new ConcurrentBag<IHomeScreenSection?>(); // we want these randomly distributed among each other.
-
-                Parallel.ForEach(orderedSections, sectionSettings =>
-                {
-                    IHomeScreenSection? sectionType =
-                        sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
-
-                    if (sectionType != null)
-                    {
-                        int instanceCount = 1;
-                        if (sectionType.Limit > 1)
-                        {
-                            Random rnd = new Random();
-                            instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
-                        }
-
-                        try
-                        {
-                            IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
-
-                            foreach (IHomeScreenSection sectionInstance in instances)
-                            {
-                                tmpPluginSections.Add(sectionInstance);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            // Adding an error log here to stop issues like #128 from completely breaking the home screen.
-                            // Whatever this section is won't work, but the rest of the home screen will still work.
-                            m_logger.LogError(e, $"An error occurred while creating section instances for user '{userId}' and section '{sectionType.Section}'.");
-                        }
-                    }
-                });
-
-                List<IHomeScreenSection> sectionList = tmpPluginSections.Where(x => x != null).Select(x => x!).ToList();
-                sectionList.Shuffle();
-
-                if (userSectionsData != null)
-                {
-                    userSectionsData.OrderedSections.TryAdd(orderedSections.Key, sectionList);
-                    userSectionsData.SectionsInProgress.Remove(orderedSections.Key, out _);
-                }
-            });
+                PluginLog.SectionInstanceError(m_logger, e, userId, sectionType.Section);
+            }
         }
 
         private HomeScreenSectionInfo SectionToInfo(IHomeScreenSection section, int configuredOrder, string? language)
@@ -249,7 +320,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             HomeScreenSectionInfo info = section.AsInfo();
 
             info.OrderIndex = configuredOrder;
-            info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => y.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+            info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => string.Equals(y.SectionId, info.Section, StringComparison.Ordinal))?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
             
             if (info.DisplayText != null)
             {
@@ -266,6 +337,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
     public class UserHomeSections
     {
         public Guid PageHash { get; set; }
-        public List<HomeScreenSectionInfo> Sections { get; set; } = new List<HomeScreenSectionInfo>();
+        public IList<HomeScreenSectionInfo> Sections { get; set; } = new List<HomeScreenSectionInfo>();
     }
 }

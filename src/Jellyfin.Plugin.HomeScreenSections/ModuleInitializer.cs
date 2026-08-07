@@ -7,7 +7,7 @@ namespace Jellyfin.Plugin.HomeScreenSections;
 
 public class ModuleInitializer
 {
-    private static Dictionary<string, Assembly> s_dynamicAssemblies = new Dictionary<string, Assembly>();
+    private static Dictionary<string, Assembly> s_dynamicAssemblies = new Dictionary<string, Assembly>(StringComparer.Ordinal);
 
 #pragma warning disable CA2255
     [ModuleInitializer]
@@ -18,7 +18,7 @@ public class ModuleInitializer
         AssemblyLoadContext assemblyLoadContext = new AssemblyLoadContext("Jellyfin.Plugin.HomeScreenSections");
         string[] resources = assembly.GetManifestResourceNames();
             
-        foreach (string resource in resources.Where(x => x.EndsWith(".dll")))
+        foreach (string resource in resources.Where(x => x.EndsWith(".dll", StringComparison.Ordinal)))
         {
             using Stream? assemblyStream = assembly.GetManifestResourceStream(resource);
             using MemoryStream memoryStream = new MemoryStream();
@@ -33,13 +33,13 @@ public class ModuleInitializer
             File.Delete(tmpDllLocation);
                 
             Assembly loadedAssembly;
-            if (!assemblyLoadContext.Assemblies.Any(x => x.FullName == assemblyName.FullName))
+            if (!assemblyLoadContext.Assemblies.Any(x => string.Equals(x.FullName, assemblyName.FullName, StringComparison.Ordinal)))
             {
                 loadedAssembly = assemblyLoadContext.LoadFromStream(assemblyStream);
             }
             else
             {
-                loadedAssembly = assemblyLoadContext.Assemblies.First(x => x.FullName == assemblyName.FullName);
+                loadedAssembly = assemblyLoadContext.Assemblies.First(x => string.Equals(x.FullName, assemblyName.FullName, StringComparison.Ordinal));
             }
                 
             s_dynamicAssemblies.Add(loadedAssembly.FullName!, loadedAssembly);
@@ -47,9 +47,9 @@ public class ModuleInitializer
 
         AppDomain.CurrentDomain.AssemblyResolve += (_, args) =>
         {
-            if (s_dynamicAssemblies.ContainsKey(args.Name!))
+            if (s_dynamicAssemblies.TryGetValue(args.Name!, out Assembly? assembly))
             {
-                return s_dynamicAssemblies[args.Name!];
+                return assembly;
             }
                 
             return null;

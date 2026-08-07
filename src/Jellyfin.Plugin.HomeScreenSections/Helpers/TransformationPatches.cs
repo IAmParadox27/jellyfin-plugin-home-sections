@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.HomeScreenSections.Attributes;
 using Jellyfin.Plugin.HomeScreenSections.Model;
@@ -15,17 +15,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             using TextReader replacementTextReader = new StreamReader(replacementStream);
         
             string[] parts = content.Contents!.Split(",loadSections:", StringSplitOptions.RemoveEmptyEntries);
-            Regex variableFind = new Regex(@"var\s+([a-zA-Z][^=]*)=");
-            string thisVariableName = variableFind.Matches(parts[0]).Last().Groups[1].Value;
+            Regex variableFind = new Regex(@"var\s+(?<name>[a-zA-Z][^=]*)=", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromMilliseconds(250));
+            string thisVariableName = variableFind.Matches(parts[0]).Last().Groups["name"].Value;
             string replacementText = replacementTextReader.ReadToEnd()
                 .Replace("{{this_hook}}", thisVariableName)
-                .Replace("{{layoutmanager_hook}}", "n"); // TODO: lookup the first "assigned" variable after `var`
+                .Replace("{{layoutmanager_hook}}", "n"); // NOTE: lookup the first "assigned" variable after `var`
 
-            if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.10.7") ?? false)
+            if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.10.7", StringComparison.Ordinal) ?? false)
             {
                 replacementText = replacementText.Replace("{{cardbuilder_hook}}", "h");
             }
-            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.11") ?? false)
+            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("10.11", StringComparison.Ordinal) ?? false)
             {
                 replacementText = replacementText.Replace("{{cardbuilder_hook}}", "u");
             }

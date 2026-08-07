@@ -39,7 +39,31 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
 
         public override QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            DtoOptions? dtoOptions = new DtoOptions
+            DtoOptions dtoOptions = CreateShowsDtoOptions();
+            User? user = m_userManager.GetUserById(payload.UserId);
+
+            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
+            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
+            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
+            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
+
+            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions)
+                .FilterToUserPermitted(m_libraryManager, user);
+
+            List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries = SearchLatestSeries(user, folders, isPlayed);
+
+            return BuildSeriesResult(user, dtoOptions, selectedSeries);
+        }
+
+        protected override LatestSectionBase CreateInstance()
+        {
+            return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService, m_serviceProvider);
+        }
+
+        private static DtoOptions CreateShowsDtoOptions()
+        {
+            DtoOptions dtoOptions = new DtoOptions
             {
                 Fields = new List<ItemFields>
                 {
@@ -56,72 +80,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 ImageType.Primary,
             };
 
-            User? user = m_userManager.GetUserById(payload.UserId);
+            return dtoOptions;
+        }
 
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                .Where(x => x.CollectionType == CollectionTypeOptions)
-                .FilterToUserPermitted(m_libraryManager, user);
-
+        private List<(Series Series, DateTime? LatestPremiereDate)> SearchLatestSeries(
+            User? user,
+            VirtualFolderInfo[] folders,
+            bool? isPlayed)
+        {
             List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries = new List<(Series, DateTime?)>();
             int dayIncrement = 30;
             DateTime currentDate = DateTime.Now;
-            DateTime stopDate = DateTime.Parse("01/01/1925"); // The first show ever was 1925 so this should be safe, we never expect to get as far back as this but we need an escape.
+            DateTime stopDate = DateTime.Parse("01/01/1925", System.Globalization.CultureInfo.InvariantCulture); // The first show ever was 1925 so this should be safe, we never expect to get as far back as this but we need an escape.
             bool continueSearching = true;
             
             do
             {
-                // Single query: Get recent episodes, limited but enough to find 16 unique series
-                // Fetch more episodes to account for multiple episodes per series
-                var mainQuery = folders.Select(x =>
-                {
-                    var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-                    if (item is not Folder folder)
-                    {
-                        folder = m_libraryManager.GetUserRootFolder();
-                    }
-
-                    var items = folder.GetItems(new InternalItemsQuery(user)
-                    {
-                        IncludeItemTypes = new[] { SectionItemKind },
-                        OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
-                        Limit = 200, // Enough to find 16 unique series even with multi-episode releases
-                        IsVirtualItem = false,
-                        IsPlayed = isPlayed,
-                        Recursive = true,
-                        ParentId = folder.Id,
-                        MaxPremiereDate = currentDate,
-                        MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
-                        EnableTotalRecordCount = true // This might have to go
-                        // DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-                    });
-
-                    return (Items: items.Items, items.Items.Count, items.TotalRecordCount);
-                }).ToArray();
-
-                var recentEpisodes = mainQuery.SelectMany(x => x.Items).OfType<Episode>()
-                .Where(x => !x.IsUnaired)
-                .ToList();
-                
-                // Group by series and get the one with the latest premiere date per series
-                var seriesWithLatestEpisode = recentEpisodes
-                    .Select(ep => (Episode: ep, Series: ep.Series))
-                    .Where(x => x.Series != null)
-                    .GroupBy(x => x.Series!.Id)
-                    .Select(g => (
-                        Series: g.First().Series!,
-                        LatestPremiereDate: g.Max(x => x.Episode.PremiereDate)
-                    ))
-                    .OrderByDescending(x => x.LatestPremiereDate)
-                    .Take(16)
+                List<(Series Series, DateTime? LatestPremiereDate)> seriesToAdd = QuerySeriesInWindow(user, folders, isPlayed, currentDate, dayIncrement)
+                    .Where(x => selectedSeries.All(y => y.Series.Id != x.Series.Id))
                     .ToList();
-                
-                var seriesToAdd = seriesWithLatestEpisode.Where(x => selectedSeries.All(y => y.Series.Id != x.Series.Id)).ToList();
                 
                 selectedSeries.AddRange(seriesToAdd);
 
@@ -137,7 +114,69 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                     break;
                 }
             } while (continueSearching);
+
+            return selectedSeries;
+        }
+
+        private List<(Series Series, DateTime? LatestPremiereDate)> QuerySeriesInWindow(
+            User? user,
+            VirtualFolderInfo[] folders,
+            bool? isPlayed,
+            DateTime currentDate,
+            int dayIncrement)
+        {
+            // Single query: Get recent episodes, limited but enough to find 16 unique series
+            // Fetch more episodes to account for multiple episodes per series
+            var mainQuery = folders.Select(x =>
+            {
+                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                if (item is not Folder folder)
+                {
+                    folder = m_libraryManager.GetUserRootFolder();
+                }
+
+                var items = folder.GetItems(new InternalItemsQuery(user)
+                {
+                    IncludeItemTypes = new[] { SectionItemKind },
+                    OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
+                    Limit = 200, // Enough to find 16 unique series even with multi-episode releases
+                    IsVirtualItem = false,
+                    IsPlayed = isPlayed,
+                    Recursive = true,
+                    ParentId = folder.Id,
+                    MaxPremiereDate = currentDate,
+                    MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
+                    EnableTotalRecordCount = true // This might have to go
+                    // DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                });
+
+                return (Items: items.Items, items.Items.Count, items.TotalRecordCount);
+            }).ToArray();
+
+            var recentEpisodes = mainQuery.SelectMany(x => x.Items).OfType<Episode>()
+                .Where(x => !x.IsUnaired)
+                .ToList();
             
+            // Group by series and get the one with the latest premiere date per series
+            return recentEpisodes
+                .Select(ep => (Episode: ep, Series: ep.Series))
+                .Where(x => x.Series != null)
+                .GroupBy(x => x.Series!.Id)
+                .Select(g => (
+                    Series: g.First().Series!,
+                    LatestPremiereDate: g.Max(x => x.Episode.PremiereDate)
+                ))
+                .OrderByDescending(x => x.LatestPremiereDate)
+                .Take(16)
+                .ToList();
+        }
+
+        private QueryResult<BaseItemDto> BuildSeriesResult(
+            User? user,
+            DtoOptions dtoOptions,
+            List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries)
+        {
             // Fetch the full series objects with proper DtoOptions for images
             var seriesIds = selectedSeries.OrderByDescending(x => x.LatestPremiereDate).Select(x => x.Series.Id);
             var seriesIdArray = seriesIds.ToArray();
@@ -155,11 +194,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             
             return new QueryResult<BaseItemDto>(Array.ConvertAll(orderedSeries.ToArray(),
                 i => m_dtoService.GetBaseItemDto(i!, dtoOptions, user)));
-        }
-
-        protected override LatestSectionBase CreateInstance()
-        {
-            return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService, m_serviceProvider);
         }
     }
 }

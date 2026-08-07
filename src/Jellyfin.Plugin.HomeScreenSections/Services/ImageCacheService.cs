@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly HttpClient m_httpClient;
         private readonly string m_cacheDirectory;
         // In-memory cache for quick lookups
-        private readonly ConcurrentDictionary<string, CachedImageDto> m_imageCache = new();
+        private readonly ConcurrentDictionary<string, CachedImageDto> m_imageCache = new(StringComparer.Ordinal);
 
         public ImageCacheService(
             ILogger<ImageCacheService> logger,
@@ -41,7 +42,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             if (IsValidCacheKey(cacheKey))
             {
-                m_logger.LogDebug("Using cached image for {CacheKey}", cacheKey);
+                PluginLog.UsingCachedImage(m_logger, cacheKey);
                 return cacheKey;
             }
 
@@ -73,14 +74,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             if (File.Exists(cachedInfo.FilePath))
             {
-                try
-                {
-                    File.Delete(cachedInfo.FilePath);
-                }
-                catch (Exception ex)
-                {
-                    m_logger.LogWarning(ex, "Failed to delete expired cache file {FilePath}", cachedInfo.FilePath);
-                }
+                BestEffortIO.TryDeleteFile(
+                    cachedInfo.FilePath,
+                    ex => PluginLog.FailedDeleteExpiredCacheFile(m_logger, ex, cachedInfo.FilePath));
             }
         }
 
@@ -100,7 +96,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             if (oldestKeys.Count > 0)
             {
                 SaveCacheIndex();
-                m_logger.LogDebug("Evicted {Count} old cache entries", oldestKeys.Count);
+                PluginLog.EvictedCacheEntries(m_logger, oldestKeys.Count);
             }
         }
 
@@ -108,13 +104,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             try
             {
-                m_logger.LogDebug("Downloading image from {SourceUrl}", sourceUrl);
+                PluginLog.DownloadingImage(m_logger, sourceUrl);
 
                 using HttpResponseMessage response = await m_httpClient.GetAsync(sourceUrl);
                 if (!response.IsSuccessStatusCode)
                 {
-                    m_logger.LogWarning("Failed to download image from {SourceUrl}, status: {StatusCode}",
-                    sourceUrl, response.StatusCode);
+                    PluginLog.ImageDownloadFailed(m_logger, sourceUrl, response.StatusCode);
                     return null;
                 }
 
@@ -129,12 +124,32 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 
                 string filePath = SaveImageToDisk(cacheKey, imageData, contentType);
                 StoreCacheInfo(cacheKey, sourceUrl, filePath, contentType, cacheTimeoutSeconds);
-                m_logger.LogDebug("Cached image {CacheKey} from {SourceUrl}", cacheKey, sourceUrl);
+                PluginLog.CachedImage(m_logger, cacheKey, sourceUrl);
                 return cacheKey;
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
-                m_logger.LogError(ex, "Error downloading and caching image from {SourceUrl}", sourceUrl);
+                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
+                return null;
+            }
+            catch (TaskCanceledException ex)
+            {
+                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
+                return null;
+            }
+            catch (IOException ex)
+            {
+                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
+                return null;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
+                return null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
                 return null;
             }
         }
@@ -166,32 +181,26 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             if (!m_imageCache.TryGetValue(cacheKey, out CachedImageDto? cachedInfo))
             {
-                m_logger.LogDebug("Cache miss for key {CacheKey}", cacheKey);
+                PluginLog.CacheMiss(m_logger, cacheKey);
                 return (null, null);
             }
             if (cachedInfo.ExpiresAt < DateTime.UtcNow)
             {
-                m_logger.LogDebug("Cache expired for key {CacheKey}", cacheKey);
+                PluginLog.CacheExpired(m_logger, cacheKey);
                 m_imageCache.TryRemove(cacheKey, out _);
                 return (null, null);
             }
             if (!File.Exists(cachedInfo.FilePath))
             {
-                m_logger.LogWarning("Cache file missing for key {CacheKey}", cacheKey);
+                PluginLog.CacheFileMissing(m_logger, cacheKey);
                 m_imageCache.TryRemove(cacheKey, out _);
                 return (null, null);
             }
 
-            try
-            {
-                byte[] data = File.ReadAllBytes(cachedInfo.FilePath);
-                return (data, cachedInfo.ContentType);
-            }
-            catch (Exception ex)
-            {
-                m_logger.LogError(ex, "Error reading cached image {CacheKey}", cacheKey);
-                return (null, null);
-            }
+            byte[]? data = BestEffortIO.TryReadAllBytes(
+                cachedInfo.FilePath,
+                ex => PluginLog.CacheReadError(m_logger, ex, cacheKey));
+            return data == null ? (null, null) : (data, cachedInfo.ContentType);
         }
 
         public void ClearExpiredCache()
@@ -207,14 +216,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 {
                     if (File.Exists(cachedInfo.FilePath))
                     {
-                        try
+                        BestEffortIO.TryDeleteFile(
+                            cachedInfo.FilePath,
+                            ex => PluginLog.FailedDeleteExpiredCacheFile(m_logger, ex, cachedInfo.FilePath));
+                        if (!File.Exists(cachedInfo.FilePath))
                         {
-                            File.Delete(cachedInfo.FilePath);
-                            m_logger.LogDebug("Deleted expired cache file {FilePath}", cachedInfo.FilePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            m_logger.LogWarning(ex, "Failed to delete expired cache file {FilePath}", cachedInfo.FilePath);
+                            PluginLog.DeletedExpiredCacheFile(m_logger, cachedInfo.FilePath);
                         }
                     }
                 }
@@ -223,7 +230,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             if (expiredKeys.Count > 0)
             {
                 SaveCacheIndex();
-                m_logger.LogInformation("Cleared {Count} expired cache entries", expiredKeys.Count);
+                PluginLog.ClearedExpiredCacheEntries(m_logger, expiredKeys.Count);
             }
         }
 
@@ -233,20 +240,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 if (File.Exists(cachedInfo.FilePath))
                 {
-                    try
-                    {
-                        File.Delete(cachedInfo.FilePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        m_logger.LogWarning(ex, "Failed to delete cache file {FilePath}", cachedInfo.FilePath);
-                    }
+                    BestEffortIO.TryDeleteFile(
+                        cachedInfo.FilePath,
+                        ex => PluginLog.FailedDeleteCacheFile(m_logger, ex, cachedInfo.FilePath));
                 }
             }
 
             m_imageCache.Clear();
             SaveCacheIndex();
-            m_logger.LogInformation("Cleared all cache entries");
+            PluginLog.ClearedAllCacheEntries(m_logger);
         }
 
         private static string GenerateCacheKey(string sourceUrl)
@@ -261,7 +263,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 using SKBitmap? originalBitmap = SKBitmap.Decode(imageData);
                 if (originalBitmap == null)
                 {
-                    m_logger.LogWarning("Failed to decode image for processing");
+                    PluginLog.ImageDecodeFailed(m_logger);
                     return Array.Empty<byte>();
                 }
 
@@ -290,9 +292,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     }
                 }
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-                m_logger.LogError(ex, "Error processing image");
+                PluginLog.ImageProcessError(m_logger, ex);
+                return Array.Empty<byte>();
+            }
+            catch (InvalidOperationException ex)
+            {
+                PluginLog.ImageProcessError(m_logger, ex);
+                return Array.Empty<byte>();
+            }
+            catch (NullReferenceException ex)
+            {
+                PluginLog.ImageProcessError(m_logger, ex);
                 return Array.Empty<byte>();
             }
         }
@@ -307,13 +319,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             if (resizedBitmap == null)
             {
-                m_logger.LogWarning("Failed to resize image from {OriginalWidth}x{OriginalHeight}",
-                    originalBitmap.Width, originalBitmap.Height);
+                PluginLog.ImageResizeFailed(m_logger, originalBitmap.Width, originalBitmap.Height);
                 return null;
             }
 
-            m_logger.LogDebug("Resized image from {OriginalWidth}x{OriginalHeight} to {NewWidth}x{NewHeight}",
-                originalBitmap.Width, originalBitmap.Height, newWidth, newHeight);
+            PluginLog.ImageResized(m_logger, originalBitmap.Width, originalBitmap.Height, newWidth, newHeight);
             
             return resizedBitmap;
         }
@@ -346,9 +356,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 return;
             }
+
+            string? json = BestEffortIO.TryReadAllText(
+                indexPath,
+                ex => PluginLog.CacheIndexLoadError(m_logger, ex));
+            if (json == null)
+            {
+                return;
+            }
+
             try
             {
-                string json = File.ReadAllText(indexPath);
                 CachedImageDto[]? entries = System.Text.Json.JsonSerializer.Deserialize<CachedImageDto[]>(json);
                 
                 if (entries != null)
@@ -361,24 +379,26 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                         }
                         else if (File.Exists(entry.FilePath))
                         {
-                            try
-                            {
-                                File.Delete(entry.FilePath);
-                            }
-                            catch
-                            {
-                                // Ignore cleanup errors
-                            }
+                            BestEffortIO.TryDeleteFile(entry.FilePath);
                         }
                     }
-                    m_logger.LogInformation("Loaded {Count} cached images from index", m_imageCache.Count);
+                    PluginLog.LoadedCacheIndex(m_logger, m_imageCache.Count);
                 }
             }
-            catch (Exception ex)
+            catch (System.Text.Json.JsonException ex)
             {
-                m_logger.LogError(ex, "Error loading cache index");
+                PluginLog.CacheIndexLoadError(m_logger, ex);
+            }
+            catch (NotSupportedException ex)
+            {
+                PluginLog.CacheIndexLoadError(m_logger, ex);
             }
         }
+
+        private static readonly System.Text.Json.JsonSerializerOptions s_cacheIndexJsonOptions = new()
+        {
+            WriteIndented = true
+        };
 
         private void SaveCacheIndex()
         {
@@ -387,16 +407,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             try
             {
                 CachedImageDto[] entries = m_imageCache.Values.ToArray();
-                string json = System.Text.Json.JsonSerializer.Serialize(entries, new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-                
-                File.WriteAllText(indexPath, json);
+                string json = System.Text.Json.JsonSerializer.Serialize(entries, s_cacheIndexJsonOptions);
+                BestEffortIO.TryWriteAllText(
+                    indexPath,
+                    json,
+                    ex => PluginLog.CacheIndexSaveError(m_logger, ex));
             }
-            catch (Exception ex)
+            catch (System.Text.Json.JsonException ex)
             {
-                m_logger.LogError(ex, "Error saving cache index");
+                PluginLog.CacheIndexSaveError(m_logger, ex);
+            }
+            catch (NotSupportedException ex)
+            {
+                PluginLog.CacheIndexSaveError(m_logger, ex);
             }
         }
     }

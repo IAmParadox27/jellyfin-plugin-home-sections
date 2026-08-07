@@ -61,9 +61,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             string sourceImageUrl = albumImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
-            Dictionary<string, string> providerIds = new Dictionary<string, string>
-            {
-                { "LidarrAlbumId", calendarItem.Id.ToString() },
+            Dictionary<string, string> providerIds = new Dictionary<string, string>(StringComparer.Ordinal) {
+                { "LidarrAlbumId", calendarItem.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "FormattedDate", countdownText },
                 { "LidarrPoster", cachedImageUrl }
             };

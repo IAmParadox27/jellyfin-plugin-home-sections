@@ -1,4 +1,4 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Entities;
@@ -16,7 +16,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? DisplayText { get; set; } = "Continue Watching / Next Up";
         public int? Limit => 1;
         public string? Route => null;
-        public string? AdditionalData { get; set; } = null;
+        public string? AdditionalData { get; set; }
         public object? OriginalPayload => null;
 
         private ContinueWatchingSection? m_continueWatchingSection;
@@ -44,8 +44,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             // Apply default Next Up settings, halves performance impact
             // Unfortunately we can't get the user's actual Next Up settings, as they're stored in local storage on the client
-            var nuQuery = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
-            {
+            var nuQuery = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(StringComparer.Ordinal) {
                 ["UserId"] = queryCollection["UserId"],
                 ["EnableRewatching"] = "false",
                 ["NextUpDateCutoff"] = DateTime.UtcNow.AddDays(-365).ToString("O")
@@ -67,7 +66,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             // If HideWatchedItems is enabled for this section, filter out watched items
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
+            var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
             if (sectionSettings?.HideWatchedItems == true)
             {
                 returnItems = returnItems.Where(x => x.UserData?.Played != true).ToList();
@@ -85,7 +84,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             Dictionary<Guid, DateTime> lookup = new Dictionary<Guid, DateTime>();
             User? user = m_userManager.GetUserById(userId);
-            if (user == null) return lookup;
+            if (user == null)
+            {
+                return lookup;
+            }
 
             // Collect all unique series IDs that need lookup
             List<Guid> seriesIds = items
@@ -96,7 +98,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .Distinct()
                 .ToList();
 
-            if (seriesIds.Count == 0) return lookup;
+            if (seriesIds.Count == 0)
+            {
+                return lookup;
+            }
 
             // Query recent played episodes for each series
             // Limit 2: most recent + fallback in case first lacks LastPlayedDate
@@ -128,13 +133,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         // Uses native LastPlayedDate if available,
         // otherwise checks series LastPlayedDate,
         // then falls back to DateCreated (but I don't think this should happen)
-        private DateTime GetSortDate(BaseItemDto item, Dictionary<Guid, DateTime> seriesLastPlayed)
+        private static DateTime GetSortDate(BaseItemDto item, Dictionary<Guid, DateTime> seriesLastPlayed)
         {
             if (item.UserData?.LastPlayedDate != null)
+            {
                 return item.UserData.LastPlayedDate.Value;
+            }
 
             if (item.SeriesId != null && seriesLastPlayed.TryGetValue(item.SeriesId.Value, out DateTime seriesDate))
+            {
                 return seriesDate;
+            }
 
             return item.DateCreated ?? DateTime.MinValue;
         }

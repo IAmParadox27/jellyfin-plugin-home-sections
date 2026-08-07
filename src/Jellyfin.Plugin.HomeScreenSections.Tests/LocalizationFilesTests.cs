@@ -5,7 +5,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests;
 
 public class LocalizationFilesTests
 {
-    private static readonly Regex PlaceholderRegex = new(@"\{[^}]+\}", RegexOptions.Compiled);
+    private static readonly Regex PlaceholderRegex = new(
+        @"\{[^}]+\}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture,
+        TimeSpan.FromMilliseconds(250));
 
     [Fact]
     public void All_localization_files_are_valid_json_objects()
@@ -28,8 +31,8 @@ public class LocalizationFilesTests
         JObject en = Load("en.json");
         JObject da = Load("da.json");
 
-        string[] enKeys = en.Properties().Select(p => p.Name).OrderBy(k => k).ToArray();
-        string[] daKeys = da.Properties().Select(p => p.Name).OrderBy(k => k).ToArray();
+        string[] enKeys = en.Properties().Select(p => p.Name).OrderBy(k => k, StringComparer.Ordinal).ToArray();
+        string[] daKeys = da.Properties().Select(p => p.Name).OrderBy(k => k, StringComparer.Ordinal).ToArray();
 
         Assert.Equal(enKeys, daKeys);
     }
@@ -57,11 +60,11 @@ public class LocalizationFilesTests
             string enText = prop.Value.Value<string>() ?? string.Empty;
             string daText = da.Value<string>(prop.Name) ?? string.Empty;
 
-            string[] enPlaceholders = PlaceholderRegex.Matches(enText).Select(m => m.Value).OrderBy(x => x).ToArray();
-            string[] daPlaceholders = PlaceholderRegex.Matches(daText).Select(m => m.Value).OrderBy(x => x).ToArray();
+            string[] enPlaceholders = PlaceholderRegex.Matches(enText).Select(m => m.Value).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+            string[] daPlaceholders = PlaceholderRegex.Matches(daText).Select(m => m.Value).OrderBy(x => x, StringComparer.Ordinal).ToArray();
 
             Assert.True(
-                enPlaceholders.SequenceEqual(daPlaceholders),
+                enPlaceholders.SequenceEqual(daPlaceholders, StringComparer.Ordinal),
                 $"Placeholder mismatch for '{prop.Name}': en=[{string.Join(",", enPlaceholders)}] da=[{string.Join(",", daPlaceholders)}]");
         }
     }
@@ -95,12 +98,12 @@ public class LocalizationFilesTests
     {
         JObject da = Load("da.json");
         string template = da.Value<string>(key)!;
-        Assert.Contains("{0}", template);
+        Assert.Contains("{0}", template, StringComparison.Ordinal);
 
         // Same replacement path used by TranslationManager for Pattern metadata
-        string result = template.Replace("{0}", value);
-        Assert.DoesNotContain("{0}", result);
-        Assert.Contains(value, result);
+        string result = template.Replace("{0}", value, StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", result, StringComparison.Ordinal);
+        Assert.Contains(value, result, StringComparison.Ordinal);
     }
 
     private static JObject Load(string fileName)

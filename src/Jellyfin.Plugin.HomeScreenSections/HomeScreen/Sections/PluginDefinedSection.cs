@@ -9,7 +9,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
     public class PluginDefinedSection : IHomeScreenSection
     {
-        public delegate QueryResult<BaseItemDto> GetResultsDelegate(HomeScreenSectionPayload payload);
+        public delegate QueryResult<BaseItemDto> GetResultsHandler(HomeScreenSectionPayload payload);
         
         public string? Section { get; }
         public string? DisplayText { get; set; }
@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public object? OriginalPayload => null;
         
-        public required GetResultsDelegate OnGetResults { get; set; }
+        public required GetResultsHandler OnGetResults { get; set; }
         
         public PluginDefinedSection(string sectionUuid, string displayText, string? route = null, string? additionalData = null)
         {

@@ -4,9 +4,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 {
     public class PluginConfiguration : BasePluginConfiguration
     {
-        public bool Enabled { get; set; } = false;
+        public bool Enabled { get; set; }
 
-        public bool LazyLoadEnabled { get; set; } = false;
+        public bool LazyLoadEnabled { get; set; }
 
         public int NumSectionsPerPage { get; set; } = 10;
         
@@ -48,13 +48,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 
         public bool FilterUpcomingByLibraryAccess { get; set; } = true;
 
-        public bool DeveloperMode { get; set; } = false;
+        public bool DeveloperMode { get; set; }
 
-        public int CacheBustCounter { get; set; } = 0;
+        public int CacheBustCounter { get; set; }
 
         public int CacheTimeoutSeconds { get; set; } = 86400;
 
-        public bool OverrideStreamyfinHome { get; set; } = false;
+        public bool OverrideStreamyfinHome { get; set; }
 
         public int MaxImageCacheEntries { get; set; } = 10000;
 
@@ -97,7 +97,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         
         public SectionViewMode ViewMode { get; set; } = SectionViewMode.Landscape;
 
-        public bool HideWatchedItems { get; set; } = false;
+        public bool HideWatchedItems { get; set; }
     }
     
     public class ArrConfig
@@ -106,8 +106,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? Url { get; set; } = "";
         public int UpcomingTimeframeValue { get; set; }
         public TimeframeUnit UpcomingTimeframeUnit { get; set; }
-        public bool ConsiderCinemaRelease { get; set; } = false;
-        public bool ConsiderPhysicalRelease { get; set; } = false;
+        public bool ConsiderCinemaRelease { get; set; }
+        public bool ConsiderPhysicalRelease { get; set; }
         public bool ConsiderDigitalRelease { get; set; } = true;
     }   
 }

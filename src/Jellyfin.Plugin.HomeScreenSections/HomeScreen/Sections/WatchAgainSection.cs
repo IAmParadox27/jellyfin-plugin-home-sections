@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-    internal class WatchAgainSection : IHomeScreenSection
+    internal sealed class WatchAgainSection : IHomeScreenSection
     {
         public string? Section => "WatchAgain";
 
@@ -70,7 +70,40 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            DtoOptions? dtoOptions = new DtoOptions
+            DtoOptions dtoOptions = CreateDtoOptions();
+            User user = UserManager.GetUserById(payload.UserId)!;
+            var cutoffDate = DateTime.Now.Subtract(TimeSpan.FromDays(28));
+
+            List<(BaseItem Item, DateTime? LastPlayed)> results = new List<(BaseItem, DateTime?)>();
+            CollectBoxSetCandidates(user, dtoOptions, cutoffDate, results);
+            CollectMovieCandidates(user, cutoffDate, results);
+            CollectSeriesCandidates(user, cutoffDate, results);
+
+            return BuildShuffledResult(user, dtoOptions, results);
+        }
+
+        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
+        {
+            yield return this;
+        }
+
+        public HomeScreenSectionInfo GetInfo()
+        {
+            return new HomeScreenSectionInfo
+            {
+                Section = Section,
+                DisplayText = DisplayText,
+                AdditionalData = AdditionalData,
+                Route = Route,
+                Limit = Limit ?? 1,
+                OriginalPayload = OriginalPayload,
+                ViewMode = SectionViewMode.Landscape
+            };
+        }
+
+        private static DtoOptions CreateDtoOptions()
+        {
+            return new DtoOptions
             {
                 Fields = new List<ItemFields>
                 {
@@ -84,177 +117,209 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     ImageType.Primary,
                 }
             };
+        }
 
-            User user = UserManager.GetUserById(payload.UserId)!;
-            var cutoffDate = DateTime.Now.Subtract(TimeSpan.FromDays(28));
-
-            List<(BaseItem Item, DateTime? LastPlayed)> results = new List<(BaseItem, DateTime?)>();
-
+        private void CollectBoxSetCandidates(
+            User user,
+            DtoOptions dtoOptions,
+            DateTime cutoffDate,
+            List<(BaseItem Item, DateTime? LastPlayed)> results)
+        {
             // === Process Box Sets ===
+            VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions.boxsets)
+                .FilterToUserPermitted(LibraryManager, user);
+
+            var boxSets = folders.SelectMany(x =>
             {
-                VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
-                    .Where(x => x.CollectionType == CollectionTypeOptions.boxsets)
-                    .FilterToUserPermitted(LibraryManager, user);
+                var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
-                var boxSets = folders.SelectMany(x =>
+                if (item is not Folder folder)
                 {
-                    var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-                    if (item is not Folder folder)
-                    {
-                        folder = LibraryManager.GetUserRootFolder();
-                    }
-
-                    return folder.GetItems(new InternalItemsQuery(user)
-                    {
-                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                        Recursive = true,
-                        IncludeItemTypes = new[] { BaseItemKind.BoxSet },
-                        DtoOptions = dtoOptions
-                    }).Items;
-                }).OfType<BoxSet>().ToArray();
-
-                foreach (var boxSet in boxSets)
-                {
-                    var children = boxSet.GetChildren(user, true, new InternalItemsQuery(user)).ToList();
-                    var movies = children.OfType<Movie>().ToList();
-
-                    if (movies.Count <= 1)
-                    {
-                        continue;
-                    }
-
-                    // Check if all movies in the box set are played
-                    var movieUserData = movies
-                        .Select(m => UserDataManager.GetUserData(user, m))
-                        .Where(ud => ud != null)
-                        .ToList();
-
-                    var allPlayed = movieUserData.Count == movies.Count && movieUserData.All(ud => ud!.Played);
-                    if (!allPlayed)
-                    {
-                        continue;
-                    }
-
-                    // Get the most recent LastPlayedDate from any movie in the box set
-                    var lastPlayedDate = movieUserData.Max(ud => ud?.LastPlayedDate);
-                    if (lastPlayedDate >= cutoffDate)
-                    {
-                        continue;
-                    }
-
-                    results.Add((boxSet, lastPlayedDate));
+                    folder = LibraryManager.GetUserRootFolder();
                 }
+
+                return folder.GetItems(new InternalItemsQuery(user)
+                {
+                    ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                    Recursive = true,
+                    IncludeItemTypes = new[] { BaseItemKind.BoxSet },
+                    DtoOptions = dtoOptions
+                }).Items;
+            }).OfType<BoxSet>().ToArray();
+
+            foreach (var boxSet in boxSets)
+            {
+                TryAddBoxSetCandidate(user, boxSet, cutoffDate, results);
+            }
+        }
+
+        private void TryAddBoxSetCandidate(
+            User user,
+            BoxSet boxSet,
+            DateTime cutoffDate,
+            List<(BaseItem Item, DateTime? LastPlayed)> results)
+        {
+            var children = boxSet.GetChildren(user, true, new InternalItemsQuery(user)).ToList();
+            var movies = children.OfType<Movie>().ToList();
+
+            if (movies.Count <= 1)
+            {
+                return;
             }
 
+            // Check if all movies in the box set are played
+            var movieUserData = movies
+                .Select(m => UserDataManager.GetUserData(user, m))
+                .Where(ud => ud != null)
+                .ToList();
+
+            var allPlayed = movieUserData.Count == movies.Count && movieUserData.All(ud => ud!.Played);
+            if (!allPlayed)
+            {
+                return;
+            }
+
+            // Get the most recent LastPlayedDate from any movie in the box set
+            var lastPlayedDate = movieUserData.Max(ud => ud?.LastPlayedDate);
+            if (lastPlayedDate >= cutoffDate)
+            {
+                return;
+            }
+
+            results.Add((boxSet, lastPlayedDate));
+        }
+
+        private void CollectMovieCandidates(
+            User user,
+            DateTime cutoffDate,
+            List<(BaseItem Item, DateTime? LastPlayed)> results)
+        {
             // === Process Movies ===
+            VirtualFolderInfo[] movieFolders = LibraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions.movies)
+                .FilterToUserPermitted(LibraryManager, user);
+
+            var playedMovies = movieFolders.SelectMany(x =>
             {
-                VirtualFolderInfo[] movieFolders = LibraryManager.GetVirtualFolders()
-                    .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-                    .FilterToUserPermitted(LibraryManager, user);
+                var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
-                var playedMovies = movieFolders.SelectMany(x =>
+                if (item is not Folder folder)
                 {
-                    var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                    folder = LibraryManager.GetUserRootFolder();
+                }
 
-                    if (item is not Folder folder)
-                    {
-                        folder = LibraryManager.GetUserRootFolder();
-                    }
-
-                    return folder.GetItems(new InternalItemsQuery(user)
-                    {
-                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                        IncludeItemTypes = new[] { BaseItemKind.Movie },
-                        IsPlayed = true,
-                        Recursive = true,
-                        DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-                    }).Items;
-                }).OfType<Movie>().ToList();
-
-                foreach (var movie in playedMovies)
+                return folder.GetItems(new InternalItemsQuery(user)
                 {
-                    var userData = UserDataManager.GetUserData(user, movie);
-                    if (userData?.LastPlayedDate != null && userData.LastPlayedDate < cutoffDate)
-                    {
-                        results.Add((movie, userData.LastPlayedDate));
-                    }
+                    ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                    IncludeItemTypes = new[] { BaseItemKind.Movie },
+                    IsPlayed = true,
+                    Recursive = true,
+                    DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                }).Items;
+            }).OfType<Movie>().ToList();
+
+            foreach (var movie in playedMovies)
+            {
+                var userData = UserDataManager.GetUserData(user, movie);
+                if (userData?.LastPlayedDate != null && userData.LastPlayedDate < cutoffDate)
+                {
+                    results.Add((movie, userData.LastPlayedDate));
                 }
             }
+        }
 
+        private void CollectSeriesCandidates(
+            User user,
+            DateTime cutoffDate,
+            List<(BaseItem Item, DateTime? LastPlayed)> results)
+        {
             // === Process TV Series ===
             // Phase 1: Get candidates from played episodes
+            VirtualFolderInfo[] tvFolders = LibraryManager.GetVirtualFolders()
+                .Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
+                .FilterToUserPermitted(LibraryManager, user);
+
+            var candidates = GetSeriesCandidatesFromPlayedEpisodes(user, tvFolders, cutoffDate);
+
+            // Phase 2: Single batch query for unplayed episodes across all candidates
+            var candidateSeriesIds = candidates.Select(c => c.Series.Id).ToArray();
+
+            var unplayedEpisodes = LibraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                VirtualFolderInfo[] tvFolders = LibraryManager.GetVirtualFolders()
-                    .Where(x => x.CollectionType == CollectionTypeOptions.tvshows)
-                    .FilterToUserPermitted(LibraryManager, user);
+                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                AncestorIds = candidateSeriesIds,
+                IsPlayed = false,
+                IsVirtualItem = false,
+                DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+            }).OfType<Episode>().ToList();
 
-                var playedEpisodes = tvFolders.SelectMany(x =>
+            // Get set of series IDs that have unplayed episodes
+            var seriesWithUnplayed = unplayedEpisodes
+                .Where(ep => ep.Series != null)
+                .Select(ep => ep.Series!.Id)
+                .ToHashSet();
+
+            // Filter candidates to only fully-played series
+            foreach (var candidate in candidates)
+            {
+                if (!seriesWithUnplayed.Contains(candidate.Series.Id))
                 {
-                    return LibraryManager.GetItemList(new InternalItemsQuery(user)
-                    {
-                        ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                        IncludeItemTypes = new[] { BaseItemKind.Episode },
-                        IsPlayed = true,
-                        OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Ascending) },
-                        Limit = 1000,
-                        IsVirtualItem = false,
-                        Recursive = true,
-                        DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-                    });
-                }).OfType<Episode>().ToList();
+                    results.Add((candidate.Series, candidate.LastPlayedDate));
+                }
 
-                // Group by series and get candidates
-                var candidates = playedEpisodes
-                    .Where(ep => ep.Series != null)
-                    .GroupBy(ep => ep.Series!.Id)
-                    .Select(g => new
-                    {
-                        Series = g.First().Series!,
-                        PlayedCount = g.Count(),
-                        LastPlayedDate = g.Max(ep =>
-                        {
-                            var ud = UserDataManager.GetUserData(user, ep);
-                            return ud?.LastPlayedDate;
-                        })
-                    })
-                    .Where(x => x.LastPlayedDate < cutoffDate)
-                    .Where(x => x.PlayedCount >= 3)
-                    .OrderBy(x => x.LastPlayedDate)
-                    .Take(50)
-                    .ToList();
-
-                // Phase 2: Single batch query for unplayed episodes across all candidates
-                var candidateSeriesIds = candidates.Select(c => c.Series.Id).ToArray();
-
-                var unplayedEpisodes = LibraryManager.GetItemList(new InternalItemsQuery(user)
+                if (results.Count >= 16)
                 {
-                    IncludeItemTypes = new[] { BaseItemKind.Episode },
-                    AncestorIds = candidateSeriesIds,
-                    IsPlayed = false,
-                    IsVirtualItem = false,
-                    DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
-                }).OfType<Episode>().ToList();
-
-                // Get set of series IDs that have unplayed episodes
-                var seriesWithUnplayed = unplayedEpisodes
-                    .Where(ep => ep.Series != null)
-                    .Select(ep => ep.Series!.Id)
-                    .ToHashSet();
-
-                // Filter candidates to only fully-played series
-                foreach (var candidate in candidates)
-                {
-                    if (!seriesWithUnplayed.Contains(candidate.Series.Id))
-                    {
-                        results.Add((candidate.Series, candidate.LastPlayedDate));
-                    }
-
-                    if (results.Count >= 16)
-                        break;
+                    break;
                 }
             }
+        }
 
+        private List<(Series Series, int PlayedCount, DateTime? LastPlayedDate)> GetSeriesCandidatesFromPlayedEpisodes(
+            User user,
+            VirtualFolderInfo[] tvFolders,
+            DateTime cutoffDate)
+        {
+            var playedEpisodes = tvFolders.SelectMany(x =>
+            {
+                return LibraryManager.GetItemList(new InternalItemsQuery(user)
+                {
+                    ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    IsPlayed = true,
+                    OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Ascending) },
+                    Limit = 1000,
+                    IsVirtualItem = false,
+                    Recursive = true,
+                    DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                });
+            }).OfType<Episode>().ToList();
+
+            // Group by series and get candidates
+            return playedEpisodes
+                .Where(ep => ep.Series != null)
+                .GroupBy(ep => ep.Series!.Id)
+                .Select(g => (
+                    Series: g.First().Series!,
+                    PlayedCount: g.Count(),
+                    LastPlayedDate: g.Max(ep =>
+                    {
+                        var ud = UserDataManager.GetUserData(user, ep);
+                        return ud?.LastPlayedDate;
+                    })
+                ))
+                .Where(x => x.LastPlayedDate < cutoffDate)
+                .Where(x => x.PlayedCount >= 3)
+                .OrderBy(x => x.LastPlayedDate)
+                .Take(50)
+                .ToList();
+        }
+
+        private QueryResult<BaseItemDto> BuildShuffledResult(
+            User user,
+            DtoOptions dtoOptions,
+            List<(BaseItem Item, DateTime? LastPlayed)> results)
+        {
             // Shuffle results for variety, then take top 16
             var random = new Random();
             var shuffledResults = results
@@ -277,25 +342,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .ToList();
 
             return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(orderedItems!, dtoOptions, user));
-        }
-
-        public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
-        {
-            yield return this;
-        }
-
-        public HomeScreenSectionInfo GetInfo()
-        {
-            return new HomeScreenSectionInfo
-            {
-                Section = Section,
-                DisplayText = DisplayText,
-                AdditionalData = AdditionalData,
-                Route = Route,
-                Limit = Limit ?? 1,
-                OriginalPayload = OriginalPayload,
-                ViewMode = SectionViewMode.Landscape
-            };
         }
     }
 }

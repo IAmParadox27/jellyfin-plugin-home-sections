@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.Loader;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
@@ -33,8 +33,8 @@ namespace Jellyfin.Plugin.HomeScreenSections
                         if (payload.ResultsAssembly != null && payload.ResultsClass != null && payload.ResultsMethod != null)
                         {
                             Type? resultsHandlerClass = AssemblyLoadContext.All.SelectMany(x => x.Assemblies)
-                                .FirstOrDefault(x => x.FullName == payload.ResultsAssembly)?.GetTypes()
-                                .FirstOrDefault(x => x.FullName == payload.ResultsClass);
+                                .FirstOrDefault(x => string.Equals(x.FullName, payload.ResultsAssembly, StringComparison.Ordinal))?.GetTypes()
+                                .FirstOrDefault(x => string.Equals(x.FullName, payload.ResultsClass, StringComparison.Ordinal));
 
                             if (resultsHandlerClass != null)
                             {

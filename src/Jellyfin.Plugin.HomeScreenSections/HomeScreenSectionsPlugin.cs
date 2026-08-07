@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.Loader;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -27,75 +27,82 @@ namespace Jellyfin.Plugin.HomeScreenSections
     
         public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, IHomeScreenManager homeScreenManager, ITranslationManager translationManager) : base(applicationPaths, xmlSerializer)
         {
-            int pluginPageConfigVersion = 1;
             Instance = this;
-            
             ServerConfigurationManager = serverConfigurationManager;
             ServiceProvider = serviceProvider;
             
             homeScreenManager.RegisterBuiltInResultsDelegates();
-        
-            string homeScreenSectionsConfigDir = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.HomeScreenSections");
-            if (!Directory.Exists(homeScreenSectionsConfigDir))
-            {
-                Directory.CreateDirectory(homeScreenSectionsConfigDir);
-            }
-        
-            translationManager.Initialize();
-            
-            string pluginPagesConfig = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.PluginPages", "config.json");
-        
-            JObject config = new JObject();
-            if (!File.Exists(pluginPagesConfig))
-            {
-                FileInfo info = new FileInfo(pluginPagesConfig);
-                info.Directory?.Create();
-            }
-            else
-            {
-                config = JObject.Parse(File.ReadAllText(pluginPagesConfig));
-            }
 
+            string homeScreenSectionsConfigDir = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.HomeScreenSections");
+            Directory.CreateDirectory(homeScreenSectionsConfigDir);
+
+            translationManager.Initialize();
+            EnsurePluginPagesRegistration(applicationPaths.PluginConfigurationsPath);
+        }
+
+        private void EnsurePluginPagesRegistration(string pluginConfigurationsPath)
+        {
+            const int pluginPageConfigVersion = 1;
+            string pluginPagesConfig = Path.Combine(pluginConfigurationsPath, "Jellyfin.Plugin.PluginPages", "config.json");
+
+            JObject config = LoadOrCreatePluginPagesConfig(pluginPagesConfig);
             if (!config.ContainsKey("pages"))
             {
                 config.Add("pages", new JArray());
             }
 
-            JObject? hssPageConfig = config.Value<JArray>("pages")!.FirstOrDefault(x =>
-                x.Value<string>("Id") == typeof(HomeScreenSectionsPlugin).Namespace) as JObject;
+            JArray pages = config.Value<JArray>("pages")!;
+            if (pages.FirstOrDefault(x =>
+                    string.Equals(x.Value<string>("Id"), typeof(HomeScreenSectionsPlugin).Namespace, StringComparison.Ordinal)) is JObject hssPageConfig
+                && (hssPageConfig.Value<int?>("Version") ?? 0) < pluginPageConfigVersion)
+            {
+                pages.Remove(hssPageConfig);
+            }
 
-            if (hssPageConfig != null)
+            if (pages.Any(x => string.Equals(x.Value<string>("Id"), typeof(HomeScreenSectionsPlugin).Namespace, StringComparison.Ordinal)))
             {
-                if ((hssPageConfig.Value<int?>("Version") ?? 0) < pluginPageConfigVersion)
-                {
-                    config.Value<JArray>("pages")!.Remove(hssPageConfig);
-                }
+                return;
             }
-            
-            if (!config.Value<JArray>("pages")!.Any(x => x.Value<string>("Id") == typeof(HomeScreenSectionsPlugin).Namespace))
+
+            pages.Add(CreatePluginPageEntry(pluginPageConfigVersion));
+            File.WriteAllText(pluginPagesConfig, config.ToString(Formatting.Indented));
+        }
+
+        private static JObject LoadOrCreatePluginPagesConfig(string pluginPagesConfig)
+        {
+            if (!File.Exists(pluginPagesConfig))
             {
-                Assembly? pluginPagesAssembly = AssemblyLoadContext.All.SelectMany(x => x.Assemblies).FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.PluginPages") ?? false);
-                
-                Version earliestVersionWithSubUrls = new Version("2.4.1.0");
-                bool supportsSubUrls = pluginPagesAssembly != null && pluginPagesAssembly.GetName().Version >= earliestVersionWithSubUrls;
-                
-                string rootUrl = ServerConfigurationManager.GetNetworkConfiguration().BaseUrl.TrimStart('/').Trim();
-                if (!string.IsNullOrEmpty(rootUrl))
-                {
-                    rootUrl = $"/{rootUrl}";
-                }
-                
-                config.Value<JArray>("pages")!.Add(new JObject
-                {
-                    { "Id", typeof(HomeScreenSectionsPlugin).Namespace },
-                    { "Url", $"{(supportsSubUrls ? "" : rootUrl)}/ModularHomeViews/settings" },
-                    { "DisplayText", "Modular Home" },
-                    { "Icon", "ballot" },
-                    { "Version", pluginPageConfigVersion }
-                });
-        
-                File.WriteAllText(pluginPagesConfig, config.ToString(Formatting.Indented));
+                new FileInfo(pluginPagesConfig).Directory?.Create();
+                return new JObject();
             }
+
+            return JObject.Parse(File.ReadAllText(pluginPagesConfig));
+        }
+
+        private JObject CreatePluginPageEntry(int pluginPageConfigVersion)
+        {
+            Assembly? pluginPagesAssembly = AssemblyLoadContext.All
+                .SelectMany(x => x.Assemblies)
+                .FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.PluginPages", StringComparison.Ordinal) ?? false);
+
+            Version earliestVersionWithSubUrls = new Version("2.4.1.0");
+            bool supportsSubUrls = pluginPagesAssembly != null
+                && pluginPagesAssembly.GetName().Version >= earliestVersionWithSubUrls;
+
+            string rootUrl = ServerConfigurationManager.GetNetworkConfiguration().BaseUrl.TrimStart('/').Trim();
+            if (!string.IsNullOrEmpty(rootUrl))
+            {
+                rootUrl = $"/{rootUrl}";
+            }
+
+            return new JObject
+            {
+                { "Id", typeof(HomeScreenSectionsPlugin).Namespace },
+                { "Url", $"{(supportsSubUrls ? "" : rootUrl)}/ModularHomeViews/settings" },
+                { "DisplayText", "Modular Home" },
+                { "Icon", "ballot" },
+                { "Version", pluginPageConfigVersion }
+            };
         }
 
         public IEnumerable<PluginPageInfo> GetPages()

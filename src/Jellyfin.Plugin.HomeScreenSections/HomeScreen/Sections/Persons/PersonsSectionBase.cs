@@ -1,4 +1,4 @@
-﻿using Jellyfin.Extensions;
+using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -32,13 +32,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 
         protected abstract int MinRequiredItems { get; }
 
-        public virtual TranslationMetadata? TranslationMetadata { get; protected set; } = null;
+        public virtual TranslationMetadata? TranslationMetadata { get; protected set; }
         
-        protected readonly ILibraryManager m_libraryManager;
-        protected readonly IDtoService m_dtoService;
-        protected readonly IUserManager m_userManager;
+        protected ILibraryManager m_libraryManager { get; }
+        protected IDtoService m_dtoService { get; }
+        protected IUserManager m_userManager { get; }
 
-        public PersonsSectionBase(ILibraryManager libraryManager, IDtoService dtoService, IUserManager userManager)
+        protected PersonsSectionBase(ILibraryManager libraryManager, IDtoService dtoService, IUserManager userManager)
         {
             m_libraryManager = libraryManager;
             m_dtoService = dtoService;
@@ -67,7 +67,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
             VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            IReadOnlyList<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
+            List<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
             {
                 PersonIds = new[] { personId },
                 PersonTypes = PersonTypes.ToArray(),
@@ -84,7 +84,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
                 }
 
                 return x;
-            }).DistinctBy(x => x.Id).ToArray();
+            }).DistinctBy(x => x.Id).ToList();
             
             return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(personItems, dtoOptions, user));
         }
@@ -105,7 +105,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 
             foreach (Person person in people)
             {
-                IReadOnlyList<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
+                List<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
                 {
                     PersonIds = new[] { person.Id },
                     PersonTypes = PersonTypes.ToArray(),

@@ -5,6 +5,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
@@ -98,22 +99,23 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                     Limit = 1
                 };
 
-                BaseItem? latestItemAddedForShow = m_libraryManager.GetItemList(query).FirstOrDefault();
+                var latestItems = m_libraryManager.GetItemList(query);
+                BaseItem? latestItemAddedForShow = latestItems.Count > 0 ? latestItems[0] : null;
 
                 dateCreated = latestItemAddedForShow?.DateCreated;
             }
             else if (item is Season season)
             {
                 List<BaseItem>? seasonEpisodes = season.GetEpisodes(user, dtoOptions, false);
-                dateCreated = (seasonEpisodes?.Any() ?? false) ? seasonEpisodes.Max(x => x.DateCreated) : null;
+                dateCreated = (seasonEpisodes is { Count: > 0 }) ? seasonEpisodes.Max(x => x.DateCreated) : null;
                 
-                m_logger.LogInformation($"Season '{season.Name}' has been sorted based on an episode having a date created of: {dateCreated}.");
+                PluginLog.SeasonSortedByEpisodeDate(m_logger, season.Name, dateCreated);
             }
 
             if (dateCreated == null)
             {
                 dateCreated = base.GetSortDateForItem(item, user, dtoOptions);
-                m_logger.LogInformation($"Item '{item.Name}' has been sorted based on the default behaviour with a value of: {dateCreated}.");
+                PluginLog.ItemSortedByDefaultDate(m_logger, item.Name, dateCreated);
             }
             
             return dateCreated.Value;

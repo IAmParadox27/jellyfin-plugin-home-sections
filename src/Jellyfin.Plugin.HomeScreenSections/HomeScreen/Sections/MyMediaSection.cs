@@ -29,7 +29,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Route => null;
 
         /// <inheritdoc/>
-        public string? AdditionalData { get; set; } = null;
+        public string? AdditionalData { get; set; }
 
         public object? OriginalPayload => null;
         
@@ -102,7 +102,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Limit = Limit ?? 1,
                 OriginalPayload = OriginalPayload,
                 ViewMode = SectionViewMode.Landscape,
-                AllowViewModeChange = true // TODO: Change this to allowed view modes
+                AllowViewModeChange = true // NOTE: Change this to allowed view modes
             };
         }
     }

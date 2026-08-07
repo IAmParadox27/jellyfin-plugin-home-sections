@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -39,7 +39,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             m_logger = logger;
         }
 
-        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
             PatchHelpers.SetupPatches();
             
@@ -58,18 +58,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             string[] allJsChunks = Directory.GetFiles(m_applicationPaths.WebPath, "*.chunk.js", SearchOption.AllDirectories);
             foreach (string jsChunk in allJsChunks)
             {
-                if (File.ReadAllText(jsChunk).Contains(",loadSections:"))
+                if ((await File.ReadAllTextAsync(jsChunk, cancellationToken)).Contains(",loadSections:", StringComparison.Ordinal))
                 {
                     
                     string fileName = Path.GetFileName(jsChunk);
-                    Regex r = new Regex(@"([^.]+)\.([^.]+)\.chunk.js");
+                    Regex r = new Regex(@"(?<base>[^.]+)\.(?<hash>[^.]+)\.chunk.js", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromMilliseconds(250));
                     
                     Guid guid = Guid.NewGuid();
-                    m_logger.LogInformation($"Found loadSections in `{fileName}` registering transformation for it with ID '{guid}'");
+                    PluginLog.FoundLoadSections(m_logger, fileName, guid);
                     
                     JObject payload = new JObject();
                     payload.Add("id", guid.ToString());
-                    payload.Add("fileNamePattern", r.Match(fileName).Groups[1].Value + "\\.[^.]+\\.chunk\\.js");
+                    payload.Add("fileNamePattern", r.Match(fileName).Groups["base"].Value + "\\.[^.]+\\.chunk\\.js");
                     payload.Add("callbackAssembly", GetType().Assembly.FullName);
                     payload.Add("callbackClass", typeof(TransformationPatches).FullName);
                     payload.Add("callbackMethod", nameof(TransformationPatches.LoadSections));
@@ -79,7 +79,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             
             Assembly? fileTransformationAssembly =
                 AssemblyLoadContext.All.SelectMany(x => x.Assemblies).FirstOrDefault(x =>
-                    x.FullName?.Contains(".FileTransformation") ?? false);
+                    x.FullName?.Contains(".FileTransformation", StringComparison.Ordinal) ?? false);
 
             if (fileTransformationAssembly != null)
             {
@@ -93,8 +93,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     }
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetStartupTrigger();
