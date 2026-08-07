@@ -9,6 +9,39 @@
     "imageUrl": "https://raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/src/logo.png",
     "versions": [
       {
+        "version": "2.5.17.0",
+        "changelog": "Home Screen Sections fork 2.5.17.0 - polish release. Admin live order preview, import conflict summary, section diagnostics. User Modular Home drag reorder, reset to defaults, save toast. Hardened clickable titles and more routes. Clear section cache on save. A11y pass. Danish strings. README fork comparison. PRs 9-11, 16-17, 19-20. Install: raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json",
+        "targetAbi": "10.11.5.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.17.0/Release-10.11.5.zip",
+        "checksum": "F077F5CAFFC32F34D4B56DC74AF8ADBE",
+        "timestamp": "2026-08-07T22:29:54",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.17.0",
+        "changelog": "Home Screen Sections fork 2.5.17.0 - polish release. Admin live order preview, import conflict summary, section diagnostics. User Modular Home drag reorder, reset to defaults, save toast. Hardened clickable titles and more routes. Clear section cache on save. A11y pass. Danish strings. README fork comparison. PRs 9-11, 16-17, 19-20. Install: raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.17.0/Release-10.11.11.zip",
+        "checksum": "D54D4438880BB3CEE3BE9524F4FE1EEF",
+        "timestamp": "2026-08-07T22:29:54",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
+        "version": "2.5.17.0",
+        "changelog": "Home Screen Sections fork 2.5.17.0 - polish release. Admin live order preview, import conflict summary, section diagnostics. User Modular Home drag reorder, reset to defaults, save toast. Hardened clickable titles and more routes. Clear section cache on save. A11y pass. Danish strings. README fork comparison. PRs 9-11, 16-17, 19-20. Install: raw.githubusercontent.com/Robert-Hansen/jellyfin-plugin-home-sections/main/manifest.json",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/Robert-Hansen/jellyfin-plugin-home-sections/releases/download/2.5.17.0/Release-10.10.7.zip",
+        "checksum": "F0E217D4ECCE593E895D82283B7C567A",
+        "timestamp": "2026-08-07T22:29:54",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      },
+      {
         "version": "2.5.16.0",
         "changelog": "Fork release from main: section settings UX (search, bulk toggle, arrows, dirty state, undo, export/import), cache bust on save, more clickable titles, per-user section order, advanced details memory, mobile polish.",
         "targetAbi": "10.11.5.0",
