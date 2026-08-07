@@ -233,5 +233,15 @@
   "AdminResetToDefaultsDesc": "Gendan aktiverede sektioner og rækkefølge til serveradministratorens værdier. Du skal stadig klikke på Gem.",
   "AdminResetToDefaultsDone": "Serverstandarder gendannet. Klik på Gem for at anvende.",
   "AdminSettingsUpdatedToast": "Indstillinger gemt. Opdater startskærmen for at se rækkefølgeændringer.",
-  "AdminSettingsSaveFailed": "Kunne ikke gemme indstillinger."
+  "AdminSettingsSaveFailed": "Kunne ikke gemme indstillinger.",
+  "Favorites": "Favoritter",
+  "RandomUnwatched": "Overrask mig",
+  "Trending": "Mest afspillet",
+  "RecentlyPlayed": "Senest afspillet",
+  "Kids": "Børn og familie",
+  "ComingSoonInLibrary": "Kommer snart",
+  "Decade": "{0}ernes film",
+  "Studio": "{0}",
+  "Playlists": "Playlister",
+  "UnwatchedCollections": "Gør samlingerne færdige"
 }

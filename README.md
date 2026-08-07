@@ -97,6 +97,20 @@ The original plugin catalogue is at: `https://www.iamparadox.dev/jellyfin/plugin
 
 Extra bits on top of the base plugin (same sections, integrations, and deps — File Transformation + Plugin Pages still required).
 
+### Extra home sections
+| Section | What it shows |
+|---------|----------------|
+| **Favorites** | Items you've hearted |
+| **Surprise Me** | Random unwatched movies/series |
+| **Most Played** | Your highest play-count titles |
+| **Recently Played** | Finished watches (not in-progress) |
+| **Kids & Family** | G / PG / TV-Y–PG rated titles |
+| **Coming Soon** | Library items with a future premiere date |
+| **Decade** | Random decade rows (e.g. 2010s Movies) |
+| **Studio** | Studio/network rows from your watch history |
+| **Playlists** | One row per non-empty playlist (skips "My List") |
+| **Finish These Collections** | Unwatched items from partially watched box sets |
+
 ### Admin · Section Settings
 
 | Area | Base plugin | This version |
