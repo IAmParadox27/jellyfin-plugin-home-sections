@@ -44,12 +44,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+      - name: Setup Node (for TypeScript web assets)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+      - name: Install web dependencies & type-check
+        run: |
+          npm ci
+          npm run typecheck
       - name: Test
         run: >
           dotnet test
@@ -127,12 +136,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup Node (for TypeScript web assets)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+
+      - name: Install web dependencies & type-check
+        run: |
+          npm ci
+          npm run typecheck
 
       - name: Set plugin assembly version
         shell: bash

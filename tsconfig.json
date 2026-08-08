@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["ES2017", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmitOnError": false,
+    "allowJs": false,
+    "checkJs": false,
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": false,
+    "outDir": "./src/Jellyfin.Plugin.HomeScreenSections",
+    "rootDir": "./src-web",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src-web/**/*"],
+  "exclude": ["node_modules", "src/Jellyfin.Plugin.HomeScreenSections"]
+}

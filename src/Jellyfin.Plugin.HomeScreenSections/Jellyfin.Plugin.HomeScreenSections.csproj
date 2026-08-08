@@ -81,6 +81,13 @@
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
 
+    <Target Name="BuildWebAssets" BeforeTargets="BeforeBuild" Condition="Exists('$(MSBuildProjectDirectory)/../../package.json')">
+        <!-- TypeScript sources in src-web/ compile to the embedded JS.
+             Requires Node 20+. If npm is unavailable we warn and fall back to the
+             committed JS (CI always has Node, so type errors still fail the build). -->
+        <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)/../.." ContinueOnError="WarnAndContinue" />
+    </Target>
+
     <Target Name="GenerateAssemblyMetadata_GitBranch" BeforeTargets="BeforeCompile">
         <ItemGroup>
             <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">

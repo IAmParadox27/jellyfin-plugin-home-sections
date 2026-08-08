@@ -15,6 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup Node (for TypeScript web assets)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -22,8 +28,16 @@ jobs:
             8.0.x
             9.0.x
 
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Type-check web assets (strict, SDK-typed)
+        run: npm run typecheck
+
       # Analyzers + TreatWarningsAsErrors come from src/Directory.Build.props
       # (Meziantou.Analyzer + .NET analyzers). Build fails on enforced rules.
+      # Web assets are rebuilt automatically via BeforeBuild (npm run build),
+      # but we already type-checked above for clearer logs.
       - name: Build plugin (10.11.11)
         run: >
           dotnet build

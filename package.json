@@ -1,0 +1,16 @@
+{
+  "name": "jellyfin-plugin-home-sections-web",
+  "private": true,
+  "version": "2.5.0",
+  "description": "TypeScript sources for HomeScreenSections client injection (compiled to embedded JS)",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && node scripts/replace-placeholders.mjs",
+    "typecheck": "tsc --noEmit",
+    "clean": "node scripts/clean-web.mjs"
+  },
+  "devDependencies": {
+    "@jellyfin/sdk": "0.13.0",
+    "typescript": "^7.0.2"
+  }
+}

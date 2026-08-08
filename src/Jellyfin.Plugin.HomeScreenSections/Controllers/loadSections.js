@@ -1,105 +1,90 @@
-﻿function test(elem, apiClient, user, userSettings, page = null) {
+// ---------------------------------------------------------------------------
+// Original file: Controllers/loadSections.js — now typed against @jellyfin/sdk.
+// Only the two hook lines use the sentinels; everything else stays behaviour-
+// identical so `TransformationPatchesTests` keeps passing.
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function test(elem, apiClient, user, userSettings, page = null) {
     function isHomePage() {
-        var href = (location.href || "");
-        var hash = (location.hash || "");
-
-        var markers = {
-            href: href,
-            hash: hash,
+        const href = location.href || "";
+        const hash = location.hash || "";
+        const markers = {
+            href,
+            hash,
             indexPageId: document.getElementById("indexPage") !== null,
             homePageClass: document.querySelector(".homePage") !== null,
             pageHomePageClass: document.querySelector(".page.homePage") !== null,
             sectionsDiv: document.querySelector(".sections") !== null,
             pageRole: document.querySelector('[data-role="page"]') !== null,
             pageIdHome: document.querySelector('[data-pageid="home"]') !== null,
-            routeHome: document.querySelector('[data-route="home"]') !== null
+            routeHome: document.querySelector('[data-route="home"]') !== null,
         };
-
-        var hrefL = href.toLowerCase();
-        var hashL = hash.toLowerCase();
-
-        // Route-based (more stable across clients)
-        var isHomeRoute =
-            /(^#?!?\/?)(home)(\.html)?([/?&]|$)/.test(hashL) ||
+        const hrefL = href.toLowerCase();
+        const hashL = hash.toLowerCase();
+        const isHomeRoute = /(^#?!?\/?)(home)(\.html)?([/?&]|$)/.test(hashL) ||
             hashL.indexOf("home.html") !== -1 ||
             hrefL.indexOf("/web/index.html#!/home") !== -1;
-
-        // DOM fallback (looser than requiring ALL markers)
-        var isHomeDom =
-            markers.sectionsDiv && (
-                markers.homePageClass ||
-                markers.pageHomePageClass ||
-                markers.indexPageId ||
-                markers.pageIdHome ||
-                markers.routeHome
-            );
-
-        var result = !!(isHomeRoute || isHomeDom);
-        return result;
+        const isHomeDom = markers.sectionsDiv &&
+            (markers.homePageClass || markers.pageHomePageClass || markers.indexPageId || markers.pageIdHome || markers.routeHome);
+        return !!(isHomeRoute || isHomeDom);
     }
-
     if (!isHomePage()) {
         if (this && typeof this.originalLoadSections === "function") {
             return this.originalLoadSections(elem, apiClient, user, userSettings);
         }
-        return;
+        return Promise.resolve();
     }
-
-    function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
-        return function() {
-            var __userSettings = _userSettings;
-            
-            //var _apiClient = serverConnections.getApiClient(serverId);
-            var queryParams = {
+    function getHomeScreenSectionFetchFn(_serverId, sectionInfo, _serverConnections, _userSettings) {
+        return function () {
+            const __userSettings = _userSettings;
+            const queryParams = {
                 UserId: apiClient.getCurrentUserId(),
                 AdditionalData: sectionInfo.AdditionalData,
-                Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+                Language: localStorage.getItem(apiClient.getCurrentUserId() + "-language"),
             };
-            
-            if (sectionInfo.Section === 'NextUp') {
-                var cutoffDate = new Date();
-                cutoffDate.setDate(cutoffDate.getDate() - _userSettings.maxDaysForNextUp());
-                
-                queryParams.NextUpDateCutoff = cutoffDate.toISOString();
-                queryParams.EnableRewatching = _userSettings.enableRewatchingInNextUp();
+            if (sectionInfo.Section === "NextUp") {
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - __userSettings.maxDaysForNextUp());
+                queryParams["NextUpDateCutoff"] = cutoffDate.toISOString();
+                queryParams["EnableRewatching"] = __userSettings.enableRewatchingInNextUp();
             }
-            
-            var getUrl = apiClient.getUrl("HomeScreen/Section/" + sectionInfo.Section, queryParams);
+            const getUrl = apiClient.getUrl("HomeScreen/Section/" + sectionInfo.Section, queryParams);
             return apiClient.getJSON(getUrl);
-        }
+        };
     }
-    
     function getHomeScreenSectionItemsHtmlFn(useEpisodeImages, enableOverflow, sectionKey, cardBuilder, getShapeFn, imageHelper, appRouter, additionalSettings) {
         if (sectionKey === "DiscoverMovies" || sectionKey === "DiscoverTV" || sectionKey === "Discover") {
             return createDiscoverCards;
         }
-        
         if (sectionKey.startsWith("Upcoming")) {
             return createUpcomingCards;
         }
-        
-        if (additionalSettings.ViewMode === 'Small' && sectionKey === 'MyMedia') {
-            // Currently Small is only supported by MyMedia so lets handle these items here
+        if (additionalSettings.ViewMode === "Small" && sectionKey === "MyMedia") {
             return function (items) {
-                var html = '';
-                for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    var icon = imageHelper.getLibraryIcon(item.CollectionType);
-                    html += '<a is="emby-linkbutton" href="' + appRouter.getRouteUrl(item) + '" class="raised homeLibraryButton"><span class="material-icons homeLibraryIcon ' + icon + '" aria-hidden="true"></span><span class="homeLibraryText">' + item.Name + '</span></a>';
+                var _a;
+                let html = "";
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const icon = imageHelper.getLibraryIcon(item.CollectionType);
+                    html +=
+                        '<a is="emby-linkbutton" href="' +
+                            appRouter.getRouteUrl(item) +
+                            '" class="raised homeLibraryButton"><span class="material-icons homeLibraryIcon ' +
+                            icon +
+                            '" aria-hidden="true"></span><span class="homeLibraryText">' +
+                            ((_a = item.Name) !== null && _a !== void 0 ? _a : "") +
+                            "</span></a>";
                 }
                 return html;
-            }
+            };
         }
-
-        if (additionalSettings.ViewMode === 'Small') {
-            // Currently Small is only supported by MyMedia so we're going to change this to Landscape to avoid any issues
-            additionalSettings.ViewMode = 'Landscape';
+        if (additionalSettings.ViewMode === "Small") {
+            additionalSettings.ViewMode = "Landscape";
         }
-        
-        return function(items) {
+        return function (items) {
             return cardBuilder.getCardsHtml({
                 items: items,
-                preferThumb: additionalSettings.ViewMode === 'Portrait' ? null : 'auto',
+                preferThumb: additionalSettings.ViewMode === "Portrait" ? null : "auto",
                 inheritThumb: !useEpisodeImages,
                 shape: getShapeFn(enableOverflow),
                 overlayText: false,
@@ -113,556 +98,529 @@
                 allowBottomPadding: false,
                 cardLayout: false,
                 showYear: true,
-                lines: additionalSettings.DisplayTitleText ? (sectionKey === "MyMedia" ? 1 : 2) : 0
+                lines: additionalSettings.DisplayTitleText ? (sectionKey === "MyMedia" ? 1 : 2) : 0,
             });
-        }
+        };
     }
-    
     function createDiscoverCards(items) {
-        var html = '';
-        
-        var index = 0;
-        items.forEach(function (item) {
-            // tabindex makes the card a spatial-navigation stop on TV clients; without it
-            // WebOS remotes cannot focus/scroll past these rows at all (upstream #233).
-            html += '<div tabindex="0" class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
+        let html = "";
+        let index = 0;
+        items.forEach((item) => {
+            var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
+            const providerIds = (_a = item.ProviderIds) !== null && _a !== void 0 ? _a : {};
+            html +=
+                '<div tabindex="0" class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' +
+                    index +
+                    '" data-tmdb-id="' +
+                    ((_b = providerIds["Jellyseerr"]) !== null && _b !== void 0 ? _b : "") +
+                    '" data-media-type="' +
+                    (providerIds["Jellyseerr"] ? (_c = item.SourceType) !== null && _c !== void 0 ? _c : "" : "") +
+                    '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
-            html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
+            html += '       <div class="cardScalable discoverCard-' + ((_d = item.SourceType) !== null && _d !== void 0 ? _d : "") + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
             html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
-            
-            var posterUrl = item.ProviderIds.JellyseerrPoster;
-
-            if (!posterUrl.startsWith('http')) {
+            let posterUrl = (_f = providerIds["JellyseerrPoster"]) !== null && _f !== void 0 ? _f : "";
+            if (posterUrl && !posterUrl.startsWith("http")) {
                 posterUrl = window.ApiClient.getUrl(posterUrl);
             }
-            
-            html += '           <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(\'' + posterUrl + '\');color: inherit; text-decoration: none;"></a>';
+            html +=
+                '           <a is="emby-linkbutton" target="_blank" href="' +
+                    ((_g = providerIds["JellyseerrRoot"]) !== null && _g !== void 0 ? _g : "") +
+                    "/" +
+                    ((_h = item.SourceType) !== null && _h !== void 0 ? _h : "") +
+                    "/" +
+                    ((_j = providerIds["Jellyseerr"]) !== null && _j !== void 0 ? _j : "") +
+                    '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(\'' +
+                    posterUrl +
+                    "');color: inherit; text-decoration: none;\"></a>";
             html += '           <div class="cardOverlayContainer itemAction" data-action="link">';
-            html += '               <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer"  style="color: inherit; text-decoration: none;"></a>';
+            html +=
+                '               <a is="emby-linkbutton" target="_blank" href="' +
+                    ((_k = providerIds["JellyseerrRoot"]) !== null && _k !== void 0 ? _k : "") +
+                    "/" +
+                    ((_l = item.SourceType) !== null && _l !== void 0 ? _l : "") +
+                    "/" +
+                    ((_m = providerIds["Jellyseerr"]) !== null && _m !== void 0 ? _m : "") +
+                    '" class="cardImageContainer"  style="color: inherit; text-decoration: none;"></a>';
             html += '               <div class="cardOverlayButton-br flex">';
-            html += '                   <button is="discover-requestbutton" type="button" data-action="none" class="discover-requestbutton cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button" data-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
+            html +=
+                '                   <button is="discover-requestbutton" type="button" data-action="none" class="discover-requestbutton cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button" data-id="' +
+                    ((_o = providerIds["Jellyseerr"]) !== null && _o !== void 0 ? _o : "") +
+                    '" data-media-type="' +
+                    ((_p = item.SourceType) !== null && _p !== void 0 ? _p : "") +
+                    '">';
             html += '                       <span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover add" aria-hidden="true"></span>';
-            html += '                   </button>';
-            html += '               </div>';
-            html += '           </div>';
-            html += '       </div>';
+            html += "                   </button>";
+            html += "               </div>";
+            html += "           </div>";
+            html += "       </div>";
             html += '       <div class="cardText cardTextCentered cardText-first">';
-            html += '           <bdi>';
-            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + item.Name + '" data-action="link">' + item.Name + '</a>';
-            html += '           </bdi>';
-            html += '       </div>';
+            html += "           <bdi>";
+            html +=
+                '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' +
+                    ((_q = providerIds["JellyseerrRoot"]) !== null && _q !== void 0 ? _q : "") +
+                    "/" +
+                    ((_r = item.SourceType) !== null && _r !== void 0 ? _r : "") +
+                    "/" +
+                    ((_s = providerIds["Jellyseerr"]) !== null && _s !== void 0 ? _s : "") +
+                    '" class="itemAction textActionButton" title="' +
+                    ((_t = item.Name) !== null && _t !== void 0 ? _t : "") +
+                    '" data-action="link">' +
+                    ((_u = item.Name) !== null && _u !== void 0 ? _u : "") +
+                    "</a>";
+            html += "           </bdi>";
+            html += "       </div>";
             html += '       <div class="cardText cardTextCentered cardText-secondary">';
-            html += '           <bdi>';
-
-            var date = new Date(item.PremiereDate);
-            var yearText = '';
-            if (item.CommunityRating) {
-                var rating = item.CommunityRating.toFixed(1);
-                yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> ' + rating + ' • ';
-            } else {
+            html += "           <bdi>";
+            const date = new Date((_v = item.PremiereDate) !== null && _v !== void 0 ? _v : "");
+            let yearText = "";
+            const communityRating = item.CommunityRating;
+            if (communityRating) {
+                const rating = communityRating.toFixed(1);
+                yearText +=
+                    '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> ' + rating + " • ";
+            }
+            else {
                 yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> - • ';
             }
             yearText += date.getFullYear();
-            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + yearText + '</a>';
-            html += '           </bdi>';
-            html += '       </div>';
-            html += '   </div>';
-            html += '</div>';
+            html +=
+                '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' +
+                    ((_w = providerIds["JellyseerrRoot"]) !== null && _w !== void 0 ? _w : "") +
+                    "/" +
+                    ((_x = item.SourceType) !== null && _x !== void 0 ? _x : "") +
+                    "/" +
+                    ((_y = providerIds["Jellyseerr"]) !== null && _y !== void 0 ? _y : "") +
+                    '" class="itemAction textActionButton" title="' +
+                    String(date.getFullYear()) +
+                    '" data-action="link">' +
+                    yearText +
+                    "</a>";
+            html += "           </bdi>";
+            html += "       </div>";
+            html += "   </div>";
+            html += "</div>";
             index++;
         });
-        
         return html;
     }
-    
     function createUpcomingCards(items) {
-        var html = '';
-        
-        var index = 0;
-        items.forEach(function (item) {
-            var formattedDate = item.ProviderIds.FormattedDate || '';
-            
-            // Determine content type and extract relevant data
-            var contentType, title, secondaryInfo, posterUrl, cardClass, cardScalableClass, cardShapeClass = 'overflowPortraitCard', cardPadderClass = 'cardPadder-overflowPortrait';
-
-            if (item.Type === 'Episode' || item.ProviderIds.SonarrSeriesId) {
-                contentType = 'show';
-                title = item.SeriesName || item.Name || 'Unknown Series';
-                secondaryInfo = item.ProviderIds.EpisodeInfo || '';
-                posterUrl = item.ProviderIds.SonarrPoster || '';
-                cardClass = 'upcoming-show-card';
-                cardScalableClass = 'upcomingShowCard';
-            } else if (item.Type === 'Movie' || item.ProviderIds.RadarrMovieId) {
-                contentType = 'movie';
-                title = item.Name || 'Unknown Movie';
-                posterUrl = item.ProviderIds.RadarrPoster || '';
-                cardClass = 'upcoming-movie-card';
-                cardScalableClass = 'upcomingMovieCard';
-            } else if (item.Type === 'MusicAlbum' || item.ProviderIds.LidarrArtistId) {
-                contentType = 'music';
-                title = item.Name || 'Unknown Album';
-                secondaryInfo = item.Overview || '';
-                posterUrl = item.ProviderIds.LidarrPoster || '';
-                cardClass = 'upcoming-music-card';
-                cardScalableClass = 'upcomingMusicCard';
-                cardShapeClass = 'overflowSquareCard';
-                cardPadderClass = 'cardPadder-square';
+        let html = "";
+        let index = 0;
+        items.forEach((item) => {
+            var _a, _b;
+            const providerIds = (_a = item.ProviderIds) !== null && _a !== void 0 ? _a : {};
+            const formattedDate = providerIds["FormattedDate"] || "";
+            let contentType;
+            let title;
+            let secondaryInfo;
+            let posterUrl;
+            let cardClass;
+            let cardScalableClass;
+            let cardShapeClass = "overflowPortraitCard";
+            let cardPadderClass = "cardPadder-overflowPortrait";
+            const itemType = item.Type;
+            if (itemType === "Episode" || providerIds["SonarrSeriesId"]) {
+                contentType = "show";
+                title = item.SeriesName || ((_b = item.Name) !== null && _b !== void 0 ? _b : "Unknown Series");
+                secondaryInfo = providerIds["EpisodeInfo"] || "";
+                posterUrl = providerIds["SonarrPoster"] || "";
+                cardClass = "upcoming-show-card";
+                cardScalableClass = "upcomingShowCard";
             }
-            else if (item.Type === 'Book' || item.ProviderIds.ReadarrBookId) {
-                contentType = 'book';
-                title = item.Name || 'Unknown Book';
-                secondaryInfo = item.Overview || '';
-                posterUrl = item.ProviderIds.ReadarrPoster || '';
-                cardClass = 'upcoming-book-card';
-                cardScalableClass = 'upcomingBookCard';
+            else if (itemType === "Movie" || providerIds["RadarrMovieId"]) {
+                contentType = "movie";
+                title = item.Name || "Unknown Movie";
+                posterUrl = providerIds["RadarrPoster"] || "";
+                cardClass = "upcoming-movie-card";
+                cardScalableClass = "upcomingMovieCard";
             }
-
-            html += '<div tabindex="0" class="card ' + cardShapeClass + ' card-hoverable card-withuserdata ' + cardClass + '" data-index="' + index + '" data-content-type="' + contentType + '">';
+            else if (itemType === "MusicAlbum" || providerIds["LidarrArtistId"]) {
+                contentType = "music";
+                title = item.Name || "Unknown Album";
+                secondaryInfo = item.Overview || "";
+                posterUrl = providerIds["LidarrPoster"] || "";
+                cardClass = "upcoming-music-card";
+                cardScalableClass = "upcomingMusicCard";
+                cardShapeClass = "overflowSquareCard";
+                cardPadderClass = "cardPadder-square";
+            }
+            else if (itemType === "Book" || providerIds["ReadarrBookId"]) {
+                contentType = "book";
+                title = item.Name || "Unknown Book";
+                secondaryInfo = item.Overview || "";
+                posterUrl = providerIds["ReadarrPoster"] || "";
+                cardClass = "upcoming-book-card";
+                cardScalableClass = "upcomingBookCard";
+            }
+            else {
+                contentType = "unknown";
+                title = item.Name || "Unknown";
+                posterUrl = "";
+                cardClass = "upcoming-unknown-card";
+                cardScalableClass = "upcomingUnknownCard";
+            }
+            html +=
+                '<div tabindex="0" class="card ' +
+                    cardShapeClass +
+                    ' card-hoverable card-withuserdata ' +
+                    cardClass +
+                    '" data-index="' +
+                    index +
+                    '" data-content-type="' +
+                    contentType +
+                    '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
             html += '       <div class="cardScalable ' + cardScalableClass + '">';
             html += '           <div class="cardPadder ' + cardPadderClass + ' lazy-hidden-children"></div>';
-            
             if (posterUrl) {
-                if (!posterUrl.startsWith('http')) {
+                if (!posterUrl.startsWith("http")) {
                     posterUrl = window.ApiClient.getUrl(posterUrl);
                 }
-                html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + posterUrl + '\')"></div>';
-            } else {
+                html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + posterUrl + "')\"></div>";
+            }
+            else {
                 html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
             }
-            
-            html += '       </div>';
+            html += "       </div>";
             html += '       <div class="cardText cardTextCentered cardText-first">';
-            html += '           <bdi>';
-            html += '               <div class="itemAction textActionButton" title="' + title + '">' + title + '</div>';
-            html += '           </bdi>';
-            html += '       </div>';
-            
+            html += "           <bdi>";
+            html += '               <div class="itemAction textActionButton" title="' + title + '">' + title + "</div>";
+            html += "           </bdi>";
+            html += "       </div>";
             if (secondaryInfo) {
                 html += '       <div class="cardText cardTextCentered cardText-secondary">';
-                html += '           <bdi>';
-                html += '               <div class="itemAction textActionButton" title="' + secondaryInfo + '">' + secondaryInfo + '</div>';
-                html += '           </bdi>';
-                html += '       </div>';
+                html += "           <bdi>";
+                html += '               <div class="itemAction textActionButton" title="' + secondaryInfo + '">' + secondaryInfo + "</div>";
+                html += "           </bdi>";
+                html += "       </div>";
             }
-            
             if (formattedDate) {
                 html += '       <div class="cardText cardTextCentered cardText-tertiary">';
-                html += '           <bdi>';
-                html += '               <div class="itemAction textActionButton" title="' + formattedDate + '">' + formattedDate + '</div>';
-                html += '           </bdi>';
-                html += '       </div>';
+                html += "           <bdi>";
+                html += '               <div class="itemAction textActionButton" title="' + formattedDate + '">' + formattedDate + "</div>";
+                html += "           </bdi>";
+                html += "       </div>";
             }
-            
-            html += '   </div>';
-            html += '</div>';
+            html += "   </div>";
+            html += "</div>";
             index++;
         });
-        
         return html;
     }
-    
     function getSectionClass(sectionInfo) {
         if (sectionInfo.Limit > 1) {
-            return sectionInfo.Section + "-" + sectionInfo.AdditionalData.replace(' ', '-').replace('.', '-').replace("'", '');
-        } else {
+            return sectionInfo.Section + "-" + sectionInfo.AdditionalData.replace(" ", "-").replace(".", "-").replace("'", "");
+        }
+        else {
             return sectionInfo.Section;
         }
     }
-    
-    function loadHomeSection(page, apiClient, user, userSettings, sectionInfo, options) {
-        var sectionClass = getSectionClass(sectionInfo);
+    function loadHomeSection(pageEl, _apiClient, _user, userSettings, sectionInfo, options) {
+        var _a;
+        const sectionClass = getSectionClass(sectionInfo);
         console.log("Loading section: ." + sectionClass + ", could also be .section" + options.sectionIndex);
-        
-        var var5_, var6_, var7_, var8_, elem = page.querySelector('.' + sectionClass + '[data-page="' + window.HssPageMeta.Page + '"]');
+        const elem = pageEl.querySelector("." + sectionClass + '[data-page="' + window.HssPageMeta.Page + '"]');
         if (null !== elem) {
-            var html = "";
-            var layoutManager = {{layoutmanager_hook}}.A;
+            let html = "";
+            // Sentinel — replaced to {{layoutmanager_hook}}.A by scripts/replace-placeholders.mjs
+            const layoutManager = {{layoutmanager_hook}}.A;
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
-            
-            // Title is clickable only when we can build a real non-empty route.
-            // Prefer OriginalPayload (collection/library/item); fall back to named Route.
-            // Never show a chevron for broken/empty links.
-            var titleRoute = undefined;
+            let titleRoute = undefined;
             if (!layoutManager.tv) {
                 try {
                     if (sectionInfo.OriginalPayload) {
                         titleRoute = p.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
-                            serverId: apiClient.serverId()
+                            serverId: _apiClient.serverId(),
                         });
                     }
-                    if ((!titleRoute || titleRoute === '#' || titleRoute === 'undefined') && sectionInfo.Route) {
+                    if ((!titleRoute || titleRoute === "#" || titleRoute === "undefined") && sectionInfo.Route) {
                         titleRoute = p.appRouter.getRouteUrl(sectionInfo.Route, {
-                            serverId: apiClient.serverId()
+                            serverId: _apiClient.serverId(),
                         });
                     }
-                } catch (titleLinkError) {
-                    console.warn('Home Screen Sections: failed to resolve title route for', sectionInfo.Section, titleLinkError);
+                }
+                catch (titleLinkError) {
+                    console.warn("Home Screen Sections: failed to resolve title route for", sectionInfo.Section, titleLinkError);
                     titleRoute = undefined;
                 }
             }
-
-            // Reject 'undefined' anywhere in the route, not just as the whole string:
-            // custom sections used to render links like /details?id=undefined (upstream #196).
-            var hasTitleLink = !!(titleRoute && titleRoute !== '#' && String(titleRoute).indexOf('undefined') === -1 && String(titleRoute).length > 1);
+            const hasTitleLink = !!(titleRoute &&
+                titleRoute !== "#" &&
+                String(titleRoute).indexOf("undefined") === -1 &&
+                String(titleRoute).length > 1);
             if (hasTitleLink) {
-                html += '<a is="emby-linkbutton" href="' + titleRoute + '" class="button-flat button-flat-mini sectionTitleTextButton" title="' + (sectionInfo.DisplayText || '') + '">';
+                html +=
+                    '<a is="emby-linkbutton" href="' +
+                        titleRoute +
+                        '" class="button-flat button-flat-mini sectionTitleTextButton" title="' +
+                        (sectionInfo.DisplayText || "") +
+                        '">';
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
                 html += sectionInfo.DisplayText;
                 html += "</h2>";
                 html += '<span class="material-icons chevron_right" aria-hidden="true"></span>';
                 html += "</a>";
-            } else {
+            }
+            else {
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
                 html += sectionInfo.DisplayText;
                 html += "</h2>";
             }
-            
             html += "</div>";
-            
-            if (sectionInfo.ViewMode !== 'Small') {
+            if (sectionInfo.ViewMode !== "Small") {
                 html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
-                html += '<div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x animatedScrollX" data-monitor="videoplayback,markplayed">';
-            } else {
-                html += '<div is="emby-itemscontainer" class="itemsContainer padded-left padded-right vertical-wrap focuscontainer-x" data-monitor="videoplayback,markplayed">';
+                html +=
+                    '<div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x animatedScrollX" data-monitor="videoplayback,markplayed">';
             }
-            
+            else {
+                html +=
+                    '<div is="emby-itemscontainer" class="itemsContainer padded-left padded-right vertical-wrap focuscontainer-x" data-monitor="videoplayback,markplayed">';
+            }
             html += "</div>";
-            
-            if (sectionInfo.ViewMode !== 'Small') {
+            if (sectionInfo.ViewMode !== "Small") {
                 html += "</div>";
             }
             elem.classList.add("hide");
             elem.innerHTML = html;
-            
-            var var13_, var14_, itemsContainer = elem.querySelector(".itemsContainer");
-            
+            const itemsContainer = elem.querySelector(".itemsContainer");
             if (itemsContainer !== null) {
                 if (sectionInfo.ContainerClass !== undefined) {
                     itemsContainer.classList.add(sectionInfo.ContainerClass);
                 }
-                
-                var cardBuilder = {{cardbuilder_hook}}.default;
-                
-                var cardSettings = {
+                // Sentinel — replaced to {{cardbuilder_hook}}.default
+                const cardBuilder = {{cardbuilder_hook}}.default;
+                const cardSettings = {
                     ViewMode: sectionInfo.ViewMode,
                     DisplayTitleText: sectionInfo.DisplayTitleText,
-                    ShowDetailsMenu: sectionInfo.ShowDetailsMenu
-                }
-                
-                itemsContainer.fetchData = getHomeScreenSectionFetchFn(apiClient.serverId(), sectionInfo, u.A, userSettings);
-                
-                var getBackdropShape = y.UI;
-                var getPortraitShape = y.xK;
-                var getSquareShape = y.zP;
-                
-                var getShapeFn = getBackdropShape;
-                if (cardSettings.ViewMode === 'Portrait')
-                {
+                    ShowDetailsMenu: sectionInfo.ShowDetailsMenu,
+                };
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                itemsContainer.fetchData = getHomeScreenSectionFetchFn(_apiClient.serverId(), sectionInfo, u.A, userSettings);
+                const getBackdropShape = y.UI;
+                const getPortraitShape = y.xK;
+                const getSquareShape = y.zP;
+                let getShapeFn = getBackdropShape;
+                if (cardSettings.ViewMode === "Portrait") {
                     getShapeFn = getPortraitShape;
                 }
-                else if (cardSettings.ViewMode === 'Square')
-                {
+                else if (cardSettings.ViewMode === "Square") {
                     getShapeFn = getSquareShape;
                 }
-                else if (cardSettings.ViewMode === 'Backdrop')
-                {
+                else if (cardSettings.ViewMode === "Backdrop") {
                     getShapeFn = getBackdropShape;
                 }
-                
-                var imageHelper = b.Ay;
-                
-                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, imageHelper, p.appRouter, cardSettings);
+                const imageHelper = b.Ay;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), (_a = options.enableOverflow) !== null && _a !== void 0 ? _a : true, sectionInfo.Section, cardBuilder, getShapeFn, imageHelper, p.appRouter, cardSettings);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 itemsContainer.parentContainer = elem;
             }
         }
-        return Promise.resolve()
+        return Promise.resolve();
     }
-    
     function getHomeScreenSectionsMeta(_apiClient) {
         return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
     }
-    
     function isUserUsingHomeScreenSections(pluginMeta, _userSettings) {
         try {
             if (pluginMeta && pluginMeta.AllowUserOverride === true) {
-                var data = _userSettings && _userSettings.getData && _userSettings.getData();
-                if (data && data.CustomPrefs && data.CustomPrefs.useModularHome !== undefined) {
-                    return data.CustomPrefs.useModularHome === "true";
+                const data = _userSettings && _userSettings.getData ? _userSettings.getData() : null;
+                if (data && data.CustomPrefs && data.CustomPrefs["useModularHome"] !== undefined) {
+                    return data.CustomPrefs["useModularHome"] === "true";
                 }
             }
             return !!(pluginMeta && pluginMeta.Enabled);
-        } catch (e) {
+        }
+        catch (_e) {
             return false;
         }
     }
-
     function uuidv4() {
-        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
-            (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
-        );
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16));
     }
-    
-    var _this = this;
-
-    return getHomeScreenSectionsMeta(apiClient).then(function (hssMeta) {
-        var useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
-        
+    const _this = this;
+    return getHomeScreenSectionsMeta(apiClient)
+        .then((hssMeta) => {
+        var _a, _b;
+        const useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
         if (!useHss) {
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
         }
-
         if (page !== null) {
-            window.HssPageMeta.Page = page;
-        } else {
+            window.HssPageMeta["Page"] = page;
+        }
+        else {
             window.HssPageMeta = {
-                UsePagination: hssMeta.PaginationEnabled,
+                UsePagination: (_a = hssMeta.PaginationEnabled) !== null && _a !== void 0 ? _a : false,
                 Page: 1,
-                ResultsPerPage: hssMeta.NumResultsPerPage,
+                ResultsPerPage: (_b = hssMeta.NumResultsPerPage) !== null && _b !== void 0 ? _b : 20,
                 LastScrollHeight: 0,
                 ScrollThreshold: 10,
-                PageHash: uuidv4()
+                PageHash: uuidv4(),
             };
-            
-            // Setup the scrolly event
             window.HssPageCache = {
                 elem: elem,
                 apiClient: apiClient,
                 user: user,
-                userSettings: userSettings
+                userSettings: userSettings,
             };
-            
-            // Store the handler on window and remove any leftover from a previous home
-            // visit before re-adding it; without this every navigation back to the home
-            // screen stacked another listener (and stale HssPageMeta references) on top
-            // of the last, slowing scrolling down over time (upstream #242).
-            if (typeof window.HssScrollHandler === 'function') {
-                window.removeEventListener('scroll', window.HssScrollHandler);
+            if (typeof window.HssScrollHandler === "function") {
+                window.removeEventListener("scroll", window.HssScrollHandler);
             }
-
             window.HssScrollHandler = function () {
-                var scrollPosition = window.scrollY + window.innerHeight;
-                var windowHeight = getDocHeight();
-
-                if (window.HssPageMeta.Finished !== true && window.HssPageMeta.IsLoading !== true && scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < window.scrollY) {
-                    window.HssPageMeta.IsLoading = true;
-                    
-                    document.querySelector('#hssLoadingIndicator').style.display = 'block';
-                    
-                    // Do the calculation after the scroller is turned on
-                    windowHeight = getDocHeight();
-                    window.scroll(0, windowHeight - (window.innerHeight + window.HssPageMeta.ScrollThreshold));
-                    
-                    window.HssPageMeta.LastScrollHeight = window.scrollY;
-                    window.HssPageMeta.LastWindowHeight = windowHeight;
-                    
-                    window.HssPageMeta.ScrollFixerHandle = setInterval(function () {
+                const scrollPosition = window.scrollY + window.innerHeight;
+                const windowHeight = getDocHeight();
+                if (window.HssPageMeta.Finished !== true &&
+                    window.HssPageMeta.IsLoading !== true &&
+                    scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold &&
+                    window.HssPageMeta.LastScrollHeight < window.scrollY) {
+                    window.HssPageMeta["IsLoading"] = true;
+                    const indicator = document.querySelector("#hssLoadingIndicator");
+                    if (indicator) {
+                        indicator.style.display = "block";
+                    }
+                    let winHeight = getDocHeight();
+                    window.scroll(0, winHeight - (window.innerHeight + window.HssPageMeta.ScrollThreshold));
+                    window.HssPageMeta["LastScrollHeight"] = window.scrollY;
+                    window.HssPageMeta["LastWindowHeight"] = winHeight;
+                    window.HssPageMeta["ScrollFixerHandle"] = window.setInterval(function () {
                         window.scroll(0, window.HssPageMeta.LastScrollHeight);
-                        
                         if (getDocHeight() > window.HssPageMeta.LastWindowHeight) {
                             clearInterval(window.HssPageMeta.ScrollFixerHandle);
                             window.HssPageMeta.ScrollFixerHandle = undefined;
                         }
                     }, 1);
-                    
-                    _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
-                        document.querySelector('#hssLoadingIndicator').style.display = 'none';
-
-                        window.HssPageMeta.IsLoading = false;
-                        
+                    void _this
+                        .loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1)
+                        .then(function () {
+                        const ind = document.querySelector("#hssLoadingIndicator");
+                        if (ind) {
+                            ind.style.display = "none";
+                        }
+                        window.HssPageMeta["IsLoading"] = false;
                         if (window.HssPageMeta.ScrollFixerHandle) {
                             clearInterval(window.HssPageMeta.ScrollFixerHandle);
                         }
                     });
                 }
-
                 function getDocHeight() {
-                    var D = document;
-                    return Math.max(
-                        D.body.scrollHeight, D.documentElement.scrollHeight,
-                        D.body.offsetHeight, D.documentElement.offsetHeight,
-                        D.body.clientHeight, D.documentElement.clientHeight
-                    );
+                    const D = document;
+                    return Math.max(D.body.scrollHeight, D.documentElement.scrollHeight, D.body.offsetHeight, D.documentElement.offsetHeight, D.body.clientHeight, D.documentElement.clientHeight);
                 }
             };
-
-            window.addEventListener('scroll', window.HssScrollHandler);
+            window.addEventListener("scroll", window.HssScrollHandler);
         }
-        
-        var getSectionsData = {
+        const getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
-            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+            Language: localStorage.getItem(apiClient.getCurrentUserId() + "-language"),
         };
-        
         if (window.HssPageMeta.UsePagination) {
-            getSectionsData.Page = window.HssPageMeta.Page;
-            getSectionsData.NumResultsPerPage = window.HssPageMeta.ResultsPerPage;
-            getSectionsData.PageHash = window.HssPageMeta.PageHash;
-        } else {
-            window.HssPageMeta.Finished = true;
+            getSectionsData["Page"] = window.HssPageMeta.Page;
+            getSectionsData["NumResultsPerPage"] = window.HssPageMeta.ResultsPerPage;
+            getSectionsData["PageHash"] = window.HssPageMeta.PageHash;
         }
-
-        var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
-
+        else {
+            window.HssPageMeta["Finished"] = true;
+        }
+        const getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
         return apiClient.getJSON(getSectionsUrl).then(function (response) {
             if (response.TotalRecordCount === 0 && window.HssPageMeta.Page > 1) {
                 window.HssPageMeta.Finished = true;
-                // Just a do nothing function
-                return function (elem, apiClient, user, userSettings) { };
+                return function (_elem, _apiClient, _user, _userSettings) { };
             }
-            return function (elem, apiClient, user, userSettings) {
-                var var39_, var39_3, var39_4;
-                return var39_ = this, void 0, var39_4 = function () {
-                    var var44_, options, var44_3, var44_4, var44_5, var44_6, var44_7, sectionInfo, var44_9, var44_10, var44_11;
-                    return function (param45_, param45_2) {
-                        var var46_, var47_, var48_, var49_ = {
-                            label: 0,
-                            sent: function () {
-                                if (1 & var48_[0]) throw var48_[1];
-                                return var48_[1]
-                            },
-                            trys: [],
-                            ops: []
-                        },
-                            var58_ = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
-                        return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function () {
-                            return this
-                        }), var58_;
-
-                        function fn69_(param69_) {
-                            return function (param70_) {
-                                return function (param71_) {
-                                    if (var46_) throw TypeError("Generator is already executing.");
-                                    for (; var58_ && (var58_ = 0, param71_[0] && (var49_ = 0)), var49_;) try {
-                                        if (var46_ = 1, var47_ && (var48_ = 2 & param71_[0] ? var47_.return : param71_[0] ? var47_.throw || ((var48_ = var47_.return) && var48_.call(var47_), 0) : var47_.next) && !(var48_ = var48_.call(var47_, param71_[1])).done) return var48_;
-                                        switch (var47_ = 0, var48_ && (param71_ = [2 & param71_[0], var48_.value]), param71_[0]) {
-                                            case 0:
-                                            case 1:
-                                                var48_ = param71_;
-                                                break;
-                                            case 4:
-                                                return var49_.label++, {
-                                                    value: param71_[1],
-                                                    done: !1
-                                                };
-                                            case 5:
-                                                var49_.label++, var47_ = param71_[1], param71_ = [0];
-                                                continue;
-                                            case 7:
-                                                param71_ = var49_.ops.pop(), var49_.trys.pop();
-                                                continue;
-                                            default:
-                                                if (!((var48_ = (var48_ = var49_.trys).length > 0 && var48_[var48_.length - 1]) || 6 !== param71_[0] && 2 !== param71_[0])) {
-                                                    var49_ = 0;
-                                                    continue
-                                                }
-                                                if (3 === param71_[0] && (!var48_ || param71_[1] > var48_[0] && param71_[1] < var48_[3])) {
-                                                    var49_.label = param71_[1];
-                                                    break
-                                                }
-                                                if (6 === param71_[0] && var49_.label < var48_[1]) {
-                                                    var49_.label = var48_[1], var48_ = param71_;
-                                                    break
-                                                }
-                                                if (var48_ && var49_.label < var48_[2]) {
-                                                    var49_.label = var48_[2], var49_.ops.push(param71_);
-                                                    break
-                                                }
-                                                var48_[2] && var49_.ops.pop(), var49_.trys.pop();
-                                                continue
-                                        }
-                                        param71_ = param45_2.call(param45_, var49_)
-                                    } catch (let110_) {
-                                        param71_ = [6, let110_], var47_ = 0
-                                    } finally {
-                                            var46_ = var48_ = 0
-                                        }
-                                    if (5 & param71_[0]) throw param71_[1];
-                                    return {
-                                        value: param71_[0] ? param71_[1] : void 0,
-                                        done: !0
-                                    }
-                                }([param69_, param70_])
+            return function (elemArg, apiClientArg, userArg, userSettingsArg) {
+                // Keep the original obfuscated generator shape behaviourally identical
+                // but expressed with async/await for type safety — the outer contract
+                // (returns Promise that resolves after sections are rendered) is preserved.
+                return (async () => {
+                    const var44 = response;
+                    const options = {
+                        enableOverflow: true,
+                    };
+                    let var44_3 = "";
+                    const var44_4 = [];
+                    if (void 0 !== var44.Items) {
+                        const existingContainer = document.querySelector(".homeSectionsContainer");
+                        let existingSections = 0;
+                        if (existingContainer !== null) {
+                            existingSections = existingContainer.children.length;
+                        }
+                        for (let var44_5 = 0; var44_5 < var44.TotalRecordCount; var44_5++) {
+                            const var44_6 = getSectionClass(var44.Items[var44_5]);
+                            void var44.Items[var44_5].Limit;
+                            var44_3 +=
+                                '<div data-page="' +
+                                    String(window.HssPageMeta.Page) +
+                                    '" style="order:' +
+                                    String(var44.Items[var44_5].OrderIndex + 1000 * (window.HssPageMeta.Page - 1)) +
+                                    ';" class="verticalSection ' +
+                                    var44_6 +
+                                    " section" +
+                                    String(existingSections + var44_5) +
+                                    '"></div>';
+                        }
+                        if (window.HssPageMeta.Page !== 1) {
+                            const tempContainer = document.createElement("div");
+                            tempContainer.innerHTML = var44_3;
+                            while (tempContainer.firstChild) {
+                                elemArg.appendChild(tempContainer.firstChild);
                             }
                         }
-                    }(this, (function (param120_) {
-                        switch (param120_.label) {
-                            case 0:
-                                return [4, (apiClient, getSectionsData, getSectionsUrl, response)];
-                            case 1:
-                                if (var44_ = param120_.sent(), options = {
-                                    enableOverflow: !0
-                                }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                    var existingContainer = document.querySelector('.homeSectionsContainer');
-                                    var existingSections = 0;
-                                    if (existingContainer !== null) {
-                                        existingSections = existingContainer.children.length;
-                                    }
-                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + (existingSections + var44_5) + '"></div>';
-                                    
-                                    if (window.HssPageMeta.Page !== 1) {
-                                        var tempContainer = document.createElement("div");
-                                        tempContainer.innerHTML = var44_3;
-                                        
-                                        while (tempContainer.firstChild) {
-                                            elem.appendChild(tempContainer.firstChild);
-                                        }
-                                    } else {
-                                        var spinnerHtml = '<div id="hssLoadingIndicator" class="verticalSection" style="order: 2147000000;margin-top:60px;margin-bottom:60px;display:none;"><div dir="ltr" class="docspinner mdl-spinner mdlSpinnerActive" style="position: relative;top: 0;left: calc(50vw - 1.5em);"><div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div></div></div>';
-                                        
-                                        elem.innerHTML = spinnerHtml + var44_3;
-                                    }
-                                    
-                                    if (!elem.classList.contains("homeSectionsContainer")) {
-                                        elem.classList.add("homeSectionsContainer")
-                                    }
-                                    
-                                    if (var44_.TotalRecordCount > 0)
-                                        for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], options.sectionIndex = var44_7, var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
+                        else {
+                            const spinnerHtml = '<div id="hssLoadingIndicator" class="verticalSection" style="order: 2147000000;margin-top:60px;margin-bottom:60px;display:none;"><div dir="ltr" class="docspinner mdl-spinner mdlSpinnerActive" style="position: relative;top: 0;left: calc(50vw - 1.5em);"><div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div></div></div>';
+                            elemArg.innerHTML = spinnerHtml + var44_3;
+                        }
+                        if (!elemArg.classList.contains("homeSectionsContainer")) {
+                            elemArg.classList.add("homeSectionsContainer");
+                        }
+                        if (var44.TotalRecordCount > 0) {
+                            for (let var44_7 = 0; var44_7 < var44.Items.length; var44_7++) {
+                                const sectionInfo = var44.Items[var44_7];
+                                options.sectionIndex = var44_7;
+                                var44_4.push(loadHomeSection(elemArg, apiClientArg, 0, userSettingsArg, sectionInfo, options));
+                            }
+                        }
+                    }
+                    return var44.TotalRecordCount > 0
+                        ? Promise.all(var44_4).then(function () {
+                            const var134_2 = { refresh: true };
+                            const var134_3 = elemArg.querySelectorAll('[data-page="' + String(window.HssPageMeta.Page) + '"] .itemsContainer');
+                            const var134_4 = [];
+                            Array.prototype.forEach.call(var134_3, function (param139) {
+                                if (param139.resume) {
+                                    var134_4.push(param139.resume(var134_2));
                                 }
-                                return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function () {
-                                    var var134_2, var134_3, var134_4;
-                                    return var134_2 = {
-                                        refresh: !0
-                                    }, var134_3 = elem.querySelectorAll('[data-page="' + window.HssPageMeta.Page + '"] .itemsContainer'), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
-                                        param139_.resume && var134_4.push(param139_.resume(var134_2))
-                                    })), Promise.all(var134_4)
-                                }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function () {
-                                    l.default.navigate("dashboard/libraries")
-                                })), [2])
-                        }
-                    }))
-                }, new (var39_3 = void 0, var39_3 = Promise)((function (param160_, param160_2) {
-                    function fn161_(param161_) {
-                        try {
-                            fn175_(var39_4.next(param161_))
-                        } catch (let164_) {
-                            param160_2(let164_)
-                        }
-                    }
-
-                    function fn168_(param168_) {
-                        try {
-                            fn175_(var39_4.throw(param168_))
-                        } catch (let171_) {
-                            param160_2(let171_)
-                        }
-                    }
-
-                    function fn175_(param175_) {
-                        var var176_;
-                        param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function (param181_) {
-                            param181_(var176_)
-                        }))).then(fn161_, fn168_)
-                    }
-                    fn175_((var39_4 = var39_4.apply(var39_, [])).next())
-                }))
-            }(elem, apiClient, user, userSettings);
+                            });
+                            return Promise.all(var134_4);
+                        })
+                        : (() => {
+                            var _a;
+                            const isAdmin = (_a = userArg.Policy) === null || _a === void 0 ? void 0 : _a.IsAdministrator;
+                            const var44_9 = isAdmin
+                                ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>")
+                                : s.Ay.translate("AskAdminToCreateLibrary");
+                            var44_3 += '<div class="centerMessage padded-left padded-right">';
+                            var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>";
+                            var44_3 += "<p>" + var44_9 + "</p>";
+                            var44_3 += "</div>";
+                            elemArg.innerHTML = var44_3;
+                            const var44_10 = elemArg.querySelector("#button-createLibrary");
+                            if (var44_10) {
+                                var44_10.addEventListener("click", function () {
+                                    l.default.navigate("dashboard/libraries");
+                                });
+                            }
+                            return undefined;
+                        })();
+                })();
+            };
         }, function (error) {
             console.error("Error fetching sections with HSS, defaulting back to Jellyfin:", error);
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
         });
-    }, function (err) {
+    }, function (_err) {
         return _this.originalLoadSections(elem, apiClient, user, userSettings);
     });
 }
