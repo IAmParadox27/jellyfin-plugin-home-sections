@@ -22,7 +22,10 @@ public static class MiscExtensions
 
     public static VirtualFolderInfo[] FilterToUserPermitted(this IEnumerable<VirtualFolderInfo> folders, ILibraryManager libraryManager, User? user)
     {
-        IEnumerable<VirtualFolderInfo> filtered = folders;
+        // Virtual folders can have a null/invalid ItemId; Guid.Parse would throw
+        // ArgumentNullException('input') and take down every section that filters folders
+        // (upstream #182). Drop them instead, matching the behaviour of the section queries.
+        IEnumerable<VirtualFolderInfo> filtered = folders.Where(x => Guid.TryParse(x.ItemId, out _));
 
         if (user != null)
         {
