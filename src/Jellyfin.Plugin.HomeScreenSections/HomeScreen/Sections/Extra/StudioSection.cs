@@ -69,7 +69,7 @@ public class StudioSection : IHomeScreenSection
             Recursive = true,
             IsPlayed = isPlayed,
             Limit = 120,
-            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
+            OrderBy = [(ItemSortBy.Random, SortOrder.Ascending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false,
             IsVirtualItem = false
@@ -112,20 +112,7 @@ public class StudioSection : IHomeScreenSection
         }
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape,
-            AllowHideWatched = true
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this, allowHideWatched: true);
 
     private List<string> GetStudiosForUser(User user)
     {
@@ -139,7 +126,7 @@ public class StudioSection : IHomeScreenSection
             IsVirtualItem = false
         });
 
-        Dictionary<string, int> scores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> scores = new(StringComparer.OrdinalIgnoreCase);
         foreach (BaseItem item in played.Items)
         {
             if (item.Studios == null || item.Studios.Length == 0)

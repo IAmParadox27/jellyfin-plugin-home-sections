@@ -80,7 +80,7 @@ public class TopTenSection : IHomeScreenSection
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
-        List<TopTenSection> sections = new List<TopTenSection>();
+        List<TopTenSection> sections = [];
         
         sections.Add(new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
         {

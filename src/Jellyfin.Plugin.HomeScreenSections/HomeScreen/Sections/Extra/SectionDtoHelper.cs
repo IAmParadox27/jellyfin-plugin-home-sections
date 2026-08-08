@@ -1,3 +1,5 @@
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
@@ -10,18 +12,28 @@ internal static class SectionDtoHelper
     {
         return new DtoOptions
         {
-            Fields = new List<ItemFields>
-            {
-                ItemFields.PrimaryImageAspectRatio,
-                ItemFields.MediaSourceCount
-            },
+            Fields = [ItemFields.PrimaryImageAspectRatio,
+                ItemFields.MediaSourceCount],
             ImageTypeLimit = 1,
-            ImageTypes = new List<ImageType>
-            {
-                ImageType.Primary,
+            ImageTypes = [ImageType.Primary,
                 ImageType.Thumb,
-                ImageType.Backdrop
-            }
+                ImageType.Backdrop]
+        };
+    }
+
+    // ponytail: one helper replaces 10 identical GetInfo() bodies
+    public static HomeScreenSectionInfo CreateInfo(IHomeScreenSection section, SectionViewMode viewMode = SectionViewMode.Landscape, bool allowHideWatched = false)
+    {
+        return new HomeScreenSectionInfo
+        {
+            Section = section.Section,
+            DisplayText = section.DisplayText,
+            AdditionalData = section.AdditionalData,
+            Route = section.Route,
+            Limit = section.Limit ?? 1,
+            OriginalPayload = section.OriginalPayload,
+            ViewMode = viewMode,
+            AllowHideWatched = allowHideWatched
         };
     }
 

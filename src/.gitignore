@@ -7,3 +7,4 @@ Release
 *.zip
 node_modules
 dist/
+TestResults/

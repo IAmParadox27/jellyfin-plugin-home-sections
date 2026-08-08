@@ -62,8 +62,8 @@ namespace Jellyfin.Plugin.HomeScreenSections
                         {
                             string? publishedServerUrl = serverApplicationHost.GetType()
                                 .GetProperty("PublishedServerUrl", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(serverApplicationHost) as string;
-                    
-                            HttpClient client = new HttpClient();
+
+                            HttpClient client = HomeScreenSectionsPlugin.Instance.ServiceProvider.GetService<IHttpClientFactory>()?.CreateClient() ?? new HttpClient();
                             client.BaseAddress = new Uri(publishedServerUrl ?? $"http://localhost:{serverApplicationHost.HttpPort}");
                         
                             HttpResponseMessage responseMessage = client.PostAsync(payload.ResultsEndpoint, 

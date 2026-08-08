@@ -93,11 +93,8 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
 
         DtoOptions linkDto = new DtoOptions
         {
-            Fields = new List<ItemFields>
-            {
-                ItemFields.PrimaryImageAspectRatio,
-                ItemFields.DisplayPreferencesId
-            }
+            Fields = [ItemFields.PrimaryImageAspectRatio,
+                ItemFields.DisplayPreferencesId]
         };
 
         foreach (BoxSet boxSet in FindPartialCollections(user).Take(instanceCount))
@@ -116,23 +113,11 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
         }
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
 
     private List<BoxSet> FindPartialCollections(User user)
     {
-        List<BoxSet> partial = new List<BoxSet>();
+        List<BoxSet> partial = [];
         foreach (BoxSet boxSet in m_collectionManagerProxy.GetCollections(user))
         {
             List<BaseItem> children = boxSet.GetChildren(user, true, new InternalItemsQuery(user)).ToList();

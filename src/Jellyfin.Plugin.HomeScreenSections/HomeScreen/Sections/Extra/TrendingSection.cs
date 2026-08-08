@@ -54,7 +54,7 @@ public class TrendingSection : IHomeScreenSection
             Recursive = true,
             IsPlayed = true,
             Limit = 16,
-            OrderBy = new[] { (ItemSortBy.PlayCount, SortOrder.Descending) },
+            OrderBy = [(ItemSortBy.PlayCount, SortOrder.Descending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false,
             IsVirtualItem = false
@@ -68,17 +68,5 @@ public class TrendingSection : IHomeScreenSection
         yield return this;
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
 }

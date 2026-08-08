@@ -27,11 +27,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         {
             DtoOptions dtoOptions = new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio,
-                    ItemFields.DisplayPreferencesId
-                }
+                Fields = [ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.DisplayPreferencesId]
             };
 
             return new DirectedBySection(m_libraryManager, m_dtoService, m_userManager)

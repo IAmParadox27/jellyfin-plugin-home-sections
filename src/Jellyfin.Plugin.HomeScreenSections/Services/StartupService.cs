@@ -44,7 +44,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             PatchHelpers.SetupPatches();
             
             // Look through the web path and find the file that contains `",loadSections:`
-            List<JObject> payloads = new List<JObject>();
+            List<JObject> payloads = [];
             {
                 JObject payload = new JObject();
                 payload.Add("id", "e531b5a0-5493-42b0-b632-619e2d06db5c");

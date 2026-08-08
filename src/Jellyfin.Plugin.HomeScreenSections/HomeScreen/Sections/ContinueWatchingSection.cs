@@ -71,20 +71,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             User? user = m_userManager.GetUserById(payload.UserId);
             DtoOptions? dtoOptions = new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio
-                },
+                Fields = [ItemFields.PrimaryImageAspectRatio],
                 ImageTypeLimit = 1,
-                ImageTypes = new List<ImageType>
-                {
-                    ImageType.Thumb,
+                ImageTypes = [ImageType.Thumb,
                     ImageType.Backdrop,
-                    ImageType.Primary,
-                }
+                    ImageType.Primary,]
             };
 
-            Guid[]? ancestorIds = Array.Empty<Guid>();
+            Guid[]? ancestorIds = [];
 
             Guid[]? excludeFolderIds = user!.GetPreferenceValues<Guid>(PreferenceKind.LatestItemExcludes);
             if (excludeFolderIds.Length > 0)
@@ -98,7 +92,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             QueryResult<BaseItem>? itemsResult = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
             {
-                OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending) },
+                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
                 IsResumable = true,
                 Limit = 12,
                 Recursive = true,

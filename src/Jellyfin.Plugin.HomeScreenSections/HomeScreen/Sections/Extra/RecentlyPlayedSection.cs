@@ -55,7 +55,7 @@ public class RecentlyPlayedSection : IHomeScreenSection
             IsPlayed = true,
             IsResumable = false,
             Limit = 16,
-            OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending) },
+            OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false,
             IsVirtualItem = false
@@ -69,17 +69,5 @@ public class RecentlyPlayedSection : IHomeScreenSection
         yield return this;
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
 }

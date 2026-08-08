@@ -1,5 +1,6 @@
 
 dist/
+TestResults/
 
 # Local analyzer helper scripts (not part of the plugin)
 scripts/fix-analyzers.py

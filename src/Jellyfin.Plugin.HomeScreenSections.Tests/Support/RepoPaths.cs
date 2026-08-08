@@ -1,4 +1,4 @@
-namespace Jellyfin.Plugin.HomeScreenSections.Tests;
+namespace Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 
 internal static class RepoPaths
 {

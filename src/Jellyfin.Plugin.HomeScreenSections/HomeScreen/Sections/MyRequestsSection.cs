@@ -55,8 +55,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
             
-            using HttpClient client = CreateJellyseerrClient(jellyseerrUrl);
-            int? jellyseerrUserId = ResolveJellyseerrUserId(client, user.Username);
+            using HttpClient client = JellyseerrHelper.CreateClient(jellyseerrUrl);
+            int? jellyseerrUserId = JellyseerrHelper.ResolveUserId(client, user.Username);
             if (jellyseerrUserId == null)
             {
                 return new QueryResult<BaseItemDto>();
@@ -98,23 +98,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             };
         }
 
-        private static HttpClient CreateJellyseerrClient(string jellyseerrUrl)
-        {
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(jellyseerrUrl);
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            return client;
-        }
-
-        private static int? ResolveJellyseerrUserId(HttpClient client, string username)
-        {
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(username)}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            return JObject.Parse(userResponseRaw).Value<JArray>("results")?.OfType<JObject>()
-                .FirstOrDefault(x => string.Equals(x.Value<string>("jellyfinUsername"), username, StringComparison.Ordinal))
-                ?.Value<int>("id");
-        }
-
         private QueryResult<BaseItemDto> FetchRequestedItems(HttpClient client, int jellyseerrUserId, User user, DtoOptions dtoOptions)
         {
             HttpResponseMessage requestsResponse = client.GetAsync($"/api/v1/user/{jellyseerrUserId}/requests?take=100").GetAwaiter().GetResult();
@@ -150,7 +133,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             return jellyfinItemIds?
                 .Where(y => !string.IsNullOrEmpty(y))
                 .Select(y => Guid.Parse(y!))
-                .ToArray() ?? Array.Empty<Guid>();
+                .ToArray() ?? [];
         }
 
         private IEnumerable<BaseItem> LoadRequestedLibraryItems(User user, Guid[] requestedItemIds)

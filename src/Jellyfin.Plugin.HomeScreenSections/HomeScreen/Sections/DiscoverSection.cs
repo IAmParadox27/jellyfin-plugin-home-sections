@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -50,8 +49,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
 
-            using HttpClient client = CreateJellyseerrClient(jellyseerrUrl);
-            int? jellyseerrUserId = ResolveJellyseerrUserId(client, user.Username);
+            using HttpClient client = JellyseerrHelper.CreateClient(jellyseerrUrl);
+            int? jellyseerrUserId = JellyseerrHelper.ResolveUserId(client, user.Username);
             if (jellyseerrUserId == null)
             {
                 return new QueryResult<BaseItemDto>();
@@ -70,26 +69,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             };
         }
 
-        private static HttpClient CreateJellyseerrClient(string jellyseerrUrl)
-        {
-            HttpClient client = new HttpClient { BaseAddress = new Uri(jellyseerrUrl) };
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            return client;
-        }
-
-        private static int? ResolveJellyseerrUserId(HttpClient client, string username)
-        {
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={Uri.EscapeDataString(username)}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            return JObject.Parse(userResponseRaw).Value<JArray>("results")!
-                .OfType<JObject>()
-                .FirstOrDefault(x => string.Equals(x.Value<string>("jellyfinUsername"), username, StringComparison.Ordinal))
-                ?.Value<int>("id");
-        }
 
         private List<BaseItemDto> FetchDiscoverItems(HttpClient client, string jellyseerrDisplayUrl)
         {
-            List<BaseItemDto> returnItems = new List<BaseItemDto>();
+            List<BaseItemDto> returnItems = [];
             int page = 1;
             do
             {
@@ -149,7 +132,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
                 SourceType = item.Value<string>("mediaType"),
                 CommunityRating = rating > 0 ? rating : null,
-                ProviderIds = new Dictionary<string, string>(StringComparer.Ordinal)
+                ProviderIds = new(StringComparer.Ordinal)
                 {
                     { "JellyseerrRoot", jellyseerrDisplayUrl },
                     { "Jellyseerr", item.Value<int>("id").ToString(System.Globalization.CultureInfo.InvariantCulture) },

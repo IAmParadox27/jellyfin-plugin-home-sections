@@ -57,7 +57,7 @@ public class KidsSection : IHomeScreenSection
             OfficialRatings = SectionDtoHelper.KidsOfficialRatings,
             IsPlayed = isPlayed,
             Limit = 24,
-            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
+            OrderBy = [(ItemSortBy.Random, SortOrder.Ascending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false,
             IsVirtualItem = false
@@ -71,20 +71,7 @@ public class KidsSection : IHomeScreenSection
         yield return this;
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape,
-            AllowHideWatched = true
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this, allowHideWatched: true);
 
     private static bool? GetHideWatchedIsPlayed()
     {

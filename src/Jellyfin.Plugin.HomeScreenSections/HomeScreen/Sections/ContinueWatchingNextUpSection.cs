@@ -44,7 +44,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             // Apply default Next Up settings, halves performance impact
             // Unfortunately we can't get the user's actual Next Up settings, as they're stored in local storage on the client
-            var nuQuery = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(StringComparer.Ordinal) {
+            Dictionary<string, Microsoft.Extensions.Primitives.StringValues> nuQuery = new(StringComparer.Ordinal) {
                 ["UserId"] = queryCollection["UserId"],
                 ["EnableRewatching"] = "false",
                 ["NextUpDateCutoff"] = DateTime.UtcNow.AddDays(-365).ToString("O")
@@ -52,7 +52,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             IReadOnlyList<BaseItemDto>? nuResults = m_nextUpSection?.GetResults(payload, new QueryCollection(nuQuery)).Items;
             
-            List<BaseItemDto> returnItems = new List<BaseItemDto>();
+            List<BaseItemDto> returnItems = [];
 
             if (cwResults != null)
             {
@@ -82,7 +82,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         private Dictionary<Guid, DateTime> BuildSeriesLastPlayedLookup(List<BaseItemDto> items, Guid userId)
         {
-            Dictionary<Guid, DateTime> lookup = new Dictionary<Guid, DateTime>();
+            Dictionary<Guid, DateTime> lookup = new();
             User? user = m_userManager.GetUserById(userId);
             if (user == null)
             {
@@ -109,10 +109,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             {
                 IReadOnlyList<BaseItem> recentEpisodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
                 {
-                    AncestorIds = new[] { seriesId },
-                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    AncestorIds = [seriesId],
+                    IncludeItemTypes = [BaseItemKind.Episode],
                     IsPlayed = true,
-                    OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending) },
+                    OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
                     Limit = 2
                 });
 

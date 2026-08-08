@@ -49,30 +49,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
         public ConcurrentDictionary<int, bool> SectionsInProgress { get; set; } = new ConcurrentDictionary<int, bool>();
     }
     
-    public class IntRange : IEquatable<IntRange>
+    // ponytail: record gives Equals/GetHashCode for free, keep required init for compat
+    public sealed record IntRange
     {
         public required int Start { get; init; }
-        
         public required int End { get; init; }
-
-        public bool Contains(int value)
-        {
-            return value >= Start && value <= End;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return obj is IntRange range && Start == range.Start && End == range.End;
-        }
-
-        public bool Equals(IntRange? other)
-        {
-            return Start == other?.Start && End == other.End;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Start, End);
-        }
+        public bool Contains(int value) => value >= Start && value <= End;
     }
 }

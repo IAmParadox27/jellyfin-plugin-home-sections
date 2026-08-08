@@ -13,7 +13,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         
         public override string? DisplayText { get; set; } = "Starring";
 
-        protected override IReadOnlyList<string> PersonTypes => new[] { PersonType.Actor, PersonType.GuestStar };
+        protected override IReadOnlyList<string> PersonTypes => [PersonType.Actor, PersonType.GuestStar];
         
         protected override int MinRequiredItems => 3;
         
@@ -27,11 +27,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
         {
             DtoOptions dtoOptions = new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio,
-                    ItemFields.DisplayPreferencesId
-                }
+                Fields = [ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.DisplayPreferencesId]
             };
 
             return new StarringSection(m_libraryManager, m_dtoService, m_userManager)

@@ -165,11 +165,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             return path.Replace('\\', '/').TrimEnd('/');
         }
 
-        protected string CalculateCountdown(DateTime releaseDate, PluginConfiguration config)
+        protected string CalculateCountdown(DateTime releaseDate, PluginConfiguration config, DateTime? now = null)
         {
             DateTime releaseDateLocal = releaseDate.ToLocalTime();
             // Calculate the difference in calendar days
-            int totalDays = (releaseDateLocal.Date - DateTime.Now.Date).Days;
+            int totalDays = (releaseDateLocal.Date - (now ?? DateTime.Now).Date).Days;
             
             string countdownText = totalDays switch
             {
@@ -209,6 +209,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected string GetCachedImageUrl(string? sourceUrl)
         {
             return ImageCacheHelper.GetCachedImageUrl(ImageCacheService, sourceUrl, Logger);
+        }
+
+        // ponytail: helper replaces 4 identical GetAwaiter().GetResult() ?? [] in Upcoming leaves
+        protected TDto[] GetCalendar<TDto>(ArrServiceType serviceType, DateTime startDate, DateTime endDate) where TDto : class
+        {
+            return ArrApiService.GetArrCalendarAsync<TDto>(serviceType, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
         // Abstract methods that subclasses must implement

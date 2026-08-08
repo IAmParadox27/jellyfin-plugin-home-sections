@@ -6,6 +6,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers;
 
 public static class LibreTranslateHelper
 {
+    // ponytail: reuse one HttpClient instead of new per call (socket exhaustion)
+    private static readonly HttpClient s_client = new();
+
     public static async Task<string?> TranslateAsync(string text, string srcLanguage, string destLanguage)
     {
         if (HomeScreenSectionsPlugin.Instance.Configuration.LibreTranslateUrl != null)
@@ -18,8 +21,7 @@ public static class LibreTranslateHelper
                 jsonPayload["target"] = destLanguage;
                 jsonPayload["api_key"] = HomeScreenSectionsPlugin.Instance.Configuration.LibreTranslateApiKey;
 
-                HttpClient client = new HttpClient();
-                HttpResponseMessage response = await client.PostAsync(
+                HttpResponseMessage response = await s_client.PostAsync(
                     $"{HomeScreenSectionsPlugin.Instance.Configuration.LibreTranslateUrl}/translate",
                     new StringContent(jsonPayload.ToString(Formatting.None),
                         MediaTypeHeaderValue.Parse("application/json")));

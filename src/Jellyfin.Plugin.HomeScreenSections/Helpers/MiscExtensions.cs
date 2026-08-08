@@ -35,7 +35,7 @@ public static class MiscExtensions
             {
                 IEnumerable<BaseItem> items = libraryManager.GetItemList(new InternalItemsQuery(user)
                 {
-                    ItemIds = new[] { Guid.Parse(x.ItemId) }
+                    ItemIds = [Guid.Parse(x.ItemId)]
                 });
 
                 return items.Any();

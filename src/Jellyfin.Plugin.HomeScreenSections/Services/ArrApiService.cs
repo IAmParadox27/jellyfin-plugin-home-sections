@@ -33,7 +33,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         public async Task<T[]?> GetArrCalendarAsync<T>(ArrServiceType serviceType, DateTime startDate, DateTime endDate)
         {
             (string? url, string? apiKey, string? serviceName) = GetServiceConfig(serviceType);
-            
+
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(apiKey))
             {
                 PluginLog.ArrUrlOrKeyMissing(m_logger, serviceName);
@@ -44,29 +44,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 return await FetchCalendarItemsAsync<T>(serviceType, url, apiKey, serviceName, startDate, endDate);
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or NotSupportedException or InvalidOperationException)
             {
-                PluginLog.ArrCalendarHttpError(m_logger, ex, serviceName);
-                return null;
-            }
-            catch (TaskCanceledException ex)
-            {
-                PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
-                return null;
-            }
-            catch (JsonException ex)
-            {
-                PluginLog.ArrCalendarJsonError(m_logger, ex, serviceName);
-                return null;
-            }
-            catch (NotSupportedException ex)
-            {
-                PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
-                return null;
-            }
-            catch (InvalidOperationException ex)
-            {
-                PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
+                // ponytail: one filter replaces 5 identical catch bodies
+                if (ex is JsonException)
+                {
+                    PluginLog.ArrCalendarJsonError(m_logger, (JsonException)ex, serviceName);
+                }
+                else if (ex is HttpRequestException)
+                {
+                    PluginLog.ArrCalendarHttpError(m_logger, (HttpRequestException)ex, serviceName);
+                }
+                else
+                {
+                    PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
+                }
+
                 return null;
             }
         }

@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override LidarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return ArrApiService.GetArrCalendarAsync<LidarrCalendarDto>(ArrServiceType.Lidarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
+            return GetCalendar<LidarrCalendarDto>(ArrServiceType.Lidarr, startDate, endDate);
         }
 
         protected override IOrderedEnumerable<LidarrCalendarDto> FilterAndSortItems(LidarrCalendarDto[] items)
@@ -61,7 +61,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             string sourceImageUrl = albumImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
-            Dictionary<string, string> providerIds = new Dictionary<string, string>(StringComparer.Ordinal) {
+            Dictionary<string, string> providerIds = new(StringComparer.Ordinal) {
                 { "LidarrAlbumId", calendarItem.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "FormattedDate", countdownText },
                 { "LidarrPoster", cachedImageUrl }

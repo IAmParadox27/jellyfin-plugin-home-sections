@@ -45,7 +45,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
 
                 foreach (string extraDll in extraDlls)
                 {
-                    Assembly extraPluginAssembly = Assembly.LoadFile(extraDll);
+                    Assembly extraPluginAssembly = Assembly.LoadFrom(extraDll);
 
                     Type[] homeScreenSectionTypes = extraPluginAssembly.GetTypes().Where(x => x.IsAssignableTo(typeof(IHomeScreenSection))).ToArray();
 

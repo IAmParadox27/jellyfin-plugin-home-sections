@@ -8,16 +8,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 {
     public static class TransformationPatches
     {
+        // ponytail: cache regex + js template — was recreated per request
+        private static readonly Regex s_variableFind = new(@"var\s+(?<name>[a-zA-Z][^=]*)=", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromMilliseconds(250));
+
+        private static readonly Lazy<string> s_loadSectionsTemplate = new(() =>
+        {
+            using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{typeof(HomeScreenSectionsPlugin).Namespace}.Controllers.loadSections.js")!;
+            using TextReader r = new StreamReader(s);
+            return r.ReadToEnd();
+        });
+
         public static string LoadSections(PatchRequestPayload content)
         {
             // replace `",loadSections:` with itself followed by our function followed by `",originalLoadSections:`
-            Stream replacementStream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{typeof(HomeScreenSectionsPlugin).Namespace}.Controllers.loadSections.js")!;
-            using TextReader replacementTextReader = new StreamReader(replacementStream);
-        
             string[] parts = content.Contents!.Split(",loadSections:", StringSplitOptions.RemoveEmptyEntries);
-            Regex variableFind = new Regex(@"var\s+(?<name>[a-zA-Z][^=]*)=", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromMilliseconds(250));
-            string thisVariableName = variableFind.Matches(parts[0]).Last().Groups["name"].Value;
-            string replacementText = replacementTextReader.ReadToEnd()
+            string thisVariableName = s_variableFind.Matches(parts[0]).Last().Groups["name"].Value;
+            string replacementText = s_loadSectionsTemplate.Value
                 .Replace("{{this_hook}}", thisVariableName)
                 .Replace("{{layoutmanager_hook}}", "n"); // NOTE: lookup the first "assigned" variable after `var`
 

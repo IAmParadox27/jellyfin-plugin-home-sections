@@ -68,7 +68,7 @@ public class PatchHelpers
         HomeScreenSectionService hssService = HomeScreenSectionsPlugin.Instance.ServiceProvider
             .GetRequiredService<HomeScreenSectionService>();
         IReadOnlyList<HomeScreenSectionInfo> sections =
-            hssService.MonitorLiveUpdatedSectionsForUser(userId, "en", 1) ?? Array.Empty<HomeScreenSectionInfo>();
+            hssService.MonitorLiveUpdatedSectionsForUser(userId, "en", 1) ?? [];
 
         JArray? sectionsArr = parsedOutput.Value<JObject>("settings")
             ?.Value<JObject>("home")

@@ -48,17 +48,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		{
 			DtoOptions? dtoOptions = new DtoOptions
 			{
-				Fields = new List<ItemFields>
-				{
-					ItemFields.PrimaryImageAspectRatio
-				},
+				Fields = [ItemFields.PrimaryImageAspectRatio],
 				ImageTypeLimit = 1,
-				ImageTypes = new List<ImageType>
-				{
-					ImageType.Thumb,
+				ImageTypes = [ImageType.Thumb,
 					ImageType.Backdrop,
-					ImageType.Primary,
-				}
+					ImageType.Primary,]
 			};
 
 			User user = UserManager.GetUserById(payload.UserId)!;

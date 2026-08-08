@@ -7,7 +7,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 {
     public class TranslationManager : ITranslationManager
     {
-        private Dictionary<string, JObject> m_translationPacks = new Dictionary<string, JObject>(StringComparer.Ordinal);
+        private Dictionary<string, JObject> m_translationPacks = new(StringComparer.Ordinal);
         private readonly ILogger<ITranslationManager> m_logger;
 
         public TranslationManager(ILogger<ITranslationManager> logger)
@@ -41,10 +41,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
                     string key = locFile.Replace(".json", "").Split('.').Last();
 
-                    if (!m_translationPacks.ContainsKey(key))
+                    JObject pack = JObject.Parse(reader.ReadToEnd());
+                    if (m_translationPacks.TryAdd(key, pack))
                     {
-                        m_translationPacks.Add(key, JObject.Parse(reader.ReadToEnd()));
-                        PluginLog.LoadedTranslationFile(m_logger, locFile, m_translationPacks[key].Count);
+                        PluginLog.LoadedTranslationFile(m_logger, locFile, pack.Count);
                     }
                     else
                     {

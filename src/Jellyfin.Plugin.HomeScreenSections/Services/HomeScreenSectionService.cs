@@ -138,7 +138,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             if (settings?.SectionOrder is { Count: > 0 } userOrder)
             {
-                Dictionary<string, int> rank = new Dictionary<string, int>(StringComparer.Ordinal);
+                Dictionary<string, int> rank = new(StringComparer.Ordinal);
                 for (int i = 0; i < userOrder.Count; i++)
                 {
                     string id = userOrder[i];
@@ -168,7 +168,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             int[] orderedKeys,
             out bool isComplete)
         {
-            List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionsToReturn = new List<(IHomeScreenSection, int)>();
+            List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionsToReturn = [];
             isComplete = true;
 
             for (int i = 0; i < orderedKeys.Length; i++)
@@ -204,27 +204,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             if (!m_dataCache.Cache.ContainsKey(pageHash))
             {
-                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash));
-                cacheThread.Start();
+                _ = Task.Run(() => CacheSectionsForUser(userId, pageHash));
             }
         }
 
         private void WaitUntilCachePresent(Guid pageHash)
         {
-            SpinWait spinWait = new SpinWait();
             while (!m_dataCache.Cache.ContainsKey(pageHash))
             {
-                spinWait.SpinOnce();
+                Thread.Sleep(10);
             }
         }
 
         private void WaitUntilCacheHasStartedWork(Guid pageHash)
         {
-            SpinWait spinWait = new SpinWait();
             // If there's no data at all then we wait until its started.
             while (m_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty && m_dataCache.Cache[pageHash].OrderedSections.IsEmpty)
             {
-                spinWait.SpinOnce();
+                Thread.Sleep(10);
             }
         }
 
@@ -241,17 +238,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     ? m_dataCache.Cache[pageHash].SectionsInProgress.Min(x => x.Key) 
                     : int.MaxValue);
 
-            SpinWait spinWait = new SpinWait();
             for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
             {
                 if (cache.OrderIndicesWithoutSections.Any(x => x.Contains(i)))
                 {
                     continue;
                 }
-                
+
                 while (cache.SectionsInProgress.ContainsKey(i))
                 {
-                    spinWait.SpinOnce();
+                    Thread.Sleep(10);
                 }
                 
                 IReadOnlyList<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash);
@@ -441,11 +437,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             return new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio,
-                    ItemFields.DisplayPreferencesId
-                }
+                Fields = [ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.DisplayPreferencesId]
             };
         }
 
@@ -484,6 +477,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
     public class UserHomeSections
     {
         public Guid PageHash { get; set; }
-        public IList<HomeScreenSectionInfo> Sections { get; set; } = new List<HomeScreenSectionInfo>();
+        public IList<HomeScreenSectionInfo> Sections { get; set; } = [];
     }
 }

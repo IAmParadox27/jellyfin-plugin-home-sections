@@ -74,7 +74,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             User user = UserManager.GetUserById(payload.UserId)!;
             var cutoffDate = DateTime.Now.Subtract(TimeSpan.FromDays(28));
 
-            List<(BaseItem Item, DateTime? LastPlayed)> results = new List<(BaseItem, DateTime?)>();
+            List<(BaseItem Item, DateTime? LastPlayed)> results = [];
             CollectBoxSetCandidates(user, dtoOptions, cutoffDate, results);
             CollectMovieCandidates(user, cutoffDate, results);
             CollectSeriesCandidates(user, cutoffDate, results);
@@ -105,17 +105,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             return new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio
-                },
+                Fields = [ItemFields.PrimaryImageAspectRatio],
                 ImageTypeLimit = 1,
-                ImageTypes = new List<ImageType>
-                {
-                    ImageType.Thumb,
+                ImageTypes = [ImageType.Thumb,
                     ImageType.Backdrop,
-                    ImageType.Primary,
-                }
+                    ImageType.Primary,]
             };
         }
 
@@ -143,7 +137,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 {
                     ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                     Recursive = true,
-                    IncludeItemTypes = new[] { BaseItemKind.BoxSet },
+                    IncludeItemTypes = [BaseItemKind.BoxSet],
                     DtoOptions = dtoOptions
                 }).Items;
             }).OfType<BoxSet>().ToArray();
@@ -212,10 +206,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return folder.GetItems(new InternalItemsQuery(user)
                 {
                     ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                    IncludeItemTypes = new[] { BaseItemKind.Movie },
+                    IncludeItemTypes = [BaseItemKind.Movie],
                     IsPlayed = true,
                     Recursive = true,
-                    DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                    DtoOptions = new DtoOptions { Fields = [], EnableImages = false }
                 }).Items;
             }).OfType<Movie>().ToList();
 
@@ -247,11 +241,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             var unplayedEpisodes = LibraryManager.GetItemList(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                IncludeItemTypes = [BaseItemKind.Episode],
                 AncestorIds = candidateSeriesIds,
                 IsPlayed = false,
                 IsVirtualItem = false,
-                DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                DtoOptions = new DtoOptions { Fields = [], EnableImages = false }
             }).OfType<Episode>().ToList();
 
             // Get set of series IDs that have unplayed episodes
@@ -285,13 +279,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return LibraryManager.GetItemList(new InternalItemsQuery(user)
                 {
                     ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    IncludeItemTypes = [BaseItemKind.Episode],
                     IsPlayed = true,
-                    OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Ascending) },
+                    OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Ascending)],
                     Limit = 1000,
                     IsVirtualItem = false,
                     Recursive = true,
-                    DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                    DtoOptions = new DtoOptions { Fields = [], EnableImages = false }
                 });
             }).OfType<Episode>().ToList();
 

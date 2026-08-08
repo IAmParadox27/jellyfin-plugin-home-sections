@@ -17,6 +17,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly string m_cacheDirectory;
         // In-memory cache for quick lookups
         private readonly ConcurrentDictionary<string, CachedImageDto> m_imageCache = new(StringComparer.Ordinal);
+        private bool _indexLoaded;
+#pragma warning disable MA0158 // Lock not available on net8 target (10.10.7)
+        private readonly object _indexLock = new();
+#pragma warning restore MA0158
 
         public ImageCacheService(
             ILogger<ImageCacheService> logger,
@@ -28,8 +32,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             m_httpClient = httpClient;
             m_cacheDirectory = Path.Combine(applicationPaths.CachePath, "HomeScreenSections", "Images");
             Directory.CreateDirectory(m_cacheDirectory);
-            // Load existing cache entries on startup
-            LoadCacheIndex();
+        }
+
+        private void EnsureIndexLoaded()
+        {
+            if (_indexLoaded)
+            {
+                return;
+            }
+
+            lock (_indexLock)
+            {
+                if (_indexLoaded)
+                {
+                    return;
+                }
+
+                LoadCacheIndex();
+                _indexLoaded = true;
+            }
         }
 
         public async Task<string?> GetOrCacheImage(string sourceUrl, int cacheTimeoutSeconds)
@@ -38,6 +59,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 return null;
             }
+
+            EnsureIndexLoaded();
             string cacheKey = GenerateCacheKey(sourceUrl);
 
             if (IsValidCacheKey(cacheKey))
@@ -127,27 +150,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 PluginLog.CachedImage(m_logger, cacheKey, sourceUrl);
                 return cacheKey;
             }
-            catch (HttpRequestException ex)
-            {
-                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
-                return null;
-            }
-            catch (TaskCanceledException ex)
-            {
-                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
-                return null;
-            }
-            catch (IOException ex)
-            {
-                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
-                return null;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
-                return null;
-            }
-            catch (InvalidOperationException ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException)
             {
                 PluginLog.ImageCacheError(m_logger, ex, sourceUrl);
                 return null;
@@ -179,6 +182,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public (byte[]? data, string? contentType) GetCachedImage(string cacheKey)
         {
+            EnsureIndexLoaded();
             if (!m_imageCache.TryGetValue(cacheKey, out CachedImageDto? cachedInfo))
             {
                 PluginLog.CacheMiss(m_logger, cacheKey);
@@ -205,6 +209,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public void ClearExpiredCache()
         {
+            EnsureIndexLoaded();
             List<string> expiredKeys = m_imageCache
                 .Where(kvp => kvp.Value.ExpiresAt < DateTime.UtcNow)
                 .Select(kvp => kvp.Key)
@@ -236,6 +241,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public void ClearAllCache()
         {
+            EnsureIndexLoaded();
             foreach (CachedImageDto cachedInfo in m_imageCache.Values)
             {
                 if (File.Exists(cachedInfo.FilePath))
@@ -264,7 +270,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 if (originalBitmap == null)
                 {
                     PluginLog.ImageDecodeFailed(m_logger);
-                    return Array.Empty<byte>();
+                    return [];
                 }
 
                 SKBitmap? bitmapToCompress = originalBitmap;
@@ -295,17 +301,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             catch (ArgumentException ex)
             {
                 PluginLog.ImageProcessError(m_logger, ex);
-                return Array.Empty<byte>();
+                return [];
             }
             catch (InvalidOperationException ex)
             {
                 PluginLog.ImageProcessError(m_logger, ex);
-                return Array.Empty<byte>();
+                return [];
             }
             catch (NullReferenceException ex)
             {
                 PluginLog.ImageProcessError(m_logger, ex);
-                return Array.Empty<byte>();
+                return [];
             }
         }
         private SKBitmap? ResizeImage(SKBitmap originalBitmap, int maxWidth)

@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override RadarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return ArrApiService.GetArrCalendarAsync<RadarrCalendarDto>(ArrServiceType.Radarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
+            return GetCalendar<RadarrCalendarDto>(ArrServiceType.Radarr, startDate, endDate);
         }
 
         private static DateTime GetEarliestReleaseDate(RadarrCalendarDto item, PluginConfiguration config)
@@ -88,7 +88,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
             // Create provider IDs to store external image URL and metadata
-            Dictionary<string, string> providerIds = new Dictionary<string, string>(StringComparer.Ordinal) {
+            Dictionary<string, string> providerIds = new(StringComparer.Ordinal) {
                 { "RadarrMovieId", calendarItem.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "YearInfo", yearInfo },
                 { "FormattedDate", countdownText },

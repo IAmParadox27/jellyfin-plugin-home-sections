@@ -83,11 +83,8 @@ public class PlaylistsSection : IHomeScreenSection
 
         DtoOptions linkDto = new DtoOptions
         {
-            Fields = new List<ItemFields>
-            {
-                ItemFields.PrimaryImageAspectRatio,
-                ItemFields.DisplayPreferencesId
-            }
+            Fields = [ItemFields.PrimaryImageAspectRatio,
+                ItemFields.DisplayPreferencesId]
         };
 
         IEnumerable<Playlist> playlists = m_playlistManager.GetPlaylists(user.Id)
@@ -106,17 +103,5 @@ public class PlaylistsSection : IHomeScreenSection
         }
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
 }

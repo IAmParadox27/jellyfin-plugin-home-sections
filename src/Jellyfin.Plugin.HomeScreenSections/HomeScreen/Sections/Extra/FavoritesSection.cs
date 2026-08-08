@@ -54,7 +54,7 @@ public class FavoritesSection : IHomeScreenSection
             Recursive = true,
             IsFavorite = true,
             Limit = 24,
-            OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+            OrderBy = [(ItemSortBy.DateCreated, SortOrder.Descending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false
         });
@@ -67,17 +67,5 @@ public class FavoritesSection : IHomeScreenSection
         yield return this;
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
 }

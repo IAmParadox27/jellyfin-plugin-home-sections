@@ -57,7 +57,7 @@ public class ComingSoonInLibrarySection : IHomeScreenSection
             MinPremiereDate = today,
             MaxPremiereDate = today.AddDays(90),
             Limit = 24,
-            OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Ascending) },
+            OrderBy = [(ItemSortBy.PremiereDate, SortOrder.Ascending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false
         });
@@ -70,17 +70,5 @@ public class ComingSoonInLibrarySection : IHomeScreenSection
         yield return this;
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
 }

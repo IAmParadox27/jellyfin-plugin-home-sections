@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override SonarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return ArrApiService.GetArrCalendarAsync<SonarrCalendarDto>(ArrServiceType.Sonarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
+            return GetCalendar<SonarrCalendarDto>(ArrServiceType.Sonarr, startDate, endDate);
         }
 
         protected override IOrderedEnumerable<SonarrCalendarDto> FilterAndSortItems(SonarrCalendarDto[] items)
@@ -63,7 +63,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
             // Create provider IDs to store external image URL and metadata
-            Dictionary<string, string> providerIds = new Dictionary<string, string>(StringComparer.Ordinal) {
+            Dictionary<string, string> providerIds = new(StringComparer.Ordinal) {
                 { "SonarrSeriesId", calendarItem.SeriesId.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "SonarrEpisodeId", calendarItem.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "EpisodeInfo", episodeInfo },

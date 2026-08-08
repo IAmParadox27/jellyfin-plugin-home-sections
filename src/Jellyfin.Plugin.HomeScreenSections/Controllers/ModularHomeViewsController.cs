@@ -56,7 +56,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         public QueryResult<HomeScreenSectionInfo> GetSectionTypes([FromQuery] string? language = null)
         {
             // NOTE: add reading whether the section is enabled or disabled by the user.
-            List<HomeScreenSectionInfo> items = new List<HomeScreenSectionInfo>();
+            List<HomeScreenSectionInfo> items = [];
 
             IEnumerable<IHomeScreenSection> sections = m_homeScreenManager.GetSectionTypes();
 

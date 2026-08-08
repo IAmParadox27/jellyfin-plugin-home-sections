@@ -72,22 +72,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             User? user = m_userManager.GetUserById(payload.UserId);
             
-            List<ItemFields> fields = new List<ItemFields>
-            {
-                ItemFields.PrimaryImageAspectRatio,
+            List<ItemFields> fields = [ItemFields.PrimaryImageAspectRatio,
                 ItemFields.DateCreated,
                 ItemFields.Path,
-                ItemFields.MediaSourceCount
-            };
+                ItemFields.MediaSourceCount];
 
             DtoOptions options = new DtoOptions { Fields = fields };
             options.ImageTypeLimit = 1;
-            options.ImageTypes = new List<ImageType>
-            {
-                ImageType.Thumb,
+            options.ImageTypes = [ImageType.Thumb,
                 ImageType.Backdrop,
-                ImageType.Primary,
-            };
+                ImageType.Primary,];
 
             bool enableRewatching = true; // Enabled by default
             if (queryCollection.TryGetValue("EnableRewatching", out StringValues enableRewatchingValue))

@@ -14,9 +14,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         public string Category => "Maintenance";
 
         private readonly ITranslationManager m_translationManager;
-        
+
         // Trailing slash included to avoid getting the folder from the github trees JSON data
         private const string c_locPath = "src/Jellyfin.Plugin.HomeScreenSections/_Localization/";
+
+        // ponytail: reuse HttpClient — was new per ExecuteAsync (socket churn)
+        private static readonly HttpClient s_httpClient = CreateHttpClient();
+
+        private static HttpClient CreateHttpClient()
+        {
+            HttpClient c = new();
+            c.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
+            return c;
+        }
 
         public DailyTranslationCacheService(ITranslationManager translationManager)
         {
@@ -28,16 +38,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
-            
             string? gitBranch = Assembly.GetExecutingAssembly()
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault(x => string.Equals(x.Key, "GitBranch", StringComparison.Ordinal))?.Value;
 
             if (!string.IsNullOrEmpty(gitBranch))
             {
-                HttpResponseMessage treesResponse = await client.GetAsync(new Uri($"https://api.github.com/repos/IAmParadox27/jellyfin-plugin-home-sections/git/trees/{gitBranch}?recursive=1"), cancellationToken);
+                HttpResponseMessage treesResponse = await s_httpClient.GetAsync(new Uri($"https://api.github.com/repos/IAmParadox27/jellyfin-plugin-home-sections/git/trees/{gitBranch}?recursive=1"), cancellationToken);
 
                 // After getting the trees we say we're 10% just to signify something has happened
                 double currentProgress = 0.1;
@@ -55,7 +62,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     
                     foreach (string blobUrl in blobUrls)
                     {
-                        HttpResponseMessage blobResponse = await client.GetAsync(new Uri($"https://raw.githubusercontent.com/IAmParadox27/jellyfin-plugin-home-sections/refs/heads/{gitBranch}/{blobUrl}"), cancellationToken);
+                        HttpResponseMessage blobResponse = await s_httpClient.GetAsync(new Uri($"https://raw.githubusercontent.com/IAmParadox27/jellyfin-plugin-home-sections/refs/heads/{gitBranch}/{blobUrl}"), cancellationToken);
                         string blobJsonRaw = await blobResponse.Content.ReadAsStringAsync(cancellationToken);
                         
                         string languageCode = Path.GetFileNameWithoutExtension(blobUrl);

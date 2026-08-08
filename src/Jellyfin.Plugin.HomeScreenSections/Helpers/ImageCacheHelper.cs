@@ -7,8 +7,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
     public static class ImageCacheHelper
     {
         public static string GetCachedImageUrl(
-            ImageCacheService imageCacheService, 
-            string? sourceUrl, 
+            ImageCacheService imageCacheService,
+            string? sourceUrl,
             ILogger? logger = null)
         {
             if (string.IsNullOrEmpty(sourceUrl))
@@ -34,38 +34,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                 {
                     PluginLog.ImageCacheFallback(logger, sourceUrl);
                 }
+
                 return sourceUrl;
             }
-            catch (HttpRequestException ex)
+            // ponytail: one filter replaces 5 identical catch bodies
+            catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidOperationException)
             {
                 if (logger != null)
                 {
                     PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
                 }
-                return sourceUrl;
-            }
-            catch (IOException ex)
-            {
-                if (logger != null)
-                {
-                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
-                }
-                return sourceUrl;
-            }
-            catch (TaskCanceledException ex)
-            {
-                if (logger != null)
-                {
-                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
-                }
-                return sourceUrl;
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (logger != null)
-                {
-                    PluginLog.ImageCacheHelperError(logger, ex, sourceUrl);
-                }
+
                 return sourceUrl;
             }
         }

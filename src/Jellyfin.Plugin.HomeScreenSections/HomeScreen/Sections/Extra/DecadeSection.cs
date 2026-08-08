@@ -59,12 +59,12 @@ public class DecadeSection : IHomeScreenSection
 
         QueryResult<BaseItem> items = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
-            IncludeItemTypes = new[] { BaseItemKind.Movie },
+            IncludeItemTypes = [BaseItemKind.Movie],
             Recursive = true,
             Years = years,
             IsPlayed = isPlayed,
             Limit = 16,
-            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
+            OrderBy = [(ItemSortBy.Random, SortOrder.Ascending)],
             DtoOptions = dtoOptions,
             EnableTotalRecordCount = false,
             IsVirtualItem = false
@@ -101,29 +101,16 @@ public class DecadeSection : IHomeScreenSection
         }
     }
 
-    public HomeScreenSectionInfo GetInfo()
-    {
-        return new HomeScreenSectionInfo
-        {
-            Section = Section,
-            DisplayText = DisplayText,
-            AdditionalData = AdditionalData,
-            Route = Route,
-            Limit = Limit ?? 1,
-            OriginalPayload = OriginalPayload,
-            ViewMode = SectionViewMode.Landscape,
-            AllowHideWatched = true
-        };
-    }
+public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this, allowHideWatched: true);
 
     private List<int> FindDecadesWithMovies(User user)
     {
         QueryResult<BaseItem> sample = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
-            IncludeItemTypes = new[] { BaseItemKind.Movie },
+            IncludeItemTypes = [BaseItemKind.Movie],
             Recursive = true,
             Limit = 400,
-            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
+            OrderBy = [(ItemSortBy.Random, SortOrder.Ascending)],
             EnableTotalRecordCount = false,
             IsVirtualItem = false
         });

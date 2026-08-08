@@ -88,11 +88,8 @@ public class GenreSection : IHomeScreenSection
 
         DtoOptions linkDtoOptions = new DtoOptions
         {
-            Fields = new List<ItemFields>
-            {
-                ItemFields.PrimaryImageAspectRatio,
-                ItemFields.DisplayPreferencesId
-            }
+            Fields = [ItemFields.PrimaryImageAspectRatio,
+                ItemFields.DisplayPreferencesId]
         };
 
         foreach (string selectedGenre in PickWeightedGenres(userGenreScores, instanceCount))
@@ -124,7 +121,7 @@ public class GenreSection : IHomeScreenSection
         Guid[] folderIds = GetMovieFolderIds(user);
         if (folderIds.Length == 0)
         {
-            return Array.Empty<(string, int)>();
+            return [];
         }
 
         List<Movie> allPlayedMovies = GetPlayedMovies(user, folderIds);
@@ -185,13 +182,13 @@ public class GenreSection : IHomeScreenSection
                 {
                     BaseItemKind.Movie
                 },
-                OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
+                OrderBy = [(ItemSortBy.Random, SortOrder.Descending)],
                 ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
                 Recursive = true,
                 Limit = 24,
                 IsPlayed = isPlayed,
                 DtoOptions = dtoOptions,
-                Genres = new List<string> { genre.Name }
+                Genres = [genre.Name]
             }).Items;
         }).GroupBy(x => x.Id).Select(x => x.First()).ToList();
     }
@@ -199,7 +196,7 @@ public class GenreSection : IHomeScreenSection
     private static IEnumerable<string> PickWeightedGenres((string Genre, int Score)[] userGenreScores, int instanceCount)
     {
         Random rnd = new Random();
-        List<string> pickedGenres = new List<string>();
+        List<string> pickedGenres = [];
         (string Genre, int Score)[] availableGenres = userGenreScores.ToArray();
 
         while (pickedGenres.Count < instanceCount && availableGenres.Length > 0)
@@ -285,7 +282,7 @@ public class GenreSection : IHomeScreenSection
 
             return folder.GetItems(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { BaseItemKind.Movie },
+                IncludeItemTypes = [BaseItemKind.Movie],
                 Recursive = true,
                 IsPlayed = true,
                 ParentId = folderId,
@@ -295,7 +292,7 @@ public class GenreSection : IHomeScreenSection
 
     private Dictionary<Guid, UserItemData?> BuildUserDataCache(User user, List<Movie> allPlayedMovies)
     {
-        var userDataCache = new Dictionary<Guid, UserItemData?>();
+        Dictionary<Guid, UserItemData?> userDataCache = [];
         foreach (var movie in allPlayedMovies)
         {
             userDataCache[movie.Id] = m_userDataManager.GetUserData(user, movie);
@@ -360,7 +357,7 @@ public class GenreSection : IHomeScreenSection
 
             return folder.GetItems(new InternalItemsQuery(user)
             {
-                IncludeItemTypes = new[] { BaseItemKind.Movie },
+                IncludeItemTypes = [BaseItemKind.Movie],
                 Recursive = true,
                 IsFavoriteOrLiked = true,
                 User = user,

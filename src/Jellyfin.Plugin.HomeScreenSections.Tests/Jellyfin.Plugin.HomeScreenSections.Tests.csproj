@@ -8,15 +8,32 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!--
+      SkiaSharp's Windows/macOS natives ship inside the main SkiaSharp package, but its
+      Linux native (libSkiaSharp.so) is a separate package. Without it the ImageCacheService
+      tests throw DllNotFoundException on Linux CI. The NoDependencies flavor bundles its own
+      system libs so no host packages (libfontconfig, etc.) are required. Version must match
+      the plugin's SkiaSharp exactly or the managed/native compatibility check fails.
+    -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.116.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jellyfin.Plugin.HomeScreenSections\Jellyfin.Plugin.HomeScreenSections.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

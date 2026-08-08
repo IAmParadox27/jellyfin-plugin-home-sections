@@ -38,9 +38,37 @@ jobs:
           -c Release
           -p:JellyfinVersion=10.10.7
 
-      - name: Test
+      - name: Test with coverage
         run: >
           dotnet test
           src/Jellyfin.Plugin.HomeScreenSections.Tests/Jellyfin.Plugin.HomeScreenSections.Tests.csproj
           -c Release
           --verbosity normal
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      # Fails the build when line coverage drops below 80%.
+      - name: Coverage gate
+        shell: pwsh
+        run: |
+          $report = Get-ChildItem ./TestResults -Recurse -Filter coverage.cobertura.xml |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $report) { throw 'No coverage report was produced.' }
+
+          [xml]$coverage = Get-Content $report.FullName
+          $lineRate = [double]$coverage.coverage.'line-rate'
+          $branchRate = [double]$coverage.coverage.'branch-rate'
+          Write-Host ("Line coverage:   {0:N2}% ({1}/{2} lines)" -f ($lineRate * 100), $coverage.coverage.'lines-covered', $coverage.coverage.'lines-valid')
+          Write-Host ("Branch coverage: {0:N2}%" -f ($branchRate * 100))
+
+          if ($lineRate -lt 0.80) {
+            throw ("Line coverage {0:N2}% is below the required 80% threshold." -f ($lineRate * 100))
+          }
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: TestResults/**/coverage.cobertura.xml

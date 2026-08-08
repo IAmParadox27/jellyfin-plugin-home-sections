@@ -65,20 +65,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         {
             DtoOptions dtoOptions = new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio,
-                    ItemFields.Path
-                }
+                Fields = [ItemFields.PrimaryImageAspectRatio,
+                    ItemFields.Path]
             };
 
             dtoOptions.ImageTypeLimit = 1;
-            dtoOptions.ImageTypes = new List<ImageType>
-            {
-                ImageType.Thumb,
+            dtoOptions.ImageTypes = [ImageType.Thumb,
                 ImageType.Backdrop,
-                ImageType.Primary,
-            };
+                ImageType.Primary,];
 
             return dtoOptions;
         }
@@ -88,7 +82,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             VirtualFolderInfo[] folders,
             bool? isPlayed)
         {
-            List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries = new List<(Series, DateTime?)>();
+            List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries = [];
             int dayIncrement = 30;
             DateTime currentDate = DateTime.Now;
             DateTime stopDate = DateTime.Parse("01/01/1925", System.Globalization.CultureInfo.InvariantCulture); // The first show ever was 1925 so this should be safe, we never expect to get as far back as this but we need an escape.
@@ -138,8 +132,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
 
                 var items = folder.GetItems(new InternalItemsQuery(user)
                 {
-                    IncludeItemTypes = new[] { SectionItemKind },
-                    OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
+                    IncludeItemTypes = [SectionItemKind],
+                    OrderBy = [(ItemSortBy.PremiereDate, SortOrder.Descending)],
                     Limit = 200, // Enough to find 16 unique series even with multi-episode releases
                     IsVirtualItem = false,
                     IsPlayed = isPlayed,
@@ -148,7 +142,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                     MaxPremiereDate = currentDate,
                     MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
                     EnableTotalRecordCount = true // This might have to go
-                    // DtoOptions = new DtoOptions { Fields = Array.Empty<ItemFields>(), EnableImages = false }
+                    // DtoOptions = new DtoOptions { Fields = [], EnableImages = false }
                 });
 
                 return (Items: items.Items, items.Items.Count, items.TotalRecordCount);

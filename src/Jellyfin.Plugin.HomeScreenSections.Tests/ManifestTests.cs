@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 using Newtonsoft.Json.Linq;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Tests;

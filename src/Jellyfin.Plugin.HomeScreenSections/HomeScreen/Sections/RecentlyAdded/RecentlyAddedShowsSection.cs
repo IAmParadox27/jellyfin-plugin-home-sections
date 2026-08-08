@@ -90,8 +90,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 {
                     AncestorWithPresentationUniqueKey = null,
                     SeriesPresentationUniqueKey = seriesKey,
-                    IncludeItemTypes = new[] { BaseItemKind.Episode },
-                    OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+                    IncludeItemTypes = [BaseItemKind.Episode],
+                    OrderBy = [(ItemSortBy.DateCreated, SortOrder.Descending)],
                     DtoOptions = dtoOptions,
                     IsMissing = false,
                     IsVirtualItem = false,

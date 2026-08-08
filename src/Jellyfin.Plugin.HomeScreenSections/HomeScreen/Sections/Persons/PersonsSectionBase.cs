@@ -53,17 +53,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
             User? user = m_userManager.GetUserById(payload.UserId);
             DtoOptions? dtoOptions = new DtoOptions
             {
-                Fields = new List<ItemFields>
-                {
-                    ItemFields.PrimaryImageAspectRatio
-                },
+                Fields = [ItemFields.PrimaryImageAspectRatio],
                 ImageTypeLimit = 1,
-                ImageTypes = new List<ImageType>
-                {
-                    ImageType.Thumb,
+                ImageTypes = [ImageType.Thumb,
                     ImageType.Backdrop,
-                    ImageType.Primary,
-                }
+                    ImageType.Primary,]
             };
             Guid personId = Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString());
             
@@ -72,10 +66,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 
             List<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
             {
-                PersonIds = new[] { personId },
+                PersonIds = [personId],
                 PersonTypes = PersonTypes.ToArray(),
-                OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
-                IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Episode },
+                OrderBy = [(ItemSortBy.Random, SortOrder.Ascending)],
+                IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
                 Limit = 16,
                 ParentId = Guid.Parse(x.ItemId),
                 Recursive = true
@@ -97,11 +91,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
             // Want to use the user data at some point to actually weight the people chosen based on watch history, similar to how Genres are picked.
             // For now this is fine to get something in.
-            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, Array.Empty<string>())).ToList();
+            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, [])).ToList();
 
             people.Shuffle();
 
-            List<IHomeScreenSection> sections = new List<IHomeScreenSection>();
+            List<IHomeScreenSection> sections = [];
             
             VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
                 .FilterToUserPermitted(m_libraryManager, user);
@@ -110,9 +104,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
             {
                 List<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
                 {
-                    PersonIds = new[] { person.Id },
+                    PersonIds = [person.Id],
                     PersonTypes = PersonTypes.ToArray(),
-                    IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Episode },
+                    IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
                     ParentId = Guid.Parse(x.ItemId),
                     Recursive = true,
                     Limit = 16

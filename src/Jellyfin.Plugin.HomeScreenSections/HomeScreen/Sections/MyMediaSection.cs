@@ -71,11 +71,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             Folder[]? folders = m_userViewManager.GetUserViews(query);
 
             DtoOptions dtoOptions = new DtoOptions();
-            List<ItemFields> f = new List<ItemFields>
-            {
-                ItemFields.PrimaryImageAspectRatio,
-                ItemFields.DisplayPreferencesId
-            };
+            List<ItemFields> f = [ItemFields.PrimaryImageAspectRatio,
+                ItemFields.DisplayPreferencesId];
 
             dtoOptions.Fields = f.ToArray();
 

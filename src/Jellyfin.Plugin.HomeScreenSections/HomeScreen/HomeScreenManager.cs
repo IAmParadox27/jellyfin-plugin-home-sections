@@ -25,8 +25,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
     /// </summary>
     public class HomeScreenManager : IHomeScreenManager
     {
-        private Dictionary<string, IHomeScreenSection> m_delegates = new Dictionary<string, IHomeScreenSection>(StringComparer.Ordinal);
-        private Dictionary<Guid, bool> m_userFeatureEnabledStates = new Dictionary<Guid, bool>();
+        private Dictionary<string, IHomeScreenSection> m_delegates = new(StringComparer.Ordinal);
+        private Dictionary<Guid, bool> m_userFeatureEnabledStates = [];
 
         private readonly IServiceProvider m_serviceProvider;
         private readonly IApplicationPaths m_applicationPaths;
@@ -48,67 +48,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             string userFeatureEnabledPath = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, "userFeatureEnabled.json");
             if (File.Exists(userFeatureEnabledPath))
             {
-                m_userFeatureEnabledStates = JsonConvert.DeserializeObject<Dictionary<Guid, bool>>(File.ReadAllText(userFeatureEnabledPath)) ?? new Dictionary<Guid, bool>();
+                m_userFeatureEnabledStates = JsonConvert.DeserializeObject<Dictionary<Guid, bool>>(File.ReadAllText(userFeatureEnabledPath)) ?? [];
             }
         }
         
         public void RegisterBuiltInResultsDelegates()
         {
-            RegisterResultsDelegate<MyMediaSection>();
-            
-            RegisterResultsDelegate<ContinueWatchingSection>();
-            RegisterResultsDelegate<NextUpSection>();
-            RegisterResultsDelegate<ContinueWatchingNextUpSection>();
-            
-            RegisterResultsDelegate<RecentlyAddedMoviesSection>();
-            RegisterResultsDelegate<RecentlyAddedShowsSection>();
-            RegisterResultsDelegate<RecentlyAddedAlbumsSection>();
-            RegisterResultsDelegate<RecentlyAddedArtistsSection>();
-            RegisterResultsDelegate<RecentlyAddedBooksSection>();
-            RegisterResultsDelegate<RecentlyAddedAudioBooksSection>();
-            RegisterResultsDelegate<RecentlyAddedMusicVideosSection>();
-            
-            RegisterResultsDelegate<LatestMoviesSection>();
-            RegisterResultsDelegate<LatestShowsSection>();
-            RegisterResultsDelegate<LatestAlbumsSection>();
-            RegisterResultsDelegate<LatestBooksSection>();
-            RegisterResultsDelegate<LatestAudioBooksSection>();
-            RegisterResultsDelegate<LatestMusicVideoSection>();
-            
-            RegisterResultsDelegate<BecauseYouWatchedSection>();
-            RegisterResultsDelegate<LiveTvSection>();
-            RegisterResultsDelegate<MyListSection>();
-            RegisterResultsDelegate<WatchAgainSection>();
-            
-            RegisterResultsDelegate<DiscoverSection>();
-            RegisterResultsDelegate<DiscoverMoviesSection>();
-            RegisterResultsDelegate<DiscoverTvSection>();
-            
-            RegisterResultsDelegate<UpcomingShowsSection>();
-            RegisterResultsDelegate<UpcomingMoviesSection>();
-            RegisterResultsDelegate<UpcomingMusicSection>();
-            RegisterResultsDelegate<UpcomingBooksSection>();
-            
-            RegisterResultsDelegate<GenreSection>();
-            RegisterResultsDelegate<MyRequestsSection>();
+            // ponytail: table-driven — was 30 hand-written RegisterResultsDelegate<X>() lines
+            Type[] sectionTypes =
+            [
+                typeof(MyMediaSection), typeof(ContinueWatchingSection), typeof(NextUpSection), typeof(ContinueWatchingNextUpSection),
+                typeof(RecentlyAddedMoviesSection), typeof(RecentlyAddedShowsSection), typeof(RecentlyAddedAlbumsSection), typeof(RecentlyAddedArtistsSection), typeof(RecentlyAddedBooksSection), typeof(RecentlyAddedAudioBooksSection), typeof(RecentlyAddedMusicVideosSection),
+                typeof(LatestMoviesSection), typeof(LatestShowsSection), typeof(LatestAlbumsSection), typeof(LatestBooksSection), typeof(LatestAudioBooksSection), typeof(LatestMusicVideoSection),
+                typeof(BecauseYouWatchedSection), typeof(LiveTvSection), typeof(MyListSection), typeof(WatchAgainSection),
+                typeof(DiscoverSection), typeof(DiscoverMoviesSection), typeof(DiscoverTvSection),
+                typeof(UpcomingShowsSection), typeof(UpcomingMoviesSection), typeof(UpcomingMusicSection), typeof(UpcomingBooksSection),
+                typeof(GenreSection), typeof(MyRequestsSection),
+                typeof(FavoritesSection), typeof(RandomUnwatchedSection), typeof(TrendingSection), typeof(RecentlyPlayedSection), typeof(KidsSection), typeof(ComingSoonInLibrarySection), typeof(DecadeSection), typeof(StudioSection), typeof(PlaylistsSection), typeof(UnwatchedCollectionsSection),
+            ];
 
-            // Extra library rows
-            RegisterResultsDelegate<FavoritesSection>();
-            RegisterResultsDelegate<RandomUnwatchedSection>();
-            RegisterResultsDelegate<TrendingSection>();
-            RegisterResultsDelegate<RecentlyPlayedSection>();
-            RegisterResultsDelegate<KidsSection>();
-            RegisterResultsDelegate<ComingSoonInLibrarySection>();
-            RegisterResultsDelegate<DecadeSection>();
-            RegisterResultsDelegate<StudioSection>();
-            RegisterResultsDelegate<PlaylistsSection>();
-            RegisterResultsDelegate<UnwatchedCollectionsSection>();
-            
-            // Removed from public access while its still in dev.
-            //RegisterResultsDelegate<DirectedBySection>();
-            //RegisterResultsDelegate<StarringSection>();
-            
-            //RegisterResultsDelegate<TopTenSection>();
+            foreach (Type t in sectionTypes)
+            {
+                RegisterResultsDelegate(t);
+            }
         }
 
         /// <inheritdoc/>
@@ -130,7 +92,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 return section.GetResults(payload, queryCollection);
             }
 
-            return new QueryResult<BaseItemDto>(Array.Empty<BaseItemDto>());
+            return new QueryResult<BaseItemDto>([]);
         }
 
         /// <inheritdoc/>
@@ -210,7 +172,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                     settings = settingsArray.Select(x => JsonConvert.DeserializeObject<ModularHomeUserSettings>(x.ToString())).First(x => x != null && x.UserId.Equals(userId));
                     if (settings != null && settings.SectionOrder == null)
                     {
-                        settings.SectionOrder = new List<string>();
+                        settings.SectionOrder = [];
                     }
                 }
             }
@@ -265,7 +227,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             fInfo.Directory?.Create();
 
             JArray settings = new JArray();
-            List<ModularHomeUserSettings?> newSettings = new List<ModularHomeUserSettings?>();
+            // Seed with the incoming settings so a first-ever save (no settings file yet) is
+            // not written out as an empty array.
+            List<ModularHomeUserSettings?> newSettings = [userSettings];
 
             PluginLog.CheckingExistingUserSettings(m_logger, userId);
             if (File.Exists(pluginSettings))

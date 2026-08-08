@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override ReadarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return ArrApiService.GetArrCalendarAsync<ReadarrCalendarDto>(ArrServiceType.Readarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
+            return GetCalendar<ReadarrCalendarDto>(ArrServiceType.Readarr, startDate, endDate);
         }
 
         protected override IOrderedEnumerable<ReadarrCalendarDto> FilterAndSortItems(ReadarrCalendarDto[] items)
@@ -60,7 +60,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             string sourceImageUrl = posterImage?.RemoteUrl ?? GetFallbackCoverUrl(calendarItem);
             string cachedImageUrl = GetCachedImageUrl(sourceImageUrl);
 
-            Dictionary<string, string> providerIds = new Dictionary<string, string>(StringComparer.Ordinal) {
+            Dictionary<string, string> providerIds = new(StringComparer.Ordinal) {
                 { "ReadarrBookId", calendarItem.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) },
                 { "FormattedDate", countdownText },
                 { "ReadarrPoster", cachedImageUrl }
