@@ -378,6 +378,46 @@ public class HomeScreenSectionServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(1)]
+    public void ResolveInstanceCount_returns_one_for_single_instance_sections(int? sectionLimit)
+    {
+        SectionSettings settings = new SectionSettings { LowerLimit = 3, UpperLimit = 7 };
+
+        Assert.Equal(1, HomeScreenSectionService.ResolveInstanceCount(sectionLimit, settings));
+    }
+
+    [Fact]
+    public void ResolveInstanceCount_defaults_unset_limits_to_one_instance()
+    {
+        // Regression for upstream #153: config defaults are 0/0, which used to produce
+        // rnd.Next(0, 0) == 0 instances and silently removed the section from the home.
+        SectionSettings settings = new SectionSettings();
+
+        Assert.Equal(1, HomeScreenSectionService.ResolveInstanceCount(5, settings));
+    }
+
+    [Fact]
+    public void ResolveInstanceCount_stays_within_inclusive_configured_bounds()
+    {
+        SectionSettings settings = new SectionSettings { LowerLimit = 2, UpperLimit = 4 };
+
+        for (int i = 0; i < 200; i++)
+        {
+            int count = HomeScreenSectionService.ResolveInstanceCount(5, settings);
+            Assert.InRange(count, 2, 4);
+        }
+    }
+
+    [Fact]
+    public void ResolveInstanceCount_clamps_inverted_limits_to_the_lower_bound()
+    {
+        SectionSettings settings = new SectionSettings { LowerLimit = 4, UpperLimit = 2 };
+
+        Assert.Equal(4, HomeScreenSectionService.ResolveInstanceCount(5, settings));
+    }
+
     [Fact]
     public void UserHomeSections_defaults_to_empty_section_list()
     {

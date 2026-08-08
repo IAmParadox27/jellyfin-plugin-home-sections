@@ -370,12 +370,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 return;
             }
 
-            int instanceCount = 1;
-            if (sectionType.Limit > 1)
-            {
-                Random rnd = new Random();
-                instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
-            }
+            int instanceCount = ResolveInstanceCount(sectionType.Limit, sectionSettings);
 
             try
             {
@@ -404,6 +399,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 PluginLog.SectionInstanceError(m_logger, e, userId, sectionType.Section);
             }
+        }
+
+        /// <summary>
+        /// Normalizes the configured instance limits for multi-instance sections.
+        /// Unset (0/0) limits used to produce zero instances and inverted limits used to
+        /// throw, silently removing the section from the home screen (upstream #153).
+        /// The upper bound is treated as inclusive.
+        /// </summary>
+        internal static int ResolveInstanceCount(int? sectionLimit, SectionSettings sectionSettings)
+        {
+            if (sectionLimit <= 1)
+            {
+                return 1;
+            }
+
+            int lowerLimit = Math.Max(1, sectionSettings.LowerLimit);
+            int upperLimit = Math.Max(lowerLimit, sectionSettings.UpperLimit);
+
+            return Random.Shared.Next(lowerLimit, upperLimit + 1);
         }
 
         private HomeScreenSectionInfo SectionToInfo(IHomeScreenSection section, int configuredOrder, string? language, Guid userId)
