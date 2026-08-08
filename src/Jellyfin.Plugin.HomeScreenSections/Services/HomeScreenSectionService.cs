@@ -213,7 +213,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             if (!m_dataCache.Cache.ContainsKey(pageHash))
             {
-                m_buildTasks.GetOrAdd(pageHash, _ => Task.Run(() => CacheSectionsForUser(userId, pageHash)));
+                _ = m_buildTasks.GetOrAdd(pageHash, _ => Task.Run(() => CacheSectionsForUser(userId, pageHash)));
             }
         }
 
@@ -409,7 +409,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         /// </summary>
         internal static int ResolveInstanceCount(int? sectionLimit, SectionSettings sectionSettings)
         {
-            if (sectionLimit <= 1)
+            if (sectionLimit is null || sectionLimit <= 1)
             {
                 return 1;
             }

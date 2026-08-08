@@ -301,8 +301,8 @@ public class HomeScreenSectionServiceTests
         }
     }
 
-    [Fact(Timeout = 30000)]
-    public void MonitorLiveUpdatedSectionsForUser_with_empty_section_settings_and_page_hash_does_not_hang()
+    [Fact]
+    public async Task MonitorLiveUpdatedSectionsForUser_with_empty_section_settings_and_page_hash_does_not_hang()
     {
         // Same fresh-install scenario as above, but through the paginated path where the
         // cache is built on a background task and the request busy-waits for it.
@@ -321,9 +321,14 @@ public class HomeScreenSectionServiceTests
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new[] { MakeSection("ContinueWatching", "Continue Watching") });
 
-            IReadOnlyList<HomeScreenSectionInfo>? result =
-                service.MonitorLiveUpdatedSectionsForUser(userId, "en", 1, 10, Guid.NewGuid());
+            // Bounded wait: if the busy-wait regression comes back this fails instead of
+            // hanging the whole test run.
+            Task<IReadOnlyList<HomeScreenSectionInfo>?> work = Task.Run(() =>
+                service.MonitorLiveUpdatedSectionsForUser(userId, "en", 1, 10, Guid.NewGuid()));
+            Task finished = await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(20)));
+            Assert.True(finished == work, "Home screen section request did not return in time (busy-wait regression).");
 
+            IReadOnlyList<HomeScreenSectionInfo>? result = await work;
             Assert.NotNull(result);
             Assert.Empty(result!);
         }

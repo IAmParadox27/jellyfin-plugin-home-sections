@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Claims;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
@@ -295,7 +296,7 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     public void RegisterSection_requires_administrator_authorization()
     {
         // Regression for upstream #258: the endpoint used to be completely unauthenticated.
-        System.Reflection.MethodInfo method = typeof(HomeScreenController)
+        MethodInfo method = typeof(HomeScreenController)
             .GetMethod(nameof(HomeScreenController.RegisterSection))
             ?? throw new InvalidOperationException("RegisterSection action not found.");
 
