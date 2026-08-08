@@ -175,6 +175,27 @@ public class HomeScreenManagerTests : IDisposable
     }
 
     [Fact]
+    public void RegisterResultsDelegate_instance_overload_keeps_first_registration_on_duplicate()
+    {
+        // Regression for upstream #258: the instance overload used to overwrite existing
+        // handlers, letting external registrations replace built-in sections.
+        HomeScreenManager manager = MakeManager();
+        PluginDefinedSection original = new PluginDefinedSection("Duplicate", "Original")
+        {
+            OnGetResults = _ => new QueryResult<BaseItemDto>()
+        };
+        PluginDefinedSection impostor = new PluginDefinedSection("Duplicate", "Impostor")
+        {
+            OnGetResults = _ => new QueryResult<BaseItemDto>([new BaseItemDto()])
+        };
+
+        manager.RegisterResultsDelegate(original);
+        manager.RegisterResultsDelegate(impostor);
+
+        Assert.Same(original, manager.GetSection("Duplicate"));
+    }
+
+    [Fact]
     public void RegisterResultsDelegate_ignores_sections_without_id()
     {
         HomeScreenManager manager = MakeManager();

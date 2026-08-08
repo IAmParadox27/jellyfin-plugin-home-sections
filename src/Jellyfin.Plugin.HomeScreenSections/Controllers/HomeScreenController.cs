@@ -363,9 +363,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
         }
 
+        /// <summary>
+        /// Registers an externally provided section. Requires administrator credentials: the
+        /// registered handler receives the requesting user's id and its results endpoint is
+        /// called by the server, so anonymous access would be an SSRF/section-swap vector
+        /// (upstream #258). API keys satisfy the Administrator role, so plugin-based
+        /// registrations keep working.
+        /// </summary>
         [HttpPost("RegisterSection")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [Authorize(Roles = "Administrator")]
         public ActionResult RegisterSection([FromBody] SectionRegisterPayload payload)
         {
+            if (!string.IsNullOrEmpty(payload.Id) && m_homeScreenManager.GetSection(payload.Id) != null)
+            {
+                return Conflict();
+            }
+
             m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
             {
                 OnGetResults = sectionPayload =>

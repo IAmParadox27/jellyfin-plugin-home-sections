@@ -85,6 +85,9 @@ internal static partial class PluginLog
     [LoggerMessage(EventId = 1111, Level = LogLevel.Information, Message = "User settings updated.")]
     public static partial void UserSettingsUpdated(ILogger logger);
 
+    [LoggerMessage(EventId = 1112, Level = LogLevel.Warning, Message = "Rejected duplicate section registration for '{Section}'; already registered to '{ExistingType}'")]
+    public static partial void DuplicateSectionRegistration(ILogger logger, string section, string? existingType);
+
     // --- StartupService ---
     [LoggerMessage(EventId = 1200, Level = LogLevel.Information, Message = "Found loadSections in `{FileName}` registering transformation for it with ID '{TransformationId}'")]
     public static partial void FoundLoadSections(ILogger logger, string fileName, Guid transformationId);

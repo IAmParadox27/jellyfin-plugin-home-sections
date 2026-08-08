@@ -265,6 +265,48 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     }
 
     [Fact]
+    public void RegisterSection_returns_conflict_when_section_id_already_registered()
+    {
+        // Regression for upstream #258: re-registering an existing section id must not
+        // silently replace the handler (e.g. a built-in like ContinueWatching).
+        m_homeScreenManager
+            .Setup(manager => manager.GetSection("NextUp"))
+            .Returns(new PluginDefinedSection("NextUp", "Existing")
+            {
+                OnGetResults = _ => new QueryResult<BaseItemDto>()
+            });
+
+        HomeScreenController controller = MakeController();
+
+        ActionResult result = controller.RegisterSection(new SectionRegisterPayload
+        {
+            Id = "NextUp",
+            DisplayText = "Impostor",
+            ResultsEndpoint = "/sections/results"
+        });
+
+        Assert.IsType<ConflictResult>(result);
+        m_homeScreenManager.Verify(
+            manager => manager.RegisterResultsDelegate(It.IsAny<PluginDefinedSection>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public void RegisterSection_requires_administrator_authorization()
+    {
+        // Regression for upstream #258: the endpoint used to be completely unauthenticated.
+        System.Reflection.MethodInfo method = typeof(HomeScreenController)
+            .GetMethod(nameof(HomeScreenController.RegisterSection))
+            ?? throw new InvalidOperationException("RegisterSection action not found.");
+
+        Microsoft.AspNetCore.Authorization.AuthorizeAttribute? attribute = method
+            .GetCustomAttribute<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>();
+
+        Assert.NotNull(attribute);
+        Assert.Equal("Administrator", attribute!.Roles);
+    }
+
+    [Fact]
     public async Task MakeDiscoverRequest_forbids_anonymous_callers()
     {
         HomeScreenController controller = MakeController(userIdClaim: null);
