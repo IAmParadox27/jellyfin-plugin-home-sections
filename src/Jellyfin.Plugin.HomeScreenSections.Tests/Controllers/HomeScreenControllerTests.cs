@@ -23,46 +23,46 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Controllers;
 [Collection("Plugin Instance")]
 public class HomeScreenControllerTests
 {
-    private readonly PluginFixture m_fixture;
-    private readonly Mock<IHomeScreenManager> m_homeScreenManager = new();
-    private readonly Mock<IDisplayPreferencesManager> m_displayPreferencesManager = new();
-    private readonly Mock<IServerApplicationHost> m_serverApplicationHost = new();
-    private readonly Mock<IServerConfigurationManager> m_serverConfigurationManager = new();
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly Mock<ICollectionManager> m_collectionManager = new();
-    private readonly Mock<IPlaylistManager> m_playlistManager = new();
+    private readonly PluginFixture _fixture;
+    private readonly Mock<IHomeScreenManager> _homeScreenManager = new();
+    private readonly Mock<IDisplayPreferencesManager> _displayPreferencesManager = new();
+    private readonly Mock<IServerApplicationHost> _serverApplicationHost = new();
+    private readonly Mock<IServerConfigurationManager> _serverConfigurationManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly Mock<ICollectionManager> _collectionManager = new();
+    private readonly Mock<IPlaylistManager> _playlistManager = new();
 
     public HomeScreenControllerTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     private HomeScreenController MakeController()
     {
         HomeScreenSectionService sectionService = new HomeScreenSectionService(
-            m_homeScreenManager.Object,
+            _homeScreenManager.Object,
             NullLogger<HomeScreenSectionsPlugin>.Instance,
-            m_fixture.TranslationManagerMock.Object,
+            _fixture.TranslationManagerMock.Object,
             new UserSectionsDataCache(),
-            m_serverConfigurationManager.Object,
-            m_userManager.Object,
-            m_libraryManager.Object,
-            m_dtoService.Object,
-            new CollectionManagerProxy(m_collectionManager.Object),
-            m_playlistManager.Object);
+            _serverConfigurationManager.Object,
+            _userManager.Object,
+            _libraryManager.Object,
+            _dtoService.Object,
+            new CollectionManagerProxy(_collectionManager.Object),
+            _playlistManager.Object);
 
         ImageCacheService imageCacheService = new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient(FakeHttpMessageHandler.RespondingWithStatus(System.Net.HttpStatusCode.NotFound)));
 
         HomeScreenController controller = new HomeScreenController(
-            m_homeScreenManager.Object,
-            m_displayPreferencesManager.Object,
-            m_serverApplicationHost.Object,
-            m_fixture.Paths,
+            _homeScreenManager.Object,
+            _displayPreferencesManager.Object,
+            _serverApplicationHost.Object,
+            _fixture.Paths,
             sectionService,
             imageCacheService);
 
@@ -139,7 +139,7 @@ public class HomeScreenControllerTests
         try
         {
             HomeScreenController controller = MakeController();
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(Array.Empty<IHomeScreenSection>());
 
@@ -187,7 +187,7 @@ public class HomeScreenControllerTests
         try
         {
             HomeScreenController controller = MakeController();
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(Array.Empty<IHomeScreenSection>());
 

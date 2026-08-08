@@ -36,12 +36,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public object? OriginalPayload => null;
         
-        private readonly IUserViewManager m_userViewManager;
-        private readonly IUserManager m_userManager;
-        private readonly IDtoService m_dtoService;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly ISessionManager m_sessionManager;
-        private readonly ITVSeriesManager m_tvSeriesManager;
+        private readonly IUserViewManager _userViewManager;
+        private readonly IUserManager _userManager;
+        private readonly IDtoService _dtoService;
+        private readonly ILibraryManager _libraryManager;
+        private readonly ISessionManager _sessionManager;
+        private readonly ITVSeriesManager _tvSeriesManager;
 
         /// <summary>
         /// Constructor.
@@ -59,18 +59,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             ISessionManager sessionManager,
             ITVSeriesManager tvSeriesManager)
         {
-            m_userViewManager = userViewManager;
-            m_userManager = userManager;
-            m_dtoService = dtoService;
-            m_libraryManager = libraryManager;
-            m_sessionManager = sessionManager;
-            m_tvSeriesManager = tvSeriesManager;
+            _userViewManager = userViewManager;
+            _userManager = userManager;
+            _dtoService = dtoService;
+            _libraryManager = libraryManager;
+            _sessionManager = sessionManager;
+            _tvSeriesManager = tvSeriesManager;
         }
 
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
             
             List<ItemFields> fields = [ItemFields.PrimaryImageAspectRatio,
                 ItemFields.DateCreated,
@@ -102,7 +102,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 }
             }
 
-            QueryResult<BaseItem> result = m_tvSeriesManager.GetNextUp(
+            QueryResult<BaseItem> result = _tvSeriesManager.GetNextUp(
                 new NextUpQuery
                 {
                     Limit = 24,
@@ -116,7 +116,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 },
                 options);
 
-            IReadOnlyList<BaseItemDto> returnItems = m_dtoService.GetBaseItemDtos(result.Items, options, user);
+            IReadOnlyList<BaseItemDto> returnItems = _dtoService.GetBaseItemDtos(result.Items, options, user);
 
             return new QueryResult<BaseItemDto>(
                 null,

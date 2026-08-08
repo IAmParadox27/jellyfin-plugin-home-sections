@@ -7,18 +7,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific
 {
     public class CollectionManagerProxy
     {
-        private readonly ICollectionManager m_collectionManager;
+        private readonly ICollectionManager _collectionManager;
 
         public CollectionManagerProxy(ICollectionManager collectionManager)
         {
-            m_collectionManager = collectionManager;
+            _collectionManager = collectionManager;
         }
 
         public IEnumerable<BoxSet> GetCollections(User user)
         {
-            return m_collectionManager.GetType()
+            return _collectionManager.GetType()
                 .GetMethod("GetCollections", BindingFlags.Instance | BindingFlags.NonPublic)?
-                .Invoke(m_collectionManager, new object?[]
+                .Invoke(_collectionManager, new object?[]
                 {
                     user
                 }) as IEnumerable<BoxSet> ?? Enumerable.Empty<BoxSet>();

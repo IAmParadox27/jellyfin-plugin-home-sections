@@ -10,11 +10,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Services;
 [Collection("Plugin Instance")]
 public class ScheduledTasksTests
 {
-    private readonly PluginFixture m_fixture;
+    private readonly PluginFixture _fixture;
 
     public ScheduledTasksTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     [Fact]
@@ -22,7 +22,7 @@ public class ScheduledTasksTests
     {
         // A web chunk containing the loadSections marker exercises the scan's found-branch;
         // a chunk without the marker exercises the skip-branch.
-        string chunkDir = Path.Combine(m_fixture.Paths.WebPath, "main-container");
+        string chunkDir = Path.Combine(_fixture.Paths.WebPath, "main-container");
         Directory.CreateDirectory(chunkDir);
         await File.WriteAllTextAsync(
             Path.Combine(chunkDir, "main.abc123.chunk.js"),
@@ -33,7 +33,7 @@ public class ScheduledTasksTests
 
         StartupService task = new StartupService(
             new Mock<IServerApplicationHost>().Object,
-            m_fixture.Paths,
+            _fixture.Paths,
             NullLogger<HomeScreenSectionsPlugin>.Instance);
 
         // The FileTransformation plugin is not loaded in tests, so registration is skipped; the
@@ -51,7 +51,7 @@ public class ScheduledTasksTests
     {
         StartupService task = new StartupService(
             new Mock<IServerApplicationHost>().Object,
-            m_fixture.Paths,
+            _fixture.Paths,
             NullLogger<HomeScreenSectionsPlugin>.Instance);
 
         Assert.Equal(
@@ -64,7 +64,7 @@ public class ScheduledTasksTests
     {
         ImageCacheService imageCacheService = new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient(FakeHttpMessageHandler.RespondingWithStatus(System.Net.HttpStatusCode.NotFound)));
 
         ImageCacheCleanupTask task = new ImageCacheCleanupTask(
@@ -83,7 +83,7 @@ public class ScheduledTasksTests
     {
         ImageCacheService imageCacheService = new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient(FakeHttpMessageHandler.RespondingWithStatus(System.Net.HttpStatusCode.NotFound)));
 
         ImageCacheCleanupTask task = new ImageCacheCleanupTask(
@@ -99,7 +99,7 @@ public class ScheduledTasksTests
     public void DailyTranslationCacheService_metadata_and_triggers()
     {
         DailyTranslationCacheService task = new DailyTranslationCacheService(
-            m_fixture.TranslationManagerMock.Object);
+            _fixture.TranslationManagerMock.Object);
 
         Assert.Equal("HSS Daily Translation Cache", task.Name);
         Assert.Equal("Jellyfin.Plugin.HomeScreenSections.DailyTranslationCache", task.Key);

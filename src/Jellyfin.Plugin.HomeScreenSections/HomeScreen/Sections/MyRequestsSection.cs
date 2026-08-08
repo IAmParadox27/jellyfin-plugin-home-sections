@@ -16,9 +16,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
     public class MyRequestsSection : IHomeScreenSection
     {
-        private readonly IUserManager m_userManager;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly IDtoService m_dtoService;
+        private readonly IUserManager _userManager;
+        private readonly ILibraryManager _libraryManager;
+        private readonly IDtoService _dtoService;
 
         public string? Section => "MyJellyseerrRequests";
         
@@ -34,9 +34,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public MyRequestsSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService)
         {
-            m_userManager = userManager;
-            m_libraryManager = libraryManager;
-            m_dtoService = dtoService;
+            _userManager = userManager;
+            _libraryManager = libraryManager;
+            _dtoService = dtoService;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -49,7 +49,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
             
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
             if (user == null)
             {
                 return new QueryResult<BaseItemDto>();
@@ -120,7 +120,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             }
 
             IEnumerable<BaseItem> items = LoadRequestedLibraryItems(user, requestedItemIds);
-            return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
+            return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(items.Take(16).ToArray(), dtoOptions, user));
         }
 
         private static Guid[] ResolveRequestedItemIds(IEnumerable<JObject>? presentRequestedMedia)
@@ -138,8 +138,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         private IEnumerable<BaseItem> LoadRequestedLibraryItems(User user, Guid[] requestedItemIds)
         {
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                .FilterToUserPermitted(m_libraryManager, user);
+            VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
+                .FilterToUserPermitted(_libraryManager, user);
 
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
             var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
@@ -147,7 +147,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             IEnumerable<BaseItem> items = folders.SelectMany(x =>
             {
-                return m_libraryManager.GetItemList(new InternalItemsQuery(user)
+                return _libraryManager.GetItemList(new InternalItemsQuery(user)
                 {
                     ItemIds = requestedItemIds,
                     Recursive = true,

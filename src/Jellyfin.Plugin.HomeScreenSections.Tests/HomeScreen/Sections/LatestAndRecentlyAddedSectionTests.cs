@@ -24,31 +24,31 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.HomeScreen.Sections;
 /// </summary>
 public class LatestAndRecentlyAddedSectionTests : IDisposable
 {
-    private readonly Mock<IUserViewManager> m_userViewManager = new();
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly TestServiceProvider m_serviceProvider;
-    private readonly FakeApplicationPaths m_paths;
-    private readonly User m_user = new("LibraryViewer", "AuthProvider", "PasswordResetProvider");
+    private readonly Mock<IUserViewManager> _userViewManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly TestServiceProvider _serviceProvider;
+    private readonly FakeApplicationPaths _paths;
+    private readonly User _user = new("LibraryViewer", "AuthProvider", "PasswordResetProvider");
 
     public LatestAndRecentlyAddedSectionTests()
     {
-        m_paths = new FakeApplicationPaths(Path.Combine(Path.GetTempPath(), "hss-section-tests", Guid.NewGuid().ToString("N")));
-        m_serviceProvider = new TestServiceProvider(m_paths);
+        _paths = new FakeApplicationPaths(Path.Combine(Path.GetTempPath(), "hss-section-tests", Guid.NewGuid().ToString("N")));
+        _serviceProvider = new TestServiceProvider(_paths);
     }
 
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        TestIO.DeleteBestEffort(m_paths.Root);
+        TestIO.DeleteBestEffort(_paths.Root);
     }
 
     [Fact]
     public void LatestMovies_GetResults_without_libraries_returns_empty()
     {
         LatestMoviesSection section = MakeLatestSection();
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetVirtualFolders())
             .Returns([]);
 
@@ -61,9 +61,9 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
     public void LatestMovies_CreateInstances_links_matching_library_folder()
     {
         Guid userId = Guid.NewGuid();
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(userId))
-            .Returns(m_user);
+            .Returns(_user);
 
         Mock<Folder> moviesFolder = new();
         moviesFolder
@@ -76,13 +76,13 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
             .Setup(folder => folder.GetChildren(It.IsAny<User>(), true, It.IsAny<InternalItemsQuery>()))
             .Returns(new BaseItem[] { moviesFolder.Object });
 
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetUserRootFolder())
             .Returns(rootFolder.Object);
 
         BaseItemDto folderDto = new BaseItemDto { Id = Guid.NewGuid(), Name = "Movies Library" };
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(moviesFolder.Object, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(moviesFolder.Object, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(folderDto);
 
         LatestMoviesSection section = MakeLatestSection();
@@ -100,15 +100,15 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
     public void LatestMovies_CreateInstances_without_folders_has_no_payload()
     {
         Guid userId = Guid.NewGuid();
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(userId))
-            .Returns(m_user);
+            .Returns(_user);
 
         Mock<Folder> rootFolder = new();
         rootFolder
             .Setup(folder => folder.GetChildren(It.IsAny<User>(), true, It.IsAny<InternalItemsQuery>()))
             .Returns(Array.Empty<BaseItem>());
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetUserRootFolder())
             .Returns(rootFolder.Object);
 
@@ -135,7 +135,7 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
     public void RecentlyAddedMovies_GetResults_without_libraries_returns_empty()
     {
         RecentlyAddedMoviesSection section = MakeRecentlyAddedSection();
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetVirtualFolders())
             .Returns([]);
 
@@ -148,9 +148,9 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
     public void RecentlyAddedMovies_CreateInstances_copies_metadata_and_payload()
     {
         Guid userId = Guid.NewGuid();
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(userId))
-            .Returns(m_user);
+            .Returns(_user);
 
         Mock<Folder> moviesFolder = new();
         moviesFolder
@@ -162,13 +162,13 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
         rootFolder
             .Setup(folder => folder.GetChildren(It.IsAny<User>(), true, It.IsAny<InternalItemsQuery>()))
             .Returns(new BaseItem[] { moviesFolder.Object });
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetUserRootFolder())
             .Returns(rootFolder.Object);
 
         BaseItemDto folderDto = new BaseItemDto { Id = Guid.NewGuid(), Name = "Movies" };
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(moviesFolder.Object, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(moviesFolder.Object, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(folderDto);
 
         RecentlyAddedMoviesSection section = MakeRecentlyAddedSection();
@@ -198,20 +198,20 @@ public class LatestAndRecentlyAddedSectionTests : IDisposable
     private LatestMoviesSection MakeLatestSection()
     {
         return new LatestMoviesSection(
-            m_userViewManager.Object,
-            m_userManager.Object,
-            m_libraryManager.Object,
-            m_dtoService.Object,
-            m_serviceProvider);
+            _userViewManager.Object,
+            _userManager.Object,
+            _libraryManager.Object,
+            _dtoService.Object,
+            _serviceProvider);
     }
 
     private RecentlyAddedMoviesSection MakeRecentlyAddedSection()
     {
         return new RecentlyAddedMoviesSection(
-            m_userViewManager.Object,
-            m_userManager.Object,
-            m_libraryManager.Object,
-            m_dtoService.Object,
-            m_serviceProvider);
+            _userViewManager.Object,
+            _userManager.Object,
+            _libraryManager.Object,
+            _dtoService.Object,
+            _serviceProvider);
     }
 }

@@ -23,16 +23,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 {
     public class HomeScreenSectionService
     {
-        private readonly IServerConfigurationManager m_configurationManager;
-        private readonly IHomeScreenManager m_homeScreenManager;
-        private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
-        private readonly ITranslationManager m_translationManager;
-        private readonly UserSectionsDataCache m_dataCache;
-        private readonly IUserManager m_userManager;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly IDtoService m_dtoService;
-        private readonly CollectionManagerProxy m_collectionManagerProxy;
-        private readonly IPlaylistManager m_playlistManager;
+        private readonly IServerConfigurationManager _configurationManager;
+        private readonly IHomeScreenManager _homeScreenManager;
+        private readonly ILogger<HomeScreenSectionsPlugin> _logger;
+        private readonly ITranslationManager _translationManager;
+        private readonly UserSectionsDataCache _dataCache;
+        private readonly IUserManager _userManager;
+        private readonly ILibraryManager _libraryManager;
+        private readonly IDtoService _dtoService;
+        private readonly CollectionManagerProxy _collectionManagerProxy;
+        private readonly IPlaylistManager _playlistManager;
     
         public HomeScreenSectionService(
             IHomeScreenManager homeScreenManager,
@@ -46,21 +46,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             CollectionManagerProxy collectionManagerProxy,
             IPlaylistManager playlistManager)
         {
-            m_homeScreenManager = homeScreenManager;
-            m_logger = logger;
-            m_translationManager = translationManager;
-            m_dataCache = dataCache;
-            m_configurationManager = configurationManager;
-            m_userManager = userManager;
-            m_libraryManager = libraryManager;
-            m_dtoService = dtoService;
-            m_collectionManagerProxy = collectionManagerProxy;
-            m_playlistManager = playlistManager;
+            _homeScreenManager = homeScreenManager;
+            _logger = logger;
+            _translationManager = translationManager;
+            _dataCache = dataCache;
+            _configurationManager = configurationManager;
+            _userManager = userManager;
+            _libraryManager = libraryManager;
+            _dtoService = dtoService;
+            _collectionManagerProxy = collectionManagerProxy;
+            _playlistManager = playlistManager;
         }
 
         public IReadOnlyList<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
         {
-            if (!m_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? userSectionsData))
+            if (!_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? userSectionsData))
             {
                 return null;
             }
@@ -94,7 +94,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 
                 CacheSectionsForUser(userId, pageHash.Value);
 
-                int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
+                int totalSectionCount = _dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
                 return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
             }
 
@@ -107,14 +107,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
     
         public void CacheSectionsForUser(Guid userId, Guid? pageHash = null)
         {
-            if (m_dataCache.Cache.ContainsKey(pageHash ?? Guid.Empty))
+            if (_dataCache.Cache.ContainsKey(pageHash ?? Guid.Empty))
             {
                 return;
             }
             
-            ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
+            ModularHomeUserSettings? settings = _homeScreenManager.GetUserSettings(userId);
 
-            List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
+            List<IHomeScreenSection> sectionTypes = _homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
 
             IGrouping<int, SectionSettings>[] groupedOrderedSections = BuildOrderedSectionGroups(settings);
 
@@ -202,7 +202,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         private void EnsureCacheStarted(Guid userId, Guid pageHash)
         {
-            if (!m_dataCache.Cache.ContainsKey(pageHash))
+            if (!_dataCache.Cache.ContainsKey(pageHash))
             {
                 _ = Task.Run(() => CacheSectionsForUser(userId, pageHash));
             }
@@ -210,7 +210,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         private void WaitUntilCachePresent(Guid pageHash)
         {
-            while (!m_dataCache.Cache.ContainsKey(pageHash))
+            while (!_dataCache.Cache.ContainsKey(pageHash))
             {
                 Thread.Sleep(10);
             }
@@ -219,7 +219,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private void WaitUntilCacheHasStartedWork(Guid pageHash)
         {
             // If there's no data at all then we wait until its started.
-            while (m_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty && m_dataCache.Cache[pageHash].OrderedSections.IsEmpty)
+            while (_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty && _dataCache.Cache[pageHash].OrderedSections.IsEmpty)
             {
                 Thread.Sleep(10);
             }
@@ -229,13 +229,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
             // If its still in progress then we'll wait for it to finish.
-            UserSectionsData cache = m_dataCache.Cache[pageHash];
+            UserSectionsData cache = _dataCache.Cache[pageHash];
             int lowestSectionIndex = Math.Min(
-                !m_dataCache.Cache[pageHash].OrderedSections.IsEmpty
-                    ? m_dataCache.Cache[pageHash].OrderedSections.Min(x => x.Key) 
+                !_dataCache.Cache[pageHash].OrderedSections.IsEmpty
+                    ? _dataCache.Cache[pageHash].OrderedSections.Min(x => x.Key) 
                     : int.MaxValue,
-                !m_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty
-                    ? m_dataCache.Cache[pageHash].SectionsInProgress.Min(x => x.Key) 
+                !_dataCache.Cache[pageHash].SectionsInProgress.IsEmpty
+                    ? _dataCache.Cache[pageHash].SectionsInProgress.Min(x => x.Key) 
                     : int.MaxValue);
 
             for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
@@ -268,7 +268,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
             };
             
-            m_dataCache.Cache.TryAdd(pageHash, userSectionsData);
+            _dataCache.Cache.TryAdd(pageHash, userSectionsData);
 
             foreach (int orderIndex in groupedOrderedSections.Select(x => x.Key).OrderBy(x => x))
             {
@@ -367,7 +367,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 or System.Text.Json.JsonException
                 or Newtonsoft.Json.JsonException)
             {
-                PluginLog.SectionInstanceError(m_logger, e, userId, sectionType.Section);
+                PluginLog.SectionInstanceError(_logger, e, userId, sectionType.Section);
             }
         }
 
@@ -389,7 +389,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             if (info.DisplayText != null)
             {
                 // Fallback to system default language if there's no language provided.
-                string? translatedResult = m_translationManager.Translate(info.Section!, language?.Trim() ?? m_configurationManager.Configuration.UICulture, info.DisplayText, section.TranslationMetadata);
+                string? translatedResult = _translationManager.Translate(info.Section!, language?.Trim() ?? _configurationManager.Configuration.UICulture, info.DisplayText, section.TranslationMetadata);
 
                 info.DisplayText = translatedResult;
             }
@@ -405,7 +405,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             try
             {
-                User? user = m_userManager.GetUserById(userId);
+                User? user = _userManager.GetUserById(userId);
                 if (user == null)
                 {
                     return null;
@@ -427,7 +427,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 or HttpRequestException
                 or System.Reflection.TargetInvocationException)
             {
-                PluginLog.SectionTitleLinkResolveFailed(m_logger, ex, additionalData, userId);
+                PluginLog.SectionTitleLinkResolveFailed(_logger, ex, additionalData, userId);
             }
 
             return null;
@@ -449,28 +449,28 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 return null;
             }
 
-            BaseItem? byId = m_libraryManager.GetItemById(itemId);
-            return byId != null ? m_dtoService.GetBaseItemDto(byId, dtoOptions, user) : null;
+            BaseItem? byId = _libraryManager.GetItemById(itemId);
+            return byId != null ? _dtoService.GetBaseItemDto(byId, dtoOptions, user) : null;
         }
 
         private BaseItemDto? ResolveTitleLinkByName(string additionalData, Guid userId, User user, DtoOptions dtoOptions)
         {
-            BoxSet? collection = m_collectionManagerProxy.GetCollections(user)
+            BoxSet? collection = _collectionManagerProxy.GetCollections(user)
                 .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
             if (collection != null)
             {
-                return m_dtoService.GetBaseItemDto(collection, dtoOptions, user);
+                return _dtoService.GetBaseItemDto(collection, dtoOptions, user);
             }
 
-            Playlist? playlist = m_playlistManager.GetPlaylists(userId)
+            Playlist? playlist = _playlistManager.GetPlaylists(userId)
                 .FirstOrDefault(x => string.Equals(x.Name, additionalData, StringComparison.OrdinalIgnoreCase));
             if (playlist != null)
             {
-                return m_dtoService.GetBaseItemDto(playlist, dtoOptions, user);
+                return _dtoService.GetBaseItemDto(playlist, dtoOptions, user);
             }
 
-            Genre? genre = m_libraryManager.GetGenre(additionalData);
-            return genre != null ? m_dtoService.GetBaseItemDto(genre, dtoOptions, user) : null;
+            Genre? genre = _libraryManager.GetGenre(additionalData);
+            return genre != null ? _dtoService.GetBaseItemDto(genre, dtoOptions, user) : null;
         }
     }
 

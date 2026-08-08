@@ -37,20 +37,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
 
         public virtual TranslationMetadata? TranslationMetadata { get; protected set; }
         
-        protected ILibraryManager m_libraryManager { get; }
-        protected IDtoService m_dtoService { get; }
-        protected IUserManager m_userManager { get; }
+        protected ILibraryManager _libraryManager { get; }
+        protected IDtoService _dtoService { get; }
+        protected IUserManager _userManager { get; }
 
         protected PersonsSectionBase(ILibraryManager libraryManager, IDtoService dtoService, IUserManager userManager)
         {
-            m_libraryManager = libraryManager;
-            m_dtoService = dtoService;
-            m_userManager = userManager;
+            _libraryManager = libraryManager;
+            _dtoService = dtoService;
+            _userManager = userManager;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
             DtoOptions? dtoOptions = new DtoOptions
             {
                 Fields = [ItemFields.PrimaryImageAspectRatio],
@@ -61,10 +61,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
             };
             Guid personId = Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString());
             
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                .FilterToUserPermitted(m_libraryManager, user);
+            VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
+                .FilterToUserPermitted(_libraryManager, user);
 
-            List<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
+            List<BaseItem> personItems = folders.SelectMany(x => _libraryManager.GetItemList(new InternalItemsQuery()
             {
                 PersonIds = [personId],
                 PersonTypes = PersonTypes.ToArray(),
@@ -83,26 +83,26 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
                 return x;
             }).DistinctBy(x => x.Id).ToList();
             
-            return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(personItems, dtoOptions, user));
+            return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(personItems, dtoOptions, user));
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
+            User? user = _userManager.GetUserById(userId ?? Guid.Empty);
             // Want to use the user data at some point to actually weight the people chosen based on watch history, similar to how Genres are picked.
             // For now this is fine to get something in.
-            List<Person> people = m_libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, [])).ToList();
+            List<Person> people = _libraryManager.GetPeopleItems(new InternalPeopleQuery(PersonTypes, [])).ToList();
 
             people.Shuffle();
 
             List<IHomeScreenSection> sections = [];
             
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
-                .FilterToUserPermitted(m_libraryManager, user);
+            VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
+                .FilterToUserPermitted(_libraryManager, user);
 
             foreach (Person person in people)
             {
-                List<BaseItem> personItems = folders.SelectMany(x => m_libraryManager.GetItemList(new InternalItemsQuery()
+                List<BaseItem> personItems = folders.SelectMany(x => _libraryManager.GetItemList(new InternalItemsQuery()
                 {
                     PersonIds = [person.Id],
                     PersonTypes = PersonTypes.ToArray(),

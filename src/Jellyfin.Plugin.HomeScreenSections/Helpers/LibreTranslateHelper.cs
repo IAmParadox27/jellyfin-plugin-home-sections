@@ -6,7 +6,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers;
 
 public static class LibreTranslateHelper
 {
-    // ponytail: reuse one HttpClient instead of new per call (socket exhaustion)
     private static readonly HttpClient s_client = new();
 
     public static async Task<string?> TranslateAsync(string text, string srcLanguage, string destLanguage)

@@ -28,18 +28,18 @@ public class PluginInterfaceTestResultsHandler
 [Collection("Plugin Instance")]
 public class PluginInterfaceTests
 {
-    private readonly PluginFixture m_fixture;
+    private readonly PluginFixture _fixture;
 
     public PluginInterfaceTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     [Fact]
     public void RegisterSection_invokes_reflection_handler_from_loaded_assembly()
     {
         PluginDefinedSection? captured = null;
-        m_fixture.HomeScreenManagerMock
+        _fixture.HomeScreenManagerMock
             .Setup(manager => manager.RegisterResultsDelegate(It.IsAny<PluginDefinedSection>()))
             .Callback<PluginDefinedSection>(section => captured = section);
 
@@ -78,12 +78,12 @@ public class PluginInterfaceTests
             path => (200, JsonConvert.SerializeObject(serverResult)));
 
         int port = new Uri(server.BaseUrl).Port;
-        m_fixture.ServerApplicationHostMock
+        _fixture.ServerApplicationHostMock
             .SetupGet(host => host.HttpPort)
             .Returns(port);
 
         PluginDefinedSection? captured = null;
-        m_fixture.HomeScreenManagerMock
+        _fixture.HomeScreenManagerMock
             .Setup(manager => manager.RegisterResultsDelegate(It.IsAny<PluginDefinedSection>()))
             .Callback<PluginDefinedSection>(section => captured = section);
 
@@ -109,7 +109,7 @@ public class PluginInterfaceTests
     public void RegisterSection_without_handler_returns_empty_results()
     {
         PluginDefinedSection? captured = null;
-        m_fixture.HomeScreenManagerMock
+        _fixture.HomeScreenManagerMock
             .Setup(manager => manager.RegisterResultsDelegate(It.IsAny<PluginDefinedSection>()))
             .Callback<PluginDefinedSection>(section => captured = section);
 
@@ -134,7 +134,7 @@ public class PluginInterfaceTests
     public void RegisterSection_preserves_object_original_payload()
     {
         PluginDefinedSection? captured = null;
-        m_fixture.HomeScreenManagerMock
+        _fixture.HomeScreenManagerMock
             .Setup(manager => manager.RegisterResultsDelegate(It.IsAny<PluginDefinedSection>()))
             .Callback<PluginDefinedSection>(section => captured = section);
 

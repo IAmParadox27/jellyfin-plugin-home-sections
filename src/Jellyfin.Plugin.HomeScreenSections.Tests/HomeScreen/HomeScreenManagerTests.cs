@@ -62,25 +62,25 @@ public class HomeScreenManagerTests : IDisposable
         "UnwatchedCollections"
     ];
 
-    private readonly FakeApplicationPaths m_paths;
-    private readonly TestServiceProvider m_serviceProvider;
+    private readonly FakeApplicationPaths _paths;
+    private readonly TestServiceProvider _serviceProvider;
 
     public HomeScreenManagerTests(PluginFixture fixture)
     {
         _ = fixture;
-        m_paths = new FakeApplicationPaths(Path.Combine(fixture.TempRoot, "manager-" + Guid.NewGuid().ToString("N")));
-        m_serviceProvider = new TestServiceProvider(m_paths);
+        _paths = new FakeApplicationPaths(Path.Combine(fixture.TempRoot, "manager-" + Guid.NewGuid().ToString("N")));
+        _serviceProvider = new TestServiceProvider(_paths);
     }
 
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        TestIO.DeleteBestEffort(m_paths.Root);
+        TestIO.DeleteBestEffort(_paths.Root);
     }
 
     private HomeScreenManager MakeManager()
     {
-        return new HomeScreenManager(m_serviceProvider, m_paths, NullLogger<HomeScreenManager>.Instance);
+        return new HomeScreenManager(_serviceProvider, _paths, NullLogger<HomeScreenManager>.Instance);
     }
 
     [Fact]

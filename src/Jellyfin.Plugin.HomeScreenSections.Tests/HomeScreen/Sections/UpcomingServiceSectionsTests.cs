@@ -19,11 +19,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.HomeScreen.Sections;
 [Collection("Plugin Instance")]
 public class UpcomingServiceSectionsTests
 {
-    private readonly PluginFixture m_fixture;
+    private readonly PluginFixture _fixture;
 
     public UpcomingServiceSectionsTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     [Fact]
@@ -422,7 +422,7 @@ public class UpcomingServiceSectionsTests
     {
         return new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient(FakeHttpMessageHandler.RespondingWithStatus(System.Net.HttpStatusCode.NotFound)));
     }
 }

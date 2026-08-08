@@ -28,10 +28,10 @@ public class StudioSection : IHomeScreenSection
 
     public object? OriginalPayload { get; set; }
 
-    private readonly IUserManager m_userManager;
-    private readonly ILibraryManager m_libraryManager;
-    private readonly IDtoService m_dtoService;
-    private readonly IUserDataManager m_userDataManager;
+    private readonly IUserManager _userManager;
+    private readonly ILibraryManager _libraryManager;
+    private readonly IDtoService _dtoService;
+    private readonly IUserDataManager _userDataManager;
 
     public StudioSection(
         IUserManager userManager,
@@ -39,10 +39,10 @@ public class StudioSection : IHomeScreenSection
         IDtoService dtoService,
         IUserDataManager userDataManager)
     {
-        m_userManager = userManager;
-        m_libraryManager = libraryManager;
-        m_dtoService = dtoService;
-        m_userDataManager = userDataManager;
+        _userManager = userManager;
+        _libraryManager = libraryManager;
+        _dtoService = dtoService;
+        _userDataManager = userDataManager;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -52,7 +52,7 @@ public class StudioSection : IHomeScreenSection
             return new QueryResult<BaseItemDto>();
         }
 
-        User? user = m_userManager.GetUserById(payload.UserId);
+        User? user = _userManager.GetUserById(payload.UserId);
         if (user == null)
         {
             return new QueryResult<BaseItemDto>();
@@ -63,7 +63,7 @@ public class StudioSection : IHomeScreenSection
         string studio = payload.AdditionalData;
 
         // Pull a random sample and filter by studio name (query has StudioIds, not names).
-        QueryResult<BaseItem> items = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
+        QueryResult<BaseItem> items = _libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
             IncludeItemTypes = SectionDtoHelper.MovieAndSeriesKinds,
             Recursive = true,
@@ -81,14 +81,14 @@ public class StudioSection : IHomeScreenSection
             .Take(16)
             .ToArray();
 
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(matched, dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(matched, dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
         User? user = userId is null || userId.Value == Guid.Empty
             ? null
-            : m_userManager.GetUserById(userId.Value);
+            : _userManager.GetUserById(userId.Value);
 
         if (user == null)
         {
@@ -104,7 +104,7 @@ public class StudioSection : IHomeScreenSection
         Random rnd = new Random();
         foreach (string studio in studios.OrderBy(_ => rnd.Next()).Take(instanceCount))
         {
-            yield return new StudioSection(m_userManager, m_libraryManager, m_dtoService, m_userDataManager)
+            yield return new StudioSection(_userManager, _libraryManager, _dtoService, _userDataManager)
             {
                 AdditionalData = studio,
                 DisplayText = studio
@@ -116,7 +116,7 @@ public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this, allo
 
     private List<string> GetStudiosForUser(User user)
     {
-        QueryResult<BaseItem> played = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
+        QueryResult<BaseItem> played = _libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
             IncludeItemTypes = SectionDtoHelper.MovieAndSeriesKinds,
             Recursive = true,
@@ -135,7 +135,7 @@ public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this, allo
             }
 
             int weight = 1;
-            UserItemData? data = m_userDataManager.GetUserData(user, item);
+            UserItemData? data = _userDataManager.GetUserData(user, item);
             if (data?.PlayCount is > 0)
             {
                 weight = data.PlayCount;

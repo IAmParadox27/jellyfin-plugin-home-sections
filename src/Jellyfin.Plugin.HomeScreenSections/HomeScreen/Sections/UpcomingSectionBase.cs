@@ -211,7 +211,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             return ImageCacheHelper.GetCachedImageUrl(ImageCacheService, sourceUrl, Logger);
         }
 
-        // ponytail: helper replaces 4 identical GetAwaiter().GetResult() ?? [] in Upcoming leaves
         protected TDto[] GetCalendar<TDto>(ArrServiceType serviceType, DateTime startDate, DateTime endDate) where TDto : class
         {
             return ArrApiService.GetArrCalendarAsync<TDto>(serviceType, startDate, endDate).GetAwaiter().GetResult() ?? [];

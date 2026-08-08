@@ -30,11 +30,11 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
 
     public object? OriginalPayload { get; set; }
 
-    private readonly IUserManager m_userManager;
-    private readonly IDtoService m_dtoService;
-    private readonly CollectionManagerProxy m_collectionManagerProxy;
-    private readonly ILibraryManager m_libraryManager;
-    private readonly IUserDataManager m_userDataManager;
+    private readonly IUserManager _userManager;
+    private readonly IDtoService _dtoService;
+    private readonly CollectionManagerProxy _collectionManagerProxy;
+    private readonly ILibraryManager _libraryManager;
+    private readonly IUserDataManager _userDataManager;
 
     public UnwatchedCollectionsSection(
         IUserManager userManager,
@@ -43,23 +43,23 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
         ILibraryManager libraryManager,
         IUserDataManager userDataManager)
     {
-        m_userManager = userManager;
-        m_dtoService = dtoService;
-        m_collectionManagerProxy = collectionManagerProxy;
-        m_libraryManager = libraryManager;
-        m_userDataManager = userDataManager;
+        _userManager = userManager;
+        _dtoService = dtoService;
+        _collectionManagerProxy = collectionManagerProxy;
+        _libraryManager = libraryManager;
+        _userDataManager = userDataManager;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
     {
-        User? user = m_userManager.GetUserById(payload.UserId);
+        User? user = _userManager.GetUserById(payload.UserId);
         if (user == null || string.IsNullOrWhiteSpace(payload.AdditionalData)
             || !Guid.TryParse(payload.AdditionalData, out Guid collectionId))
         {
             return new QueryResult<BaseItemDto>();
         }
 
-        BaseItem? item = m_libraryManager.GetItemById(collectionId);
+        BaseItem? item = _libraryManager.GetItemById(collectionId);
         if (item is not BoxSet boxSet)
         {
             return new QueryResult<BaseItemDto>();
@@ -69,13 +69,13 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
         List<BaseItem> unwatched = boxSet.GetChildren(user, true, new InternalItemsQuery(user))
             .Where(child =>
             {
-                UserItemData? data = m_userDataManager.GetUserData(user, child);
+                UserItemData? data = _userDataManager.GetUserData(user, child);
                 return data == null || !data.Played;
             })
             .Take(16)
             .ToList();
 
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(unwatched, dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(unwatched, dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
@@ -85,7 +85,7 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
             yield break;
         }
 
-        User? user = m_userManager.GetUserById(userId.Value);
+        User? user = _userManager.GetUserById(userId.Value);
         if (user == null)
         {
             yield break;
@@ -100,15 +100,15 @@ public class UnwatchedCollectionsSection : IHomeScreenSection
         foreach (BoxSet boxSet in FindPartialCollections(user).Take(instanceCount))
         {
             yield return new UnwatchedCollectionsSection(
-                m_userManager,
-                m_dtoService,
-                m_collectionManagerProxy,
-                m_libraryManager,
-                m_userDataManager)
+                _userManager,
+                _dtoService,
+                _collectionManagerProxy,
+                _libraryManager,
+                _userDataManager)
             {
                 AdditionalData = boxSet.Id.ToString("N"),
                 DisplayText = $"Continue: {boxSet.Name}",
-                OriginalPayload = m_dtoService.GetBaseItemDto(boxSet, linkDto, user)
+                OriginalPayload = _dtoService.GetBaseItemDto(boxSet, linkDto, user)
             };
         }
     }
@@ -118,7 +118,7 @@ public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
     private List<BoxSet> FindPartialCollections(User user)
     {
         List<BoxSet> partial = [];
-        foreach (BoxSet boxSet in m_collectionManagerProxy.GetCollections(user))
+        foreach (BoxSet boxSet in _collectionManagerProxy.GetCollections(user))
         {
             List<BaseItem> children = boxSet.GetChildren(user, true, new InternalItemsQuery(user)).ToList();
             if (children.Count < 2)
@@ -126,7 +126,7 @@ public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this);
                 continue;
             }
 
-            int played = children.Count(c => m_userDataManager.GetUserData(user, c)?.Played == true);
+            int played = children.Count(c => _userDataManager.GetUserData(user, c)?.Played == true);
             if (played > 0 && played < children.Count)
             {
                 partial.Add(boxSet);

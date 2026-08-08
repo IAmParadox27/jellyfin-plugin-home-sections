@@ -8,7 +8,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 {
     public static class TransformationPatches
     {
-        // ponytail: cache regex + js template — was recreated per request
         private static readonly Regex s_variableFind = new(@"var\s+(?<name>[a-zA-Z][^=]*)=", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromMilliseconds(250));
 
         private static readonly Lazy<string> s_loadSectionsTemplate = new(() =>

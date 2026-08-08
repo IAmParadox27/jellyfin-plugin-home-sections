@@ -9,7 +9,6 @@ using MediaBrowser.Model.Querying;
 namespace Jellyfin.Plugin.HomeScreenSections.Helpers;
 
 /// <summary>
-/// ponytail: shared library-folder lookup — was duplicated in LatestSectionBase and RecentlyAddedSectionBase
 /// </summary>
 internal static class LibrarySectionHelper
 {

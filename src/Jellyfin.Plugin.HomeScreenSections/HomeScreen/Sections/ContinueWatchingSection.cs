@@ -38,11 +38,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public object? OriginalPayload => null;
         
-        private readonly IUserViewManager m_userViewManager;
-        private readonly IUserManager m_userManager;
-        private readonly IDtoService m_dtoService;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly ISessionManager m_sessionManager;
+        private readonly IUserViewManager _userViewManager;
+        private readonly IUserManager _userManager;
+        private readonly IDtoService _dtoService;
+        private readonly ILibraryManager _libraryManager;
+        private readonly ISessionManager _sessionManager;
 
         /// <summary>
         /// Constructor.
@@ -58,17 +58,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             ILibraryManager libraryManager,
             ISessionManager sessionManager)
         {
-            m_userViewManager = userViewManager;
-            m_userManager = userManager;
-            m_dtoService = dtoService;
-            m_libraryManager = libraryManager;
-            m_sessionManager = sessionManager;
+            _userViewManager = userViewManager;
+            _userManager = userManager;
+            _dtoService = dtoService;
+            _libraryManager = libraryManager;
+            _sessionManager = sessionManager;
         }
 
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
             DtoOptions? dtoOptions = new DtoOptions
             {
                 Fields = [ItemFields.PrimaryImageAspectRatio],
@@ -83,14 +83,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             Guid[]? excludeFolderIds = user!.GetPreferenceValues<Guid>(PreferenceKind.LatestItemExcludes);
             if (excludeFolderIds.Length > 0)
             {
-                ancestorIds = m_libraryManager.GetUserRootFolder().GetChildren(user, true)
+                ancestorIds = _libraryManager.GetUserRootFolder().GetChildren(user, true)
                     .Where(i => i is Folder)
                     .Where(i => !excludeFolderIds.Contains(i.Id))
                     .Select(i => i.Id)
                     .ToArray();
             }
 
-            QueryResult<BaseItem>? itemsResult = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
+            QueryResult<BaseItem>? itemsResult = _libraryManager.GetItemsResult(new InternalItemsQuery(user)
             {
                 OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
                 IsResumable = true,
@@ -107,7 +107,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 AncestorIds = ancestorIds
             });
 
-            IReadOnlyList<BaseItemDto>? returnItems = m_dtoService.GetBaseItemDtos(itemsResult.Items, dtoOptions, user);
+            IReadOnlyList<BaseItemDto>? returnItems = _dtoService.GetBaseItemDtos(itemsResult.Items, dtoOptions, user);
 
             return new QueryResult<BaseItemDto>(
                 null,

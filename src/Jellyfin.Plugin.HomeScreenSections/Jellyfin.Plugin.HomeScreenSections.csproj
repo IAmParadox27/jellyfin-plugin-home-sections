@@ -21,7 +21,8 @@
     </PropertyGroup>
     <PropertyGroup Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git'))">
         <GitHeadLocation>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git').Replace('gitdir: ', '').Trim())</GitHeadLocation>
-        <GitBranch>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\$(GitHeadLocation)\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+        <GitBranch Condition="$([System.IO.Path]::IsPathRooted('$(GitHeadLocation)'))">$([System.IO.File]::ReadAllText('$(GitHeadLocation)\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+        <GitBranch Condition="!$([System.IO.Path]::IsPathRooted('$(GitHeadLocation)'))">$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\$(GitHeadLocation)\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
     </PropertyGroup>
     
     <ItemGroup>

@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
 
         public override string? DisplayText { get; set; } = "Latest Shows";
 
-        private readonly ITVSeriesManager m_tvSeriesManager;
+        private readonly ITVSeriesManager _tvSeriesManager;
         
         public LatestShowsSection(IUserViewManager userViewManager,
             IUserManager userManager,
@@ -28,7 +28,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             IDtoService dtoService,
             IServiceProvider serviceProvider) : base(userViewManager, userManager, libraryManager, dtoService, serviceProvider)
         {
-            m_tvSeriesManager = tvSeriesManager;
+            _tvSeriesManager = tvSeriesManager;
         }
 
         public override SectionViewMode DefaultViewMode => SectionViewMode.Landscape;
@@ -40,16 +40,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         public override QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             DtoOptions dtoOptions = CreateShowsDtoOptions();
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
 
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
             var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+            VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
                 .Where(x => x.CollectionType == CollectionTypeOptions)
-                .FilterToUserPermitted(m_libraryManager, user);
+                .FilterToUserPermitted(_libraryManager, user);
 
             List<(Series Series, DateTime? LatestPremiereDate)> selectedSeries = SearchLatestSeries(user, folders, isPlayed);
 
@@ -58,7 +58,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
 
         protected override LatestSectionBase CreateInstance()
         {
-            return new LatestShowsSection(m_userViewManager, m_userManager, m_libraryManager, m_tvSeriesManager, m_dtoService, m_serviceProvider);
+            return new LatestShowsSection(_userViewManager, _userManager, _libraryManager, _tvSeriesManager, _dtoService, _serviceProvider);
         }
 
         private static DtoOptions CreateShowsDtoOptions()
@@ -123,11 +123,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             // Fetch more episodes to account for multiple episodes per series
             var mainQuery = folders.Select(x =>
             {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                var item = _libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
                 if (item is not Folder folder)
                 {
-                    folder = m_libraryManager.GetUserRootFolder();
+                    folder = _libraryManager.GetUserRootFolder();
                 }
 
                 var items = folder.GetItems(new InternalItemsQuery(user)
@@ -174,7 +174,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
             // Fetch the full series objects with proper DtoOptions for images
             var seriesIds = selectedSeries.OrderByDescending(x => x.LatestPremiereDate).Select(x => x.Series.Id);
             var seriesIdArray = seriesIds.ToArray();
-            var seriesItems = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+            var seriesItems = _libraryManager.GetItemList(new InternalItemsQuery(user)
             {
                 ItemIds = seriesIdArray,
                 DtoOptions = dtoOptions
@@ -187,7 +187,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                 .ToList();
             
             return new QueryResult<BaseItemDto>(Array.ConvertAll(orderedSeries.ToArray(),
-                i => m_dtoService.GetBaseItemDto(i!, dtoOptions, user)));
+                i => _dtoService.GetBaseItemDto(i!, dtoOptions, user)));
         }
     }
 }

@@ -7,23 +7,23 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 {
     public class TranslationManager : ITranslationManager
     {
-        private Dictionary<string, JObject> m_translationPacks = new(StringComparer.Ordinal);
-        private readonly ILogger<ITranslationManager> m_logger;
+        private Dictionary<string, JObject> _translationPacks = new(StringComparer.Ordinal);
+        private readonly ILogger<ITranslationManager> _logger;
 
         public TranslationManager(ILogger<ITranslationManager> logger)
         {
-            m_logger = logger;
+            _logger = logger;
         }
 
         public void Initialize()
         {
-            PluginLog.LoadingTranslationFiles(m_logger);
-            if (m_logger.IsEnabled(LogLevel.Trace))
+            PluginLog.LoadingTranslationFiles(_logger);
+            if (_logger.IsEnabled(LogLevel.Trace))
             {
                 string resources = string.Join(
                     ',',
                     HomeScreenSectionsPlugin.Instance.GetType().Assembly.GetManifestResourceNames());
-                PluginLog.AvailableResources(m_logger, resources);
+                PluginLog.AvailableResources(_logger, resources);
             }
             
             // Get all the json files from the embedded resources
@@ -32,7 +32,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             foreach (string locFile in locJsonFiles)
             {
-                PluginLog.LoadingTranslationFile(m_logger, locFile);
+                PluginLog.LoadingTranslationFile(_logger, locFile);
                 using Stream? locStream = HomeScreenSectionsPlugin.Instance.GetType().Assembly.GetManifestResourceStream(locFile);
 
                 if (locStream != null)
@@ -42,13 +42,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     string key = locFile.Replace(".json", "").Split('.').Last();
 
                     JObject pack = JObject.Parse(reader.ReadToEnd());
-                    if (m_translationPacks.TryAdd(key, pack))
+                    if (_translationPacks.TryAdd(key, pack))
                     {
-                        PluginLog.LoadedTranslationFile(m_logger, locFile, pack.Count);
+                        PluginLog.LoadedTranslationFile(_logger, locFile, pack.Count);
                     }
                     else
                     {
-                        PluginLog.TranslationFileAlreadyLoaded(m_logger, locFile);
+                        PluginLog.TranslationFileAlreadyLoaded(_logger, locFile);
                     }
                 }
             }
@@ -56,9 +56,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public string Translate(string key, string desiredLanguage, string fallbackText, TranslationMetadata? metadata = null)
         {
-            PluginLog.TranslatingKey(m_logger, key, desiredLanguage);
+            PluginLog.TranslatingKey(_logger, key, desiredLanguage);
             string languageKey = ResolveLanguageKey(desiredLanguage);
-            JObject translationPack = m_translationPacks[languageKey];
+            JObject translationPack = _translationPacks[languageKey];
 
             string translatedText = LookupTranslation(key, fallbackText, desiredLanguage, languageKey, translationPack, ref metadata);
             if (metadata != null)
@@ -74,20 +74,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             string languageKey = desiredLanguage;
             while (true)
             {
-                if (m_translationPacks.ContainsKey(languageKey))
+                if (_translationPacks.ContainsKey(languageKey))
                 {
-                    PluginLog.FoundTranslationPack(m_logger, languageKey);
+                    PluginLog.FoundTranslationPack(_logger, languageKey);
                     return languageKey;
                 }
 
                 if (languageKey.Contains('-'))
                 {
-                    PluginLog.LanguageMissingRemoveRegion(m_logger, languageKey);
+                    PluginLog.LanguageMissingRemoveRegion(_logger, languageKey);
                     languageKey = languageKey.Split("-")[0];
                     continue;
                 }
 
-                PluginLog.LanguageMissingFallbackEnglish(m_logger, languageKey);
+                PluginLog.LanguageMissingFallbackEnglish(_logger, languageKey);
                 return "en";
             }
         }
@@ -103,25 +103,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             string fullTextKey = fallbackText.Replace(" ", "").Replace("-", "");
             if (!string.Equals(key, fullTextKey, StringComparison.Ordinal) && translationPack.ContainsKey(fullTextKey))
             {
-                PluginLog.FoundFullTextTranslation(m_logger, fullTextKey, languageKey);
+                PluginLog.FoundFullTextTranslation(_logger, fullTextKey, languageKey);
                 metadata = null;
                 return translationPack.Value<string>(fullTextKey)!;
             }
 
             if (translationPack.ContainsKey(key))
             {
-                PluginLog.FoundKeyTranslation(m_logger, key, languageKey);
+                PluginLog.FoundKeyTranslation(_logger, key, languageKey);
                 return translationPack.Value<string>(key)!;
             }
 
-            PluginLog.NoTranslationFound(m_logger, key, languageKey);
+            PluginLog.NoTranslationFound(_logger, key, languageKey);
             string? libreTranslateVersion = LibreTranslateHelper.TranslateAsync(fallbackText, "en", desiredLanguage).GetAwaiter().GetResult();
-            return libreTranslateVersion ?? m_translationPacks["en"].Value<string>(key) ?? fallbackText;
+            return libreTranslateVersion ?? _translationPacks["en"].Value<string>(key) ?? fallbackText;
         }
 
         private string ApplyTranslationMetadata(string translatedText, string desiredLanguage, TranslationMetadata metadata)
         {
-            PluginLog.ApplyingTranslationMetadata(m_logger, translatedText);
+            PluginLog.ApplyingTranslationMetadata(_logger, translatedText);
 
             string? additionalContent = metadata.AdditionalContent;
             if (metadata.TranslateAdditionalContent && !string.IsNullOrEmpty(additionalContent))
@@ -142,30 +142,30 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 translatedText = translatedText.Replace("{0}", additionalContent);
             }
 
-            PluginLog.AppliedTranslationMetadata(m_logger, translatedText);
+            PluginLog.AppliedTranslationMetadata(_logger, translatedText);
             return translatedText;
         }
 
         public void UpdateTranslationPack(string language, JObject translationPack)
         {
-            m_translationPacks[language] = translationPack;
+            _translationPacks[language] = translationPack;
         }
 
         public IDictionary<string, string>? GetTranslationPack(string language)
         {
             string languageKey = language;
 
-            if (!m_translationPacks.ContainsKey(languageKey) && languageKey.Contains('-'))
+            if (!_translationPacks.ContainsKey(languageKey) && languageKey.Contains('-'))
             {
                 languageKey = languageKey.Split("-")[0];
             }
 
-            if (!m_translationPacks.ContainsKey(languageKey))
+            if (!_translationPacks.ContainsKey(languageKey))
             {
                 languageKey = "en";
             }
 
-            if (m_translationPacks.TryGetValue(languageKey, out JObject? pack))
+            if (_translationPacks.TryGetValue(languageKey, out JObject? pack))
             {
                 return pack.ToObject<Dictionary<string, string>>();
             }

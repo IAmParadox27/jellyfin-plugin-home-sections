@@ -30,35 +30,35 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Controllers;
 [Collection("Plugin Instance")]
 public class HomeScreenControllerEndpointsTests : IDisposable
 {
-    private readonly PluginFixture m_fixture;
-    private readonly Mock<IHomeScreenManager> m_homeScreenManager = new();
-    private readonly Mock<IDisplayPreferencesManager> m_displayPreferencesManager = new();
-    private readonly Mock<IServerApplicationHost> m_serverApplicationHost = new();
-    private readonly Mock<IServerConfigurationManager> m_serverConfigurationManager = new();
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly Mock<ICollectionManager> m_collectionManager = new();
-    private readonly Mock<IPlaylistManager> m_playlistManager = new();
-    private readonly UserSectionsDataCache m_dataCache = new();
-    private readonly JellyseerrFakeServer m_server;
+    private readonly PluginFixture _fixture;
+    private readonly Mock<IHomeScreenManager> _homeScreenManager = new();
+    private readonly Mock<IDisplayPreferencesManager> _displayPreferencesManager = new();
+    private readonly Mock<IServerApplicationHost> _serverApplicationHost = new();
+    private readonly Mock<IServerConfigurationManager> _serverConfigurationManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly Mock<ICollectionManager> _collectionManager = new();
+    private readonly Mock<IPlaylistManager> _playlistManager = new();
+    private readonly UserSectionsDataCache _dataCache = new();
+    private readonly JellyseerrFakeServer _server;
 
-    private string? m_originalJellyseerrUrl;
-    private string? m_originalApiKey;
+    private string? _originalJellyseerrUrl;
+    private string? _originalApiKey;
 
     public HomeScreenControllerEndpointsTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
-        m_server = JellyseerrFakeServer.Start(Respond);
+        _fixture = fixture;
+        _server = JellyseerrFakeServer.Start(Respond);
 
-        m_serverConfigurationManager
+        _serverConfigurationManager
             .Setup(manager => manager.Configuration)
             .Returns(new MediaBrowser.Model.Configuration.ServerConfiguration());
 
         PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
-        m_originalJellyseerrUrl = config.JellyseerrUrl;
-        m_originalApiKey = config.JellyseerrApiKey;
-        config.JellyseerrUrl = m_server.BaseUrl;
+        _originalJellyseerrUrl = config.JellyseerrUrl;
+        _originalApiKey = config.JellyseerrApiKey;
+        config.JellyseerrUrl = _server.BaseUrl;
         config.JellyseerrApiKey = "test-key";
     }
 
@@ -66,9 +66,9 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     {
         GC.SuppressFinalize(this);
         PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
-        config.JellyseerrUrl = m_originalJellyseerrUrl;
-        config.JellyseerrApiKey = m_originalApiKey;
-        m_server.Dispose();
+        config.JellyseerrUrl = _originalJellyseerrUrl;
+        config.JellyseerrApiKey = _originalApiKey;
+        _server.Dispose();
     }
 
     private static (int StatusCode, string Json) Respond(string pathAndQuery)
@@ -98,27 +98,27 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     private HomeScreenController MakeController(string? userIdClaim = null)
     {
         HomeScreenSectionService sectionService = new HomeScreenSectionService(
-            m_homeScreenManager.Object,
+            _homeScreenManager.Object,
             NullLogger<HomeScreenSectionsPlugin>.Instance,
-            m_fixture.TranslationManagerMock.Object,
-            m_dataCache,
-            m_serverConfigurationManager.Object,
-            m_userManager.Object,
-            m_libraryManager.Object,
-            m_dtoService.Object,
-            new CollectionManagerProxy(m_collectionManager.Object),
-            m_playlistManager.Object);
+            _fixture.TranslationManagerMock.Object,
+            _dataCache,
+            _serverConfigurationManager.Object,
+            _userManager.Object,
+            _libraryManager.Object,
+            _dtoService.Object,
+            new CollectionManagerProxy(_collectionManager.Object),
+            _playlistManager.Object);
 
         ImageCacheService imageCacheService = new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient(FakeHttpMessageHandler.RespondingWithStatus(System.Net.HttpStatusCode.NotFound)));
 
         HomeScreenController controller = new HomeScreenController(
-            m_homeScreenManager.Object,
-            m_displayPreferencesManager.Object,
-            m_serverApplicationHost.Object,
-            m_fixture.Paths,
+            _homeScreenManager.Object,
+            _displayPreferencesManager.Object,
+            _serverApplicationHost.Object,
+            _fixture.Paths,
             sectionService,
             imageCacheService);
 
@@ -139,7 +139,7 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     [Fact]
     public void GetReady_returns_503_when_no_sections_registered()
     {
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetSectionTypes())
             .Returns(Array.Empty<IHomeScreenSection>());
 
@@ -152,7 +152,7 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     [Fact]
     public void GetReady_returns_ok_when_sections_registered()
     {
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetSectionTypes())
             .Returns(new IHomeScreenSection[]
             {
@@ -179,10 +179,10 @@ public class HomeScreenControllerEndpointsTests : IDisposable
         ];
         try
         {
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetUserSettings(userId))
                 .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["EndpointSection"] });
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new IHomeScreenSection[]
                 {
@@ -191,7 +191,7 @@ public class HomeScreenControllerEndpointsTests : IDisposable
                         OnGetResults = _ => new QueryResult<BaseItemDto>()
                     }
                 });
-            m_fixture.TranslationManagerMock
+            _fixture.TranslationManagerMock
                 .Setup(manager => manager.Translate(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -218,7 +218,7 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     public void GetSectionContent_invokes_the_matching_results_delegate()
     {
         Guid userId = Guid.NewGuid();
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.InvokeResultsDelegate(
                 "NextUp",
                 It.Is<HomeScreenSectionPayload>(payload => payload.UserId == userId),
@@ -235,13 +235,13 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     [Fact]
     public void RegisterSection_registers_delegate_that_posts_to_endpoint()
     {
-        int port = new Uri(m_server.BaseUrl).Port;
-        m_serverApplicationHost
+        int port = new Uri(_server.BaseUrl).Port;
+        _serverApplicationHost
             .SetupGet(host => host.HttpPort)
             .Returns(port);
 
         PluginDefinedSection? captured = null;
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.RegisterResultsDelegate(It.IsAny<PluginDefinedSection>()))
             .Callback<PluginDefinedSection>(section => captured = section);
 
@@ -270,7 +270,7 @@ public class HomeScreenControllerEndpointsTests : IDisposable
         HomeScreenController controller = MakeController(userIdClaim: null);
 
         ActionResult result = await controller.MakeDiscoverRequest(
-            m_userManager.Object,
+            _userManager.Object,
             new DiscoverRequestPayload { MediaType = "movie", MediaId = 5 });
 
         Assert.IsType<ForbidResult>(result);
@@ -280,14 +280,14 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     public async Task MakeDiscoverRequest_returns_bad_request_for_unknown_user()
     {
         Guid userId = Guid.NewGuid();
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(userId))
             .Returns((User?)null);
 
         HomeScreenController controller = MakeController(userIdClaim: userId.ToString());
 
         ActionResult result = await controller.MakeDiscoverRequest(
-            m_userManager.Object,
+            _userManager.Object,
             new DiscoverRequestPayload { MediaType = "movie", MediaId = 5 });
 
         Assert.IsType<BadRequestResult>(result);
@@ -300,18 +300,18 @@ public class HomeScreenControllerEndpointsTests : IDisposable
     {
         Guid userId = Guid.NewGuid();
         User user = new("EndpointUser", "AuthProvider", "PasswordResetProvider");
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(userId))
             .Returns(user);
 
         HomeScreenController controller = MakeController(userIdClaim: userId.ToString());
 
         ActionResult result = await controller.MakeDiscoverRequest(
-            m_userManager.Object,
+            _userManager.Object,
             new DiscoverRequestPayload { MediaType = mediaType, MediaId = 42 });
 
         ContentResult content = Assert.IsType<ContentResult>(result);
         Assert.Contains("55", content.Content, StringComparison.Ordinal);
-        Assert.Contains(m_server.RequestsReceived, request => request.StartsWith("/api/v1/request", StringComparison.Ordinal));
+        Assert.Contains(_server.RequestsReceived, request => request.StartsWith("/api/v1/request", StringComparison.Ordinal));
     }
 }

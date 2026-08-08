@@ -19,22 +19,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.HomeScreen.Sections;
 
 public class GenreSectionTests
 {
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<ICollectionManager> m_collectionManager = new();
-    private readonly Mock<IUserDataManager> m_userDataManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly Mock<IUserViewManager> m_userViewManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<ICollectionManager> _collectionManager = new();
+    private readonly Mock<IUserDataManager> _userDataManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly Mock<IUserViewManager> _userViewManager = new();
 
     private GenreSection MakeSection()
     {
         return new GenreSection(
-            m_userManager.Object,
-            m_libraryManager.Object,
-            new CollectionManagerProxy(m_collectionManager.Object),
-            m_userDataManager.Object,
-            m_dtoService.Object,
-            m_userViewManager.Object);
+            _userManager.Object,
+            _libraryManager.Object,
+            new CollectionManagerProxy(_collectionManager.Object),
+            _userDataManager.Object,
+            _dtoService.Object,
+            _userViewManager.Object);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public class GenreSectionTests
     {
         Guid userId = Guid.NewGuid();
         User user = new("GenreViewer", "AuthProvider", "PasswordResetProvider");
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(userId))
             .Returns(user);
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetVirtualFolders())
             .Returns([]);
 

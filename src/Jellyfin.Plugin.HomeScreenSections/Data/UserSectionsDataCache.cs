@@ -49,7 +49,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
         public ConcurrentDictionary<int, bool> SectionsInProgress { get; set; } = new ConcurrentDictionary<int, bool>();
     }
     
-    // ponytail: record gives Equals/GetHashCode for free, keep required init for compat
     public sealed record IntRange
     {
         public required int Start { get; init; }

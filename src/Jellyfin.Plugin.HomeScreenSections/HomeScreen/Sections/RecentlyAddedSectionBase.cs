@@ -40,10 +40,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected abstract SectionViewMode DefaultViewMode { get; }
         
-        protected IUserViewManager m_userViewManager { get; }
-        protected IUserManager m_userManager { get; }
-        protected ILibraryManager m_libraryManager { get; }
-        protected IDtoService m_dtoService { get; }
+        protected IUserViewManager _userViewManager { get; }
+        protected IUserManager _userManager { get; }
+        protected ILibraryManager _libraryManager { get; }
+        protected IDtoService _dtoService { get; }
         private IServiceProvider ServiceProvider { get; }
 
         protected RecentlyAddedSectionBase(IUserViewManager userViewManager,
@@ -52,16 +52,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             IDtoService dtoService,
             IServiceProvider serviceProvider)
         {
-            m_userViewManager = userViewManager;
-            m_userManager = userManager;
-            m_libraryManager = libraryManager;
-            m_dtoService = dtoService;
+            _userViewManager = userViewManager;
+            _userManager = userManager;
+            _libraryManager = libraryManager;
+            _dtoService = dtoService;
             ServiceProvider = serviceProvider;
         }
 
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
 
             DtoOptions dtoOptions = new DtoOptions
             {
@@ -79,21 +79,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
             
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+            VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
                 .Where(x => x.CollectionType == CollectionTypeOptions)
-                .FilterToUserPermitted(m_libraryManager, user);
+                .FilterToUserPermitted(_libraryManager, user);
 
             IEnumerable<BaseItem> recentlyAddedItems = GetItems(user, dtoOptions, folders, isPlayed);
             
             return new QueryResult<BaseItemDto>(Array.ConvertAll(recentlyAddedItems.ToArray(),
-                i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
+                i => _dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            BaseItemDto? originalPayload = LibrarySectionHelper.ResolveLibraryFolderDto(m_libraryManager, m_userManager, m_dtoService, userId, CollectionType, LibraryId);
+            BaseItemDto? originalPayload = LibrarySectionHelper.ResolveLibraryFolderDto(_libraryManager, _userManager, _dtoService, userId, CollectionType, LibraryId);
 
-            RecentlyAddedSectionBase instance = (ActivatorUtilities.CreateInstance(ServiceProvider, GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedSectionBase)!;
+            RecentlyAddedSectionBase instance = (ActivatorUtilities.CreateInstance(ServiceProvider, GetType(), _userViewManager, _userManager, _libraryManager, _dtoService) as RecentlyAddedSectionBase)!;
 
             instance.AdditionalData = AdditionalData;
             instance.DisplayText = DisplayText;
@@ -104,7 +104,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public HomeScreenSectionInfo GetInfo()
         {
-            // ponytail: reuse helper — was duplicated in LatestSectionBase
             return SectionDtoHelper.CreateInfo(this, DefaultViewMode, true);
         }
 
@@ -114,11 +113,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             // The reason we do this is to ensure that we always get 16 items, even if there is only 1 library that matches our type.
             return folders.SelectMany(x =>
             {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                var item = _libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
                 if (item is not Folder folder)
                 {
-                    folder = m_libraryManager.GetUserRootFolder();
+                    folder = _libraryManager.GetUserRootFolder();
                 }
 
                 return folder.GetItems(new InternalItemsQuery(user)

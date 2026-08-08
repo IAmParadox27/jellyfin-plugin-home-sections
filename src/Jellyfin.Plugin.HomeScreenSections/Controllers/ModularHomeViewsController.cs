@@ -17,9 +17,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
     [Route("[controller]")]
     public class ModularHomeViewsController : ControllerBase
     {
-        private readonly ILogger<ModularHomeViewsController> m_logger;
-        private readonly IHomeScreenManager m_homeScreenManager;
-        private readonly ITranslationManager m_translationManager;
+        private readonly ILogger<ModularHomeViewsController> _logger;
+        private readonly IHomeScreenManager _homeScreenManager;
+        private readonly ITranslationManager _translationManager;
 
         /// <summary>
         /// Constructor.
@@ -29,9 +29,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="translationManager">Instance of <see cref="ITranslationManager"/> interface.</param>
         public ModularHomeViewsController(ILogger<ModularHomeViewsController> logger, IHomeScreenManager homeScreenManager, ITranslationManager translationManager)
         {
-            m_logger = logger;
-            m_homeScreenManager = homeScreenManager;
-            m_translationManager = translationManager;
+            _logger = logger;
+            _homeScreenManager = homeScreenManager;
+            _translationManager = translationManager;
         }
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             // NOTE: add reading whether the section is enabled or disabled by the user.
             List<HomeScreenSectionInfo> items = [];
 
-            IEnumerable<IHomeScreenSection> sections = m_homeScreenManager.GetSectionTypes();
+            IEnumerable<IHomeScreenSection> sections = _homeScreenManager.GetSectionTypes();
 
             foreach (IHomeScreenSection section in sections)
             {
@@ -68,7 +68,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
                 if (!string.IsNullOrWhiteSpace(language) && item.DisplayText != null)
                 {
-                    item.DisplayText = m_translationManager.Translate(
+                    item.DisplayText = _translationManager.Translate(
                         item.Section!, language.Trim(), item.DisplayText, section.TranslationMetadata);
                 }
 
@@ -92,7 +92,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             IEnumerable<SectionSettings> adminLockedSections =
                 HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => !x.AllowUserOverride);
             
-            return m_homeScreenManager.GetUserSettings(userId) ?? new ModularHomeUserSettings
+            return _homeScreenManager.GetUserSettings(userId) ?? new ModularHomeUserSettings
             {
                 UserId = userId,
                 EnabledSections = defaultEnabledSections.Select(x => x.SectionId).ToList(),
@@ -110,7 +110,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public ActionResult<IDictionary<string, string>> GetTranslations([FromQuery] string language = "en")
         {
-            var translations = m_translationManager.GetTranslationPack(language.Trim());
+            var translations = _translationManager.GetTranslationPack(language.Trim());
             return Ok(translations ?? new Dictionary<string, string>(StringComparer.Ordinal));
         }
 
@@ -123,7 +123,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public ActionResult UpdateSettings([FromBody] ModularHomeUserSettings obj)
         {
-            m_homeScreenManager.UpdateUserSettings(obj.UserId, obj);
+            _homeScreenManager.UpdateUserSettings(obj.UserId, obj);
 
             return Ok();
         }
@@ -153,7 +153,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
             if (stream == null)
             {
-                PluginLog.FailedGetResource(m_logger, view.EmbeddedResourcePath);
+                PluginLog.FailedGetResource(_logger, view.EmbeddedResourcePath);
                 return NotFound();
             }
 

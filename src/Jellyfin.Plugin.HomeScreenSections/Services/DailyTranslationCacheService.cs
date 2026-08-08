@@ -13,12 +13,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         public string Description => "Goes to GitHub and downloads the latest translation files.";
         public string Category => "Maintenance";
 
-        private readonly ITranslationManager m_translationManager;
+        private readonly ITranslationManager _translationManager;
 
         // Trailing slash included to avoid getting the folder from the github trees JSON data
-        private const string c_locPath = "src/Jellyfin.Plugin.HomeScreenSections/_Localization/";
+        private const string LocPath = "src/Jellyfin.Plugin.HomeScreenSections/_Localization/";
 
-        // ponytail: reuse HttpClient — was new per ExecuteAsync (socket churn)
         private static readonly HttpClient s_httpClient = CreateHttpClient();
 
         private static HttpClient CreateHttpClient()
@@ -30,7 +29,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public DailyTranslationCacheService(ITranslationManager translationManager)
         {
-            m_translationManager = translationManager;
+            _translationManager = translationManager;
         }
         
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => StartupServiceHelper.GetStartupTrigger()
@@ -53,7 +52,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 string treesJsonRaw = await treesResponse.Content.ReadAsStringAsync(cancellationToken);
 
                 JObject treesObj = JObject.Parse(treesJsonRaw);
-                IEnumerable<JObject>? data = treesObj.Value<JArray>("tree")?.OfType<JObject>().Where(x => x.Value<string>("path")?.StartsWith(c_locPath, StringComparison.Ordinal) ?? false);
+                IEnumerable<JObject>? data = treesObj.Value<JArray>("tree")?.OfType<JObject>().Where(x => x.Value<string>("path")?.StartsWith(LocPath, StringComparison.Ordinal) ?? false);
                 if (data != null)
                 {
                     string[] blobUrls = data.Select(x => x.Value<string>("path")).Where(x => x != null).Select(x => x!).ToArray();
@@ -68,7 +67,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                         string languageCode = Path.GetFileNameWithoutExtension(blobUrl);
                         JObject languagePack = JObject.Parse(blobJsonRaw);
                         
-                        m_translationManager.UpdateTranslationPack(languageCode, languagePack);
+                        _translationManager.UpdateTranslationPack(languageCode, languagePack);
                         
                         currentProgress += progressIncrement;
                         progress.Report(currentProgress);

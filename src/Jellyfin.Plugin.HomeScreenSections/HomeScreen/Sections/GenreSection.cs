@@ -30,23 +30,23 @@ public class GenreSection : IHomeScreenSection
 
     public TranslationMetadata? TranslationMetadata { get; private set; }
 
-    private readonly IUserManager m_userManager;
-    private readonly ILibraryManager m_libraryManager;
-    private readonly CollectionManagerProxy m_collectionManagerProxy;
-    private readonly IUserDataManager m_userDataManager;
-    private readonly IDtoService m_dtoService;
+    private readonly IUserManager _userManager;
+    private readonly ILibraryManager _libraryManager;
+    private readonly CollectionManagerProxy _collectionManagerProxy;
+    private readonly IUserDataManager _userDataManager;
+    private readonly IDtoService _dtoService;
 
-    private readonly IUserViewManager m_userViewManager;
+    private readonly IUserViewManager _userViewManager;
 
     public GenreSection(IUserManager userManager, ILibraryManager libraryManager, CollectionManagerProxy collectionManagerProxy,
         IUserDataManager userDataManager, IDtoService dtoService, IUserViewManager userViewManager)
     {
-        m_userManager = userManager;
-        m_libraryManager = libraryManager;
-        m_collectionManagerProxy = collectionManagerProxy;
-        m_userDataManager = userDataManager;
-        m_dtoService = dtoService;
-        m_userViewManager = userViewManager;
+        _userManager = userManager;
+        _libraryManager = libraryManager;
+        _collectionManagerProxy = collectionManagerProxy;
+        _userDataManager = userDataManager;
+        _dtoService = dtoService;
+        _userViewManager = userViewManager;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -56,8 +56,8 @@ public class GenreSection : IHomeScreenSection
             return new QueryResult<BaseItemDto>();
         }
 
-        User? user = m_userManager.GetUserById(payload.UserId);
-        Genre genre = m_libraryManager.GetGenre(payload.AdditionalData);
+        User? user = _userManager.GetUserById(payload.UserId);
+        Genre genre = _libraryManager.GetGenre(payload.AdditionalData);
         DtoOptions dtoOptions = CreateDtoOptions();
 
         var config = HomeScreenSectionsPlugin.Instance?.Configuration;
@@ -68,14 +68,14 @@ public class GenreSection : IHomeScreenSection
         List<BaseItem> movies = GetMoviesForGenre(user, genre, dtoOptions, isPlayed);
         movies.Shuffle();
 
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(movies.Take(16).ToArray(), dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(movies.Take(16).ToArray(), dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
         User user = (userId is null || userId.Value.Equals(default)
             ? null
-            : m_userManager.GetUserById(userId.Value))
+            : _userManager.GetUserById(userId.Value))
             ?? throw new InvalidOperationException("User not found for genre section.");
 
         // Do the heavy lifting before we add into the cache
@@ -94,13 +94,13 @@ public class GenreSection : IHomeScreenSection
 
         foreach (string selectedGenre in PickWeightedGenres(userGenreScores, instanceCount))
         {
-            Genre? genreItem = m_libraryManager.GetGenre(selectedGenre);
-            yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
+            Genre? genreItem = _libraryManager.GetGenre(selectedGenre);
+            yield return new GenreSection(_userManager, _libraryManager, _collectionManagerProxy, _userDataManager, _dtoService, _userViewManager)
             {
                 AdditionalData = selectedGenre,
                 DisplayText = $"{selectedGenre} Movies",
                 OriginalPayload = genreItem != null
-                    ? m_dtoService.GetBaseItemDto(genreItem, linkDtoOptions, user)
+                    ? _dtoService.GetBaseItemDto(genreItem, linkDtoOptions, user)
                     : null,
                 TranslationMetadata = new TranslationMetadata()
                 {
@@ -163,17 +163,17 @@ public class GenreSection : IHomeScreenSection
 
     private List<BaseItem> GetMoviesForGenre(User? user, Genre genre, DtoOptions dtoOptions, bool? isPlayed)
     {
-        VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+        VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
             .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-            .FilterToUserPermitted(m_libraryManager, user);
+            .FilterToUserPermitted(_libraryManager, user);
 
         return folders.SelectMany(x =>
         {
-            var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+            var item = _libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
             if (item is not Folder folder)
             {
-                folder = m_libraryManager.GetUserRootFolder();
+                folder = _libraryManager.GetUserRootFolder();
             }
 
             return folder.GetItems(new InternalItemsQuery(user)
@@ -259,9 +259,9 @@ public class GenreSection : IHomeScreenSection
 
     private Guid[] GetMovieFolderIds(User user)
     {
-        VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+        VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
             .Where(x => x.CollectionType == CollectionTypeOptions.movies)
-            .FilterToUserPermitted(m_libraryManager, user);
+            .FilterToUserPermitted(_libraryManager, user);
 
         return folders
             .Select(x => Guid.Parse(x.ItemId ?? Guid.Empty.ToString()))
@@ -273,11 +273,11 @@ public class GenreSection : IHomeScreenSection
     {
         return folderIds.SelectMany(folderId =>
         {
-            var item = m_libraryManager.GetParentItem(folderId, user?.Id);
+            var item = _libraryManager.GetParentItem(folderId, user?.Id);
 
             if (item is not Folder folder)
             {
-                folder = m_libraryManager.GetUserRootFolder();
+                folder = _libraryManager.GetUserRootFolder();
             }
 
             return folder.GetItems(new InternalItemsQuery(user)
@@ -295,7 +295,7 @@ public class GenreSection : IHomeScreenSection
         Dictionary<Guid, UserItemData?> userDataCache = [];
         foreach (var movie in allPlayedMovies)
         {
-            userDataCache[movie.Id] = m_userDataManager.GetUserData(user, movie);
+            userDataCache[movie.Id] = _userDataManager.GetUserData(user, movie);
         }
 
         return userDataCache;
@@ -348,11 +348,11 @@ public class GenreSection : IHomeScreenSection
     {
         List<Movie> likedOrFavoritedMovies = folderIds.SelectMany(folderId =>
         {
-            var item = m_libraryManager.GetParentItem(folderId, user?.Id);
+            var item = _libraryManager.GetParentItem(folderId, user?.Id);
 
             if (item is not Folder folder)
             {
-                folder = m_libraryManager.GetUserRootFolder();
+                folder = _libraryManager.GetUserRootFolder();
             }
 
             return folder.GetItems(new InternalItemsQuery(user)

@@ -32,11 +32,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         protected abstract CollectionTypeOptions CollectionTypeOptions { get; }
         
-        protected IUserViewManager m_userViewManager { get; }
-        protected IUserManager m_userManager { get; }
-        protected ILibraryManager m_libraryManager { get; }
-        protected IDtoService m_dtoService { get; }
-        protected IServiceProvider m_serviceProvider { get; }
+        protected IUserViewManager _userViewManager { get; }
+        protected IUserManager _userManager { get; }
+        protected ILibraryManager _libraryManager { get; }
+        protected IDtoService _dtoService { get; }
+        protected IServiceProvider _serviceProvider { get; }
         
         protected LatestSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
@@ -44,36 +44,36 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             IDtoService dtoService,
             IServiceProvider serviceProvider)
         {
-            m_userViewManager = userViewManager;
-            m_userManager = userManager;
-            m_libraryManager = libraryManager;
-            m_dtoService = dtoService;
-            m_serviceProvider = serviceProvider;
+            _userViewManager = userViewManager;
+            _userManager = userManager;
+            _libraryManager = libraryManager;
+            _dtoService = dtoService;
+            _serviceProvider = serviceProvider;
         }
 
         public virtual QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             DtoOptions dtoOptions = CreateDtoOptions();
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
 
             var config = HomeScreenSectionsPlugin.Instance?.Configuration;
             var sectionSettings = config?.SectionSettings.FirstOrDefault(x => string.Equals(x.SectionId, Section, StringComparison.Ordinal));
             // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
             bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
 
-            VirtualFolderInfo[] folders = m_libraryManager.GetVirtualFolders()
+            VirtualFolderInfo[] folders = _libraryManager.GetVirtualFolders()
                 .Where(x => x.CollectionType == CollectionTypeOptions)
-                .FilterToUserPermitted(m_libraryManager, user);
+                .FilterToUserPermitted(_libraryManager, user);
 
             List<(BaseItem Item, DateTime? PremiereDate)> selectedItems = SearchLatestItems(user, folders, isPlayed);
 
             return new QueryResult<BaseItemDto>(Array.ConvertAll(selectedItems.OrderByDescending(x => x.PremiereDate).Select(x => x.Item).ToArray(),
-                i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
+                i => _dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
         
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            BaseItemDto? originalPayload = LibrarySectionHelper.ResolveLibraryFolderDto(m_libraryManager, m_userManager, m_dtoService, userId, CollectionType, LibraryId);
+            BaseItemDto? originalPayload = LibrarySectionHelper.ResolveLibraryFolderDto(_libraryManager, _userManager, _dtoService, userId, CollectionType, LibraryId);
 
             LatestSectionBase sectionBase = CreateInstance();
             sectionBase.DisplayText = DisplayText;
@@ -85,7 +85,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public HomeScreenSectionInfo GetInfo()
         {
-            // ponytail: reuse SectionDtoHelper — was 10-line boilerplate duplicated in RecentlyAddedSectionBase
             return SectionDtoHelper.CreateInfo(this, DefaultViewMode, true);
         }
 
@@ -147,11 +146,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             var latestMovies = folders.Select(x =>
             {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                var item = _libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
                 if (item is not Folder folder)
                 {
-                    folder = m_libraryManager.GetUserRootFolder();
+                    folder = _libraryManager.GetUserRootFolder();
                 }
 
                 var items = folder.GetItems(new InternalItemsQuery(user)
