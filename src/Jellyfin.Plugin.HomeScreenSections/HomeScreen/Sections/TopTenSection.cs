@@ -23,9 +23,9 @@ public class TopTenSection : IHomeScreenSection
         Movies,
         Shows
     }
-    private readonly IUserManager m_userManager;
-    private readonly ICollectionManager m_collectionManager;
-    private readonly IDtoService m_dtoService;
+    private readonly IUserManager _userManager;
+    private readonly ICollectionManager _collectionManager;
+    private readonly IDtoService _dtoService;
     public string? Section => "TopTen";
     public string? DisplayText { get; set; } = "Top Ten";
     public int? Limit => 2;
@@ -39,9 +39,9 @@ public class TopTenSection : IHomeScreenSection
         ICollectionManager collectionManager,
         IDtoService dtoService)
     {
-        m_userManager = userManager;
-        m_collectionManager = collectionManager;
-        m_dtoService = dtoService;
+        _userManager = userManager;
+        _collectionManager = collectionManager;
+        _dtoService = dtoService;
     }
     
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -62,10 +62,10 @@ public class TopTenSection : IHomeScreenSection
             ImageTypeLimit = 1
         };
 
-        User user = m_userManager.GetUserById(payload.UserId)!;
+        User user = _userManager.GetUserById(payload.UserId)!;
         
         // NOTE: Add config variable for collection name.
-        BoxSet? collection = m_collectionManager.GetCollections(user)
+        BoxSet? collection = _collectionManager.GetCollections(user)
             .FirstOrDefault(x => string.Equals(x.Name, "Top Ten", StringComparison.Ordinal));
 
         TopTenType type = Enum.Parse<TopTenType>(payload.AdditionalData ?? "Movies");
@@ -75,21 +75,21 @@ public class TopTenSection : IHomeScreenSection
             .Take(10)
             .ToList();
         
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items, dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(items, dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
         List<TopTenSection> sections = [];
         
-        sections.Add(new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
+        sections.Add(new TopTenSection(_userManager, _collectionManager, _dtoService)
         {
             AdditionalData = TopTenType.Movies.ToString(),
             DisplayText = $"{DisplayText} Movies",
             Type = TopTenType.Movies,
         });
         
-        sections.Add(new TopTenSection(m_userManager, m_collectionManager, m_dtoService)
+        sections.Add(new TopTenSection(_userManager, _collectionManager, _dtoService)
         {
             AdditionalData = TopTenType.Shows.ToString(),
             DisplayText = $"{DisplayText} Shows",

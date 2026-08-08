@@ -28,33 +28,33 @@ public class JellyseerrSectionsTests : IDisposable
 {
     private const string Username = "JellyseerrUser";
 
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly User m_user = new(Username, "AuthProvider", "PasswordResetProvider");
-    private readonly Guid m_userId = Guid.NewGuid();
-    private readonly JellyseerrFakeServer m_server;
-    private readonly ImageCacheService m_imageCacheService;
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly User _user = new(Username, "AuthProvider", "PasswordResetProvider");
+    private readonly Guid _userId = Guid.NewGuid();
+    private readonly JellyseerrFakeServer _server;
+    private readonly ImageCacheService _imageCacheService;
 
-    private string? m_originalJellyseerrUrl;
-    private string? m_originalExternalUrl;
-    private string? m_originalApiKey;
-    private string? m_originalLanguages;
+    private string? _originalJellyseerrUrl;
+    private string? _originalExternalUrl;
+    private string? _originalApiKey;
+    private string? _originalLanguages;
 
     public JellyseerrSectionsTests(PluginFixture fixture)
     {
         _ = fixture;
-        m_server = JellyseerrFakeServer.Start(Respond);
-        m_imageCacheService = new ImageCacheService(
+        _server = JellyseerrFakeServer.Start(Respond);
+        _imageCacheService = new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
             fixture.Paths,
             new HttpClient(FakeHttpMessageHandler.RespondingWithStatus(System.Net.HttpStatusCode.NotFound)));
 
-        m_userManager
-            .Setup(manager => manager.GetUserById(m_userId))
-            .Returns(m_user);
+        _userManager
+            .Setup(manager => manager.GetUserById(_userId))
+            .Returns(_user);
 
-        TestDtos.StubPassthrough(m_dtoService);
+        TestDtos.StubPassthrough(_dtoService);
 
         UseFakeJellyseerr();
     }
@@ -63,18 +63,18 @@ public class JellyseerrSectionsTests : IDisposable
     {
         GC.SuppressFinalize(this);
         RestoreJellyseerrConfig();
-        m_server.Dispose();
+        _server.Dispose();
     }
 
     private void UseFakeJellyseerr()
     {
         PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
-        m_originalJellyseerrUrl = config.JellyseerrUrl;
-        m_originalExternalUrl = config.JellyseerrExternalUrl;
-        m_originalApiKey = config.JellyseerrApiKey;
-        m_originalLanguages = config.JellyseerrPreferredLanguages;
+        _originalJellyseerrUrl = config.JellyseerrUrl;
+        _originalExternalUrl = config.JellyseerrExternalUrl;
+        _originalApiKey = config.JellyseerrApiKey;
+        _originalLanguages = config.JellyseerrPreferredLanguages;
 
-        config.JellyseerrUrl = m_server.BaseUrl;
+        config.JellyseerrUrl = _server.BaseUrl;
         config.JellyseerrExternalUrl = string.Empty;
         config.JellyseerrApiKey = "test-key";
         config.JellyseerrPreferredLanguages = "en";
@@ -83,10 +83,10 @@ public class JellyseerrSectionsTests : IDisposable
     private void RestoreJellyseerrConfig()
     {
         PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
-        config.JellyseerrUrl = m_originalJellyseerrUrl;
-        config.JellyseerrExternalUrl = m_originalExternalUrl;
-        config.JellyseerrApiKey = m_originalApiKey;
-        config.JellyseerrPreferredLanguages = m_originalLanguages;
+        config.JellyseerrUrl = _originalJellyseerrUrl;
+        config.JellyseerrExternalUrl = _originalExternalUrl;
+        config.JellyseerrApiKey = _originalApiKey;
+        config.JellyseerrPreferredLanguages = _originalLanguages;
     }
 
     private static (int StatusCode, string Json) Respond(string pathAndQuery)
@@ -157,9 +157,9 @@ public class JellyseerrSectionsTests : IDisposable
     [Fact]
     public void Discover_returns_mapped_items_and_applies_language_and_media_filters()
     {
-        DiscoverSection section = new DiscoverSection(m_userManager.Object, m_imageCacheService);
+        DiscoverSection section = new DiscoverSection(_userManager.Object, _imageCacheService);
 
-        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection());
+        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection());
 
         // 22 english items pass; the fr item and the mediaInfo item are dropped.
         Assert.Equal(22, result.Items.Count);
@@ -170,7 +170,7 @@ public class JellyseerrSectionsTests : IDisposable
         Assert.NotNull(first.PremiereDate);
         Assert.Equal(7.5f, first.CommunityRating);
         Assert.Equal("100", first.ProviderIds!["Jellyseerr"]);
-        Assert.Equal(m_server.BaseUrl, first.ProviderIds["JellyseerrRoot"]);
+        Assert.Equal(_server.BaseUrl, first.ProviderIds["JellyseerrRoot"]);
         Assert.Contains("poster0.jpg", first.ProviderIds["JellyseerrPoster"], StringComparison.Ordinal);
     }
 
@@ -178,9 +178,9 @@ public class JellyseerrSectionsTests : IDisposable
     public void Discover_uses_external_url_for_links_when_configured()
     {
         HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl = "https://requests.example.com/";
-        DiscoverSection section = new DiscoverSection(m_userManager.Object, m_imageCacheService);
+        DiscoverSection section = new DiscoverSection(_userManager.Object, _imageCacheService);
 
-        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection());
+        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection());
 
         Assert.Equal("https://requests.example.com/", result.Items[0].ProviderIds!["JellyseerrRoot"]);
     }
@@ -189,9 +189,9 @@ public class JellyseerrSectionsTests : IDisposable
     public void Discover_includes_other_preferred_languages()
     {
         HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages = "en, fr";
-        DiscoverSection section = new DiscoverSection(m_userManager.Object, m_imageCacheService);
+        DiscoverSection section = new DiscoverSection(_userManager.Object, _imageCacheService);
 
-        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection());
+        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection());
 
         // The fr item is allowed now; only the mediaInfo item stays skipped.
         Assert.Equal(23, result.Items.Count);
@@ -201,18 +201,18 @@ public class JellyseerrSectionsTests : IDisposable
     public void Discover_returns_empty_when_jellyseerr_not_configured()
     {
         HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl = string.Empty;
-        DiscoverSection section = new DiscoverSection(m_userManager.Object, m_imageCacheService);
+        DiscoverSection section = new DiscoverSection(_userManager.Object, _imageCacheService);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
     public void Discover_returns_empty_when_user_unknown()
     {
-        m_userManager.Setup(manager => manager.GetUserById(m_userId)).Returns((User?)null);
-        DiscoverSection section = new DiscoverSection(m_userManager.Object, m_imageCacheService);
+        _userManager.Setup(manager => manager.GetUserById(_userId)).Returns((User?)null);
+        DiscoverSection section = new DiscoverSection(_userManager.Object, _imageCacheService);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
     }
 
     [Theory]
@@ -221,26 +221,26 @@ public class JellyseerrSectionsTests : IDisposable
     public void Discover_subclasses_hit_their_own_endpoints(string sectionKind, string expectedEndpoint)
     {
         DiscoverSection section = string.Equals(sectionKind, "DiscoverMovies", StringComparison.Ordinal)
-            ? new DiscoverMoviesSection(m_userManager.Object, m_imageCacheService)
-            : new DiscoverTvSection(m_userManager.Object, m_imageCacheService);
+            ? new DiscoverMoviesSection(_userManager.Object, _imageCacheService)
+            : new DiscoverTvSection(_userManager.Object, _imageCacheService);
 
-        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection());
+        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection());
 
         Assert.Equal(22, result.Items.Count);
-        Assert.Contains(m_server.RequestsReceived, request => request.StartsWith(expectedEndpoint, StringComparison.Ordinal));
+        Assert.Contains(_server.RequestsReceived, request => request.StartsWith(expectedEndpoint, StringComparison.Ordinal));
     }
 
     [Fact]
     public void Discover_metadata_reports_portrait_locked_rows()
     {
-        DiscoverSection section = new DiscoverSection(m_userManager.Object, m_imageCacheService);
+        DiscoverSection section = new DiscoverSection(_userManager.Object, _imageCacheService);
 
         HomeScreenSectionInfo info = section.GetInfo();
 
         Assert.Equal("Discover", info.Section);
         Assert.Equal(SectionViewMode.Portrait, info.ViewMode);
         Assert.False(info.AllowViewModeChange);
-        Assert.Same(section, Assert.Single(section.CreateInstances(m_userId, 1)));
+        Assert.Same(section, Assert.Single(section.CreateInstances(_userId, 1)));
     }
 
     [Fact]
@@ -250,20 +250,20 @@ public class JellyseerrSectionsTests : IDisposable
         Movie requestedMovie = new Movie { Id = RequestedLibraryItemId, Name = "Requested Movie" };
 
         InternalItemsQuery? capturedQuery = null;
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetVirtualFolders())
             .Returns([new MediaBrowser.Model.Entities.VirtualFolderInfo { ItemId = folderId.ToString(), Name = "Movies", Locations = ["/media/movies"] }]);
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemList(It.IsAny<InternalItemsQuery>()))
             .Callback<InternalItemsQuery>(query => capturedQuery = query)
             .Returns(new BaseItem[] { requestedMovie });
 
-        MyRequestsSection section = new MyRequestsSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        MyRequestsSection section = new MyRequestsSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection());
+        QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection());
 
         Assert.Equal("Requested Movie", Assert.Single(result.Items).Name);
-        Assert.Contains(m_server.RequestsReceived, request => request.StartsWith("/api/v1/user/7/requests", StringComparison.Ordinal));
+        Assert.Contains(_server.RequestsReceived, request => request.StartsWith("/api/v1/user/7/requests", StringComparison.Ordinal));
         // The library lookup must be constrained to the requested Jellyfin media ids, not the whole library.
         Assert.NotNull(capturedQuery);
         Assert.NotNull(capturedQuery!.ItemIds);
@@ -274,36 +274,36 @@ public class JellyseerrSectionsTests : IDisposable
     public void MyRequests_returns_empty_when_jellyseerr_not_configured()
     {
         HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl = string.Empty;
-        MyRequestsSection section = new MyRequestsSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        MyRequestsSection section = new MyRequestsSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
     public void MyRequests_returns_empty_when_user_unknown()
     {
-        m_userManager.Setup(manager => manager.GetUserById(m_userId)).Returns((User?)null);
-        MyRequestsSection section = new MyRequestsSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        _userManager.Setup(manager => manager.GetUserById(_userId)).Returns((User?)null);
+        MyRequestsSection section = new MyRequestsSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
     public void MyRequests_returns_empty_when_no_library_items_match()
     {
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetVirtualFolders())
             .Returns([]);
 
-        MyRequestsSection section = new MyRequestsSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        MyRequestsSection section = new MyRequestsSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
     public void MyRequests_GetInfo_reports_landscape_row()
     {
-        MyRequestsSection section = new MyRequestsSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        MyRequestsSection section = new MyRequestsSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
         HomeScreenSectionInfo info = section.GetInfo();
 

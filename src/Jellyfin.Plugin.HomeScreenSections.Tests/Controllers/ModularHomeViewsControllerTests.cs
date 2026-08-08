@@ -16,8 +16,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Controllers;
 [Collection("Plugin Instance")]
 public class ModularHomeViewsControllerTests
 {
-    private readonly Mock<IHomeScreenManager> m_homeScreenManager = new();
-    private readonly Mock<ITranslationManager> m_translationManager = new();
+    private readonly Mock<IHomeScreenManager> _homeScreenManager = new();
+    private readonly Mock<ITranslationManager> _translationManager = new();
 
     public ModularHomeViewsControllerTests(PluginFixture fixture)
     {
@@ -28,8 +28,8 @@ public class ModularHomeViewsControllerTests
     {
         return new ModularHomeViewsController(
             NullLogger<ModularHomeViewsController>.Instance,
-            m_homeScreenManager.Object,
-            m_translationManager.Object);
+            _homeScreenManager.Object,
+            _translationManager.Object);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class ModularHomeViewsControllerTests
             OnGetResults = _ => new QueryResult<BaseItemDto>()
         };
         NullViewModeSection nullViewModeSection = new NullViewModeSection();
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetSectionTypes())
             .Returns(new IHomeScreenSection[] { section, nullViewModeSection });
 
@@ -49,7 +49,7 @@ public class ModularHomeViewsControllerTests
         Assert.Equal(2, result.TotalRecordCount);
         Assert.Equal(2, result.Items.Count);
         Assert.All(result.Items, item => Assert.Equal(SectionViewMode.Landscape, item.ViewMode));
-        m_translationManager.Verify(
+        _translationManager.Verify(
             manager => manager.Translate(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TranslationMetadata?>()),
             Times.Never());
     }
@@ -61,10 +61,10 @@ public class ModularHomeViewsControllerTests
         {
             OnGetResults = _ => new QueryResult<BaseItemDto>()
         };
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetSectionTypes())
             .Returns(new IHomeScreenSection[] { section });
-        m_translationManager
+        _translationManager
             .Setup(manager => manager.Translate("ContinueWatching", "de", "Continue Watching", null))
             .Returns("Weiter schauen");
 
@@ -96,7 +96,7 @@ public class ModularHomeViewsControllerTests
     {
         Guid userId = Guid.NewGuid();
         ModularHomeUserSettings stored = new ModularHomeUserSettings { UserId = userId };
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetUserSettings(userId))
             .Returns(stored);
 
@@ -109,7 +109,7 @@ public class ModularHomeViewsControllerTests
     public void GetUserSettings_builds_defaults_from_admin_section_settings()
     {
         Guid userId = Guid.NewGuid();
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetUserSettings(userId))
             .Returns((ModularHomeUserSettings?)null);
 
@@ -148,7 +148,7 @@ public class ModularHomeViewsControllerTests
         {
             ["AdminSave"] = "Gemmer"
         };
-        m_translationManager
+        _translationManager
             .Setup(manager => manager.GetTranslationPack("da"))
             .Returns(pack);
 
@@ -161,7 +161,7 @@ public class ModularHomeViewsControllerTests
     [Fact]
     public void GetTranslations_returns_empty_dictionary_when_no_pack_available()
     {
-        m_translationManager
+        _translationManager
             .Setup(manager => manager.GetTranslationPack(It.IsAny<string>()))
             .Returns((IDictionary<string, string>?)null);
 
@@ -180,7 +180,7 @@ public class ModularHomeViewsControllerTests
         ActionResult result = MakeController().UpdateSettings(settings);
 
         Assert.IsType<OkResult>(result);
-        m_homeScreenManager.Verify(manager => manager.UpdateUserSettings(settings.UserId, settings), Times.Once());
+        _homeScreenManager.Verify(manager => manager.UpdateUserSettings(settings.UserId, settings), Times.Once());
     }
 
     private sealed class NullViewModeSection : IHomeScreenSection

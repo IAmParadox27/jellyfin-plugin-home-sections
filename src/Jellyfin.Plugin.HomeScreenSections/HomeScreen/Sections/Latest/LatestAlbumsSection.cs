@@ -34,7 +34,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         
         protected override LatestSectionBase CreateInstance()
         {
-            return new LatestAlbumsSection(m_userViewManager, m_userManager, m_libraryManager, m_dtoService, m_serviceProvider);
+            return new LatestAlbumsSection(_userViewManager, _userManager, _libraryManager, _dtoService, _serviceProvider);
         }
     }
 }

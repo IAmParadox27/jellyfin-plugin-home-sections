@@ -10,37 +10,37 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 /// </summary>
 public sealed class JellyseerrFakeServer : IDisposable
 {
-    private readonly HttpListener m_listener;
-    private readonly Func<string, (int StatusCode, string Json)> m_responder;
-    private readonly Thread m_worker;
-    private readonly List<string> m_requestsReceived = [];
-    private volatile bool m_disposed;
+    private readonly HttpListener _listener;
+    private readonly Func<string, (int StatusCode, string Json)> _responder;
+    private readonly Thread _worker;
+    private readonly List<string> _requestsReceived = [];
+    private volatile bool _disposed;
 
     private JellyseerrFakeServer(int port, Func<string, (int StatusCode, string Json)> responder)
     {
-        m_responder = responder;
+        _responder = responder;
         // Production code (PluginInterface/HomeScreenController) builds "http://localhost:{port}",
         // while sections point directly at BaseUrl. Bind the "localhost" prefix so requests to
         // either host name land here; on Linux "localhost" can resolve to ::1 and a 127.0.0.1-only
         // binding would miss it (the RegisterSection test failed on CI for exactly this reason).
         BaseUrl = $"http://localhost:{port}/";
-        m_listener = new HttpListener();
-        m_listener.Prefixes.Add(BaseUrl);
+        _listener = new HttpListener();
+        _listener.Prefixes.Add(BaseUrl);
         try
         {
-            m_listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+            _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
         }
         catch (HttpListenerException)
         {
             // Some platforms treat the localhost prefix as already covering 127.0.0.1.
         }
-        m_listener.Start();
+        _listener.Start();
 
-        m_worker = new Thread(AcceptLoop)
+        _worker = new Thread(AcceptLoop)
         {
             IsBackground = true
         };
-        m_worker.Start();
+        _worker.Start();
     }
 
     public string BaseUrl { get; }
@@ -49,9 +49,9 @@ public sealed class JellyseerrFakeServer : IDisposable
     {
         get
         {
-            lock (m_requestsReceived)
+            lock (_requestsReceived)
             {
-                return m_requestsReceived.ToArray();
+                return _requestsReceived.ToArray();
             }
         }
     }
@@ -69,12 +69,12 @@ public sealed class JellyseerrFakeServer : IDisposable
 
     private void AcceptLoop()
     {
-        while (!m_disposed)
+        while (!_disposed)
         {
             HttpListenerContext context;
             try
             {
-                context = m_listener.GetContext();
+                context = _listener.GetContext();
             }
             catch (HttpListenerException)
             {
@@ -88,12 +88,12 @@ public sealed class JellyseerrFakeServer : IDisposable
             try
             {
                 string pathAndQuery = context.Request.Url?.PathAndQuery ?? string.Empty;
-                lock (m_requestsReceived)
+                lock (_requestsReceived)
                 {
-                    m_requestsReceived.Add(pathAndQuery);
+                    _requestsReceived.Add(pathAndQuery);
                 }
 
-                (int statusCode, string json) = m_responder(pathAndQuery);
+                (int statusCode, string json) = _responder(pathAndQuery);
                 byte[] body = Encoding.UTF8.GetBytes(json);
                 context.Response.StatusCode = statusCode;
                 context.Response.ContentType = "application/json";
@@ -119,11 +119,11 @@ public sealed class JellyseerrFakeServer : IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        m_disposed = true;
+        _disposed = true;
         try
         {
-            m_listener.Stop();
-            m_listener.Close();
+            _listener.Stop();
+            _listener.Close();
         }
         catch (ObjectDisposedException)
         {

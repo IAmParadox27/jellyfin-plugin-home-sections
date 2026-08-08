@@ -37,7 +37,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 
                 return sourceUrl;
             }
-            // ponytail: one filter replaces 5 identical catch bodies
             catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidOperationException)
             {
                 if (logger != null)

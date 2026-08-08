@@ -31,11 +31,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons
                     ItemFields.DisplayPreferencesId]
             };
 
-            return new StarringSection(m_libraryManager, m_dtoService, m_userManager)
+            return new StarringSection(_libraryManager, _dtoService, _userManager)
             {
                 AdditionalData = person.Id.ToString(),
                 DisplayText = $"Starring {person.Name}",
-                OriginalPayload = m_dtoService.GetBaseItemDto(person, dtoOptions),
+                OriginalPayload = _dtoService.GetBaseItemDto(person, dtoOptions),
                 TranslationMetadata = new TranslationMetadata()
                 {
                     Type = TranslationType.Pattern,

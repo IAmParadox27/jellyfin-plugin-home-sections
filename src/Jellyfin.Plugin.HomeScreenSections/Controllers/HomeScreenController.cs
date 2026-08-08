@@ -35,12 +35,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
     [Route("[controller]")]
     public class HomeScreenController : ControllerBase
     {
-        private readonly IHomeScreenManager m_homeScreenManager;
-        private readonly IDisplayPreferencesManager m_displayPreferencesManager;
-        private readonly IServerApplicationHost m_serverApplicationHost;
-        private readonly IApplicationPaths m_applicationPaths;
-        private readonly HomeScreenSectionService m_homeScreenSectionService;
-        private readonly ImageCacheService m_imageCacheService;
+        private readonly IHomeScreenManager _homeScreenManager;
+        private readonly IDisplayPreferencesManager _displayPreferencesManager;
+        private readonly IServerApplicationHost _serverApplicationHost;
+        private readonly IApplicationPaths _applicationPaths;
+        private readonly HomeScreenSectionService _homeScreenSectionService;
+        private readonly ImageCacheService _imageCacheService;
 
         public HomeScreenController(
             IHomeScreenManager homeScreenManager,
@@ -50,12 +50,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             HomeScreenSectionService homeScreenSectionService,
             ImageCacheService imageCacheService)
         {
-            m_homeScreenManager = homeScreenManager;
-            m_displayPreferencesManager = displayPreferencesManager;
-            m_serverApplicationHost = serverApplicationHost;
-            m_applicationPaths = applicationPaths;
-            m_homeScreenSectionService = homeScreenSectionService;
-            m_imageCacheService = imageCacheService;
+            _homeScreenManager = homeScreenManager;
+            _displayPreferencesManager = displayPreferencesManager;
+            _serverApplicationHost = serverApplicationHost;
+            _applicationPaths = applicationPaths;
+            _homeScreenSectionService = homeScreenSectionService;
+            _imageCacheService = imageCacheService;
         }
 
         /// <summary>
@@ -152,7 +152,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             {
                 id = "registered-types",
                 severity = "info",
-                message = $"{m_homeScreenManager.GetSectionTypes().Count()} section types are registered (built-in + plugins)."
+                message = $"{_homeScreenManager.GetSectionTypes().Count()} section types are registered (built-in + plugins)."
             });
 
             return Ok(new
@@ -246,7 +246,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult GetCachedImage([FromRoute] string cacheKey)
         {
-            (byte[]? data, string? contentType) = m_imageCacheService.GetCachedImage(cacheKey);
+            (byte[]? data, string? contentType) = _imageCacheService.GetCachedImage(cacheKey);
             var config = HomeScreenSectionsPlugin.Instance.Configuration;
 
             if (data == null || contentType == null)
@@ -271,11 +271,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         {
             if (clearAll)
             {
-                m_imageCacheService.ClearAllCache();
+                _imageCacheService.ClearAllCache();
                 return Ok(new { message = "All cached images cleared" });
             }
 
-            m_imageCacheService.ClearExpiredCache();
+            _imageCacheService.ClearExpiredCache();
             return Ok(new { message = "Expired cached images cleared" });
         }
 
@@ -311,13 +311,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             }
 
             // Check HomeScreenManager availability
-            if (m_homeScreenManager == null)
+            if (_homeScreenManager == null)
             {
                 return StatusCode(503, "HomeScreenManager not available");
             }
 
             // Check section types are registered
-            var sectionTypes = m_homeScreenManager.GetSectionTypes();
+            var sectionTypes = _homeScreenManager.GetSectionTypes();
             if (!sectionTypes.Any())
             {
                 return StatusCode(503, "No section types registered");
@@ -337,7 +337,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             [FromQuery] int? numResultsPerPage = null,
             [FromQuery] Guid? pageHash = null)
         {
-            IReadOnlyList<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
+            IReadOnlyList<HomeScreenSectionInfo> sections = _homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
                 page ?? 1, numResultsPerPage, pageHash) ?? [];
 
             return new QueryResult<HomeScreenSectionInfo>(
@@ -360,15 +360,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 AdditionalData = additionalData
             };
 
-            return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
+            return _homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
         }
 
         /// <summary>
         /// Registers an externally provided section. Requires administrator credentials: the
-        /// registered handler receives the requesting user's id and its results endpoint is
-        /// called by the server, so anonymous access would be an SSRF/section-swap vector
-        /// (upstream #258). API keys satisfy the Administrator role, so plugin-based
-        /// registrations keep working.
+        /// registered handler receives user ids and its results endpoint is called by the
+        /// server, so anonymous access would be an SSRF/section-swap vector (upstream #258).
+        /// API keys satisfy the Administrator role, so plugin registrations keep working.
         /// </summary>
         [HttpPost("RegisterSection")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -376,22 +375,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize(Roles = "Administrator")]
         public ActionResult RegisterSection([FromBody] SectionRegisterPayload payload)
         {
-            if (!string.IsNullOrEmpty(payload.Id) && m_homeScreenManager.GetSection(payload.Id) != null)
+            if (!string.IsNullOrEmpty(payload.Id) && _homeScreenManager.GetSection(payload.Id) != null)
             {
                 return Conflict();
             }
 
-            m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
+            _homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
             {
                 OnGetResults = sectionPayload =>
                 {
                     JObject jsonPayload = JObject.FromObject(sectionPayload);
 
-                    string? publishedServerUrl = m_serverApplicationHost.GetType()
-                        .GetProperty("PublishedServerUrl", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(m_serverApplicationHost) as string;
+                    string? publishedServerUrl = _serverApplicationHost.GetType()
+                        .GetProperty("PublishedServerUrl", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(_serverApplicationHost) as string;
 
                     HttpClient client = HomeScreenSectionsPlugin.Instance.ServiceProvider.GetService<IHttpClientFactory>()?.CreateClient() ?? new HttpClient();
-                    client.BaseAddress = new Uri(publishedServerUrl ?? $"http://localhost:{m_serverApplicationHost.HttpPort}");
+                    client.BaseAddress = new Uri(publishedServerUrl ?? $"http://localhost:{_serverApplicationHost.HttpPort}");
                     
                     HttpResponseMessage responseMessage = client.PostAsync(payload.ResultsEndpoint, 
                         new StringContent(jsonPayload.ToString(Formatting.None), MediaTypeHeaderValue.Parse("application/json"))).GetAwaiter().GetResult();

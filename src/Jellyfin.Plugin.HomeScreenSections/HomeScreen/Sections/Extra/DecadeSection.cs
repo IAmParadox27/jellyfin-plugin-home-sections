@@ -28,15 +28,15 @@ public class DecadeSection : IHomeScreenSection
 
     public object? OriginalPayload { get; set; }
 
-    private readonly IUserManager m_userManager;
-    private readonly ILibraryManager m_libraryManager;
-    private readonly IDtoService m_dtoService;
+    private readonly IUserManager _userManager;
+    private readonly ILibraryManager _libraryManager;
+    private readonly IDtoService _dtoService;
 
     public DecadeSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService)
     {
-        m_userManager = userManager;
-        m_libraryManager = libraryManager;
-        m_dtoService = dtoService;
+        _userManager = userManager;
+        _libraryManager = libraryManager;
+        _dtoService = dtoService;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -47,7 +47,7 @@ public class DecadeSection : IHomeScreenSection
             return new QueryResult<BaseItemDto>();
         }
 
-        User? user = m_userManager.GetUserById(payload.UserId);
+        User? user = _userManager.GetUserById(payload.UserId);
         if (user == null)
         {
             return new QueryResult<BaseItemDto>();
@@ -57,7 +57,7 @@ public class DecadeSection : IHomeScreenSection
         DtoOptions dtoOptions = SectionDtoHelper.CreateDefaultDtoOptions();
         bool? isPlayed = GetHideWatchedIsPlayed();
 
-        QueryResult<BaseItem> items = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
+        QueryResult<BaseItem> items = _libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
             IncludeItemTypes = [BaseItemKind.Movie],
             Recursive = true,
@@ -70,14 +70,14 @@ public class DecadeSection : IHomeScreenSection
             IsVirtualItem = false
         });
 
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Items, dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(items.Items, dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
     {
         User? user = userId is null || userId.Value == Guid.Empty
             ? null
-            : m_userManager.GetUserById(userId.Value);
+            : _userManager.GetUserById(userId.Value);
 
         if (user == null)
         {
@@ -93,7 +93,7 @@ public class DecadeSection : IHomeScreenSection
         Random rnd = new Random();
         foreach (int decade in decades.OrderBy(_ => rnd.Next()).Take(instanceCount))
         {
-            yield return new DecadeSection(m_userManager, m_libraryManager, m_dtoService)
+            yield return new DecadeSection(_userManager, _libraryManager, _dtoService)
             {
                 AdditionalData = decade.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 DisplayText = $"{decade}s Movies"
@@ -105,7 +105,7 @@ public HomeScreenSectionInfo GetInfo() => SectionDtoHelper.CreateInfo(this, allo
 
     private List<int> FindDecadesWithMovies(User user)
     {
-        QueryResult<BaseItem> sample = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
+        QueryResult<BaseItem> sample = _libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
             IncludeItemTypes = [BaseItemKind.Movie],
             Recursive = true,

@@ -12,7 +12,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
 {
     public class RecentlyAddedShowsSection : RecentlyAddedSectionBase
     {
-        private readonly ILogger<RecentlyAddedShowsSection> m_logger;
+        private readonly ILogger<RecentlyAddedShowsSection> _logger;
         
         public override string? Section => "RecentlyAddedShows";
 
@@ -39,18 +39,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
             IServiceProvider serviceProvider,
             ILogger<RecentlyAddedShowsSection> logger) : base(userViewManager, userManager, libraryManager, dtoService, serviceProvider)
         {
-            m_logger = logger;
+            _logger = logger;
         }
 
         protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed)
         {
             IEnumerable<BaseItem> candidateShows = folders.SelectMany(x =>
             {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                var item = _libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
                 if (item is not Folder folder)
                 {
-                    folder = m_libraryManager.GetUserRootFolder();
+                    folder = _libraryManager.GetUserRootFolder();
                 }
 
                 return folder.GetItems(new InternalItemsQuery(user)
@@ -99,7 +99,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                     Limit = 1
                 };
 
-                var latestItems = m_libraryManager.GetItemList(query);
+                var latestItems = _libraryManager.GetItemList(query);
                 BaseItem? latestItemAddedForShow = latestItems.Count > 0 ? latestItems[0] : null;
 
                 dateCreated = latestItemAddedForShow?.DateCreated;
@@ -109,13 +109,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 List<BaseItem>? seasonEpisodes = season.GetEpisodes(user, dtoOptions, false);
                 dateCreated = (seasonEpisodes is { Count: > 0 }) ? seasonEpisodes.Max(x => x.DateCreated) : null;
                 
-                PluginLog.SeasonSortedByEpisodeDate(m_logger, season.Name, dateCreated);
+                PluginLog.SeasonSortedByEpisodeDate(_logger, season.Name, dateCreated);
             }
 
             if (dateCreated == null)
             {
                 dateCreated = base.GetSortDateForItem(item, user, dtoOptions);
-                PluginLog.ItemSortedByDefaultDate(m_logger, item.Name, dateCreated);
+                PluginLog.ItemSortedByDefaultDate(_logger, item.Name, dateCreated);
             }
             
             return dateCreated.Value;

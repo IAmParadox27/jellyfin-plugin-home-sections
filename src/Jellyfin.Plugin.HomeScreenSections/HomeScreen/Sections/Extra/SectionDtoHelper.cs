@@ -21,7 +21,6 @@ internal static class SectionDtoHelper
         };
     }
 
-    // ponytail: one helper replaces 10 identical GetInfo() bodies
     public static HomeScreenSectionInfo CreateInfo(IHomeScreenSection section, SectionViewMode viewMode = SectionViewMode.Landscape, bool allowHideWatched = false)
     {
         return new HomeScreenSectionInfo

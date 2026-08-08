@@ -22,13 +22,13 @@ public class ContinueWatchingNextUpSectionTests
 {
     private static readonly Guid s_userId = Guid.NewGuid();
 
-    private readonly Mock<IHomeScreenManager> m_homeScreenManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<IUserDataManager> m_userDataManager = new();
-    private readonly Mock<ITVSeriesManager> m_tvSeriesManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly User m_user = new("ComboUser", "AuthProvider", "PasswordResetProvider");
+    private readonly Mock<IHomeScreenManager> _homeScreenManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<IUserDataManager> _userDataManager = new();
+    private readonly Mock<ITVSeriesManager> _tvSeriesManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly User _user = new("ComboUser", "AuthProvider", "PasswordResetProvider");
 
     public ContinueWatchingNextUpSectionTests(PluginFixture fixture)
     {
@@ -37,17 +37,17 @@ public class ContinueWatchingNextUpSectionTests
 
     private ContinueWatchingNextUpSection MakeSection(params BaseItemDto[] nextUpDtos)
     {
-        m_userManager
+        _userManager
             .Setup(manager => manager.GetUserById(s_userId))
-            .Returns(m_user);
+            .Returns(_user);
 
-        m_tvSeriesManager
+        _tvSeriesManager
             .Setup(manager => manager.GetNextUp(It.IsAny<NextUpQuery>(), It.IsAny<DtoOptions>()))
             .Returns(new QueryResult<BaseItem>(Array.Empty<BaseItem>()));
 
         // NextUpSection pipes GetNextUp items through IDtoService; returning the DTOs we
         // control here lets the merge section see scripted Next Up results.
-        m_dtoService
+        _dtoService
             .Setup(service => service.GetBaseItemDtos(
                 It.IsAny<IReadOnlyList<BaseItem>>(),
                 It.IsAny<DtoOptions>(),
@@ -57,25 +57,25 @@ public class ContinueWatchingNextUpSectionTests
 
         NextUpSection nextUp = new NextUpSection(
             new Mock<IUserViewManager>().Object,
-            m_userManager.Object,
-            m_dtoService.Object,
-            m_libraryManager.Object,
+            _userManager.Object,
+            _dtoService.Object,
+            _libraryManager.Object,
             new Mock<ISessionManager>().Object,
-            m_tvSeriesManager.Object);
+            _tvSeriesManager.Object);
 
         // Continue Watching resolves to null, covering the missing-section branch.
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetSection("ContinueWatching"))
             .Returns((IHomeScreenSection?)null);
-        m_homeScreenManager
+        _homeScreenManager
             .Setup(manager => manager.GetSection("NextUp"))
             .Returns(nextUp);
 
         return new ContinueWatchingNextUpSection(
-            m_homeScreenManager.Object,
-            m_libraryManager.Object,
-            m_userManager.Object,
-            m_userDataManager.Object);
+            _homeScreenManager.Object,
+            _libraryManager.Object,
+            _userManager.Object,
+            _userDataManager.Object);
     }
 
     [Fact]
@@ -165,11 +165,11 @@ public class ContinueWatchingNextUpSectionTests
 
         // Series lookup: one played episode in the series carrying an older LastPlayedDate.
         MediaBrowser.Controller.Entities.TV.Episode playedEpisode = new MediaBrowser.Controller.Entities.TV.Episode();
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemList(It.IsAny<InternalItemsQuery>()))
             .Returns(new BaseItem[] { playedEpisode });
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, playedEpisode))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, playedEpisode))
             .Returns(new UserItemData { Key = "played-episode", LastPlayedDate = seriesPlay });
 
         QueryResult<BaseItemDto> result = section.GetResults(new HomeScreenSectionPayload { UserId = s_userId }, QueryWithUserId());

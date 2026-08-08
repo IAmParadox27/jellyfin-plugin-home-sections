@@ -25,7 +25,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
         
         protected override LatestSectionBase CreateInstance()
         {
-            return new LatestMusicVideoSection(m_userViewManager, m_userManager, m_libraryManager, m_dtoService, m_serviceProvider);
+            return new LatestMusicVideoSection(_userViewManager, _userManager, _libraryManager, _dtoService, _serviceProvider);
         }
     }
 }

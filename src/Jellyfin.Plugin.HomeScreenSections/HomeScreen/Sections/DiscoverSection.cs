@@ -13,8 +13,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
     public class DiscoverSection : IHomeScreenSection
     {
-        private readonly IUserManager m_userManager;
-        private readonly ImageCacheService m_imageCacheService;
+        private readonly IUserManager _userManager;
+        private readonly ImageCacheService _imageCacheService;
         
         public virtual string? Section => "Discover";
 
@@ -28,8 +28,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         public DiscoverSection(IUserManager userManager, ImageCacheService imageCacheService)
         {
-            m_userManager = userManager;
-            m_imageCacheService = imageCacheService;
+            _userManager = userManager;
+            _imageCacheService = imageCacheService;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -43,7 +43,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 return new QueryResult<BaseItemDto>();
             }
             
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
             if (user == null)
             {
                 return new QueryResult<BaseItemDto>();
@@ -144,7 +144,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected string GetCachedImageUrl(string sourceUrl)
         {
-            return ImageCacheHelper.GetCachedImageUrl(m_imageCacheService, sourceUrl);
+            return ImageCacheHelper.GetCachedImageUrl(_imageCacheService, sourceUrl);
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)

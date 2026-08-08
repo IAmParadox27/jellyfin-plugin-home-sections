@@ -16,12 +16,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 /// </summary>
 internal sealed class TestServiceProvider : IServiceProvider
 {
-    private readonly Dictionary<Type, object> m_resolvedCache = [];
-    private readonly FakeApplicationPaths m_applicationPaths;
+    private readonly Dictionary<Type, object> _resolvedCache = [];
+    private readonly FakeApplicationPaths _applicationPaths;
 
     public TestServiceProvider(FakeApplicationPaths applicationPaths)
     {
-        m_applicationPaths = applicationPaths;
+        _applicationPaths = applicationPaths;
     }
 
     public T Resolve<T>() where T : class
@@ -31,7 +31,7 @@ internal sealed class TestServiceProvider : IServiceProvider
 
     public object? GetService(Type serviceType)
     {
-        if (m_resolvedCache.TryGetValue(serviceType, out object? cached))
+        if (_resolvedCache.TryGetValue(serviceType, out object? cached))
         {
             return cached;
         }
@@ -39,7 +39,7 @@ internal sealed class TestServiceProvider : IServiceProvider
         object? resolved = CreateService(serviceType);
         if (resolved != null)
         {
-            m_resolvedCache[serviceType] = resolved;
+            _resolvedCache[serviceType] = resolved;
         }
 
         return resolved;
@@ -71,7 +71,7 @@ internal sealed class TestServiceProvider : IServiceProvider
 
         if (serviceType == typeof(ImageCacheService))
         {
-            return new ImageCacheService(NullLogger<ImageCacheService>.Instance, m_applicationPaths, new HttpClient());
+            return new ImageCacheService(NullLogger<ImageCacheService>.Instance, _applicationPaths, new HttpClient());
         }
 
         if (serviceType == typeof(ILogger))

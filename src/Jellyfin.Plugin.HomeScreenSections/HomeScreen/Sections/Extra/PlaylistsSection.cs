@@ -29,10 +29,10 @@ public class PlaylistsSection : IHomeScreenSection
 
     public object? OriginalPayload { get; set; }
 
-    private readonly IUserManager m_userManager;
-    private readonly IDtoService m_dtoService;
-    private readonly IPlaylistManager m_playlistManager;
-    private readonly ILibraryManager m_libraryManager;
+    private readonly IUserManager _userManager;
+    private readonly IDtoService _dtoService;
+    private readonly IPlaylistManager _playlistManager;
+    private readonly ILibraryManager _libraryManager;
 
     public PlaylistsSection(
         IUserManager userManager,
@@ -40,22 +40,22 @@ public class PlaylistsSection : IHomeScreenSection
         IPlaylistManager playlistManager,
         ILibraryManager libraryManager)
     {
-        m_userManager = userManager;
-        m_dtoService = dtoService;
-        m_playlistManager = playlistManager;
-        m_libraryManager = libraryManager;
+        _userManager = userManager;
+        _dtoService = dtoService;
+        _playlistManager = playlistManager;
+        _libraryManager = libraryManager;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
     {
-        User? user = m_userManager.GetUserById(payload.UserId);
+        User? user = _userManager.GetUserById(payload.UserId);
         if (user == null || string.IsNullOrWhiteSpace(payload.AdditionalData)
             || !Guid.TryParse(payload.AdditionalData, out Guid playlistId))
         {
             return new QueryResult<BaseItemDto>();
         }
 
-        BaseItem? item = m_libraryManager.GetItemById(playlistId);
+        BaseItem? item = _libraryManager.GetItemById(playlistId);
         if (item is not Playlist playlist)
         {
             return new QueryResult<BaseItemDto>();
@@ -65,7 +65,7 @@ public class PlaylistsSection : IHomeScreenSection
         List<BaseItem> children = playlist.GetChildren(user, true, new InternalItemsQuery(user))
             .Take(24)
             .ToList();
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(children, dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(children, dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
@@ -75,7 +75,7 @@ public class PlaylistsSection : IHomeScreenSection
             yield break;
         }
 
-        User? user = m_userManager.GetUserById(userId.Value);
+        User? user = _userManager.GetUserById(userId.Value);
         if (user == null)
         {
             yield break;
@@ -87,18 +87,18 @@ public class PlaylistsSection : IHomeScreenSection
                 ItemFields.DisplayPreferencesId]
         };
 
-        IEnumerable<Playlist> playlists = m_playlistManager.GetPlaylists(user.Id)
+        IEnumerable<Playlist> playlists = _playlistManager.GetPlaylists(user.Id)
             .Where(p => !string.Equals(p.Name, "My List", StringComparison.OrdinalIgnoreCase))
             .Where(p => p.GetChildren(user, true, new InternalItemsQuery(user)).Count > 0)
             .Take(instanceCount);
 
         foreach (Playlist playlist in playlists)
         {
-            yield return new PlaylistsSection(m_userManager, m_dtoService, m_playlistManager, m_libraryManager)
+            yield return new PlaylistsSection(_userManager, _dtoService, _playlistManager, _libraryManager)
             {
                 AdditionalData = playlist.Id.ToString("N"),
                 DisplayText = playlist.Name,
-                OriginalPayload = m_dtoService.GetBaseItemDto(playlist, linkDto, user)
+                OriginalPayload = _dtoService.GetBaseItemDto(playlist, linkDto, user)
             };
         }
     }

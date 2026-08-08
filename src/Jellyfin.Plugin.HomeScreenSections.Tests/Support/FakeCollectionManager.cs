@@ -11,11 +11,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 /// </summary>
 public sealed class FakeCollectionManager : ICollectionManager
 {
-    private readonly IEnumerable<BoxSet> m_collections;
+    private readonly IEnumerable<BoxSet> _collections;
 
     public FakeCollectionManager(IEnumerable<BoxSet> collections)
     {
-        m_collections = collections;
+        _collections = collections;
     }
 
 #pragma warning disable CS0067 // Events satisfy ICollectionManager but are never raised here.
@@ -53,6 +53,6 @@ public sealed class FakeCollectionManager : ICollectionManager
 
     private IEnumerable<BoxSet> GetCollections(User user)
     {
-        return m_collections;
+        return _collections;
     }
 }

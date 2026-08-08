@@ -11,16 +11,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 /// </summary>
 public sealed class TestPlaylist : Playlist
 {
-    private readonly IReadOnlyList<BaseItem> m_children;
+    private readonly IReadOnlyList<BaseItem> _children;
 
     public TestPlaylist(IReadOnlyList<BaseItem> children)
     {
-        m_children = children;
+        _children = children;
     }
 
     public override IReadOnlyList<BaseItem> GetChildren(User user, bool includeLinkedChildren, InternalItemsQuery? query)
     {
-        return m_children;
+        return _children;
     }
 }
 
@@ -29,15 +29,15 @@ public sealed class TestPlaylist : Playlist
 /// </summary>
 public sealed class TestBoxSet : BoxSet
 {
-    private readonly IReadOnlyList<BaseItem> m_children;
+    private readonly IReadOnlyList<BaseItem> _children;
 
     public TestBoxSet(IReadOnlyList<BaseItem> children)
     {
-        m_children = children;
+        _children = children;
     }
 
     public override IReadOnlyList<BaseItem> GetChildren(User user, bool includeLinkedChildren, InternalItemsQuery? query)
     {
-        return m_children;
+        return _children;
     }
 }

@@ -9,31 +9,31 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests;
 [Collection("Plugin Instance")]
 public class HomeScreenSectionsPluginTests
 {
-    private readonly PluginFixture m_fixture;
+    private readonly PluginFixture _fixture;
 
     public HomeScreenSectionsPluginTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     [Fact]
     public void Instance_is_set_after_construction()
     {
-        Assert.Same(m_fixture.Plugin, HomeScreenSectionsPlugin.Instance);
+        Assert.Same(_fixture.Plugin, HomeScreenSectionsPlugin.Instance);
     }
 
     [Fact]
     public void Plugin_exposes_stable_id_and_name()
     {
-        Assert.Equal(Guid.Parse("b8298e01-2697-407a-b44d-aa8dc795e850"), m_fixture.Plugin.Id);
-        Assert.Equal("Home Screen Sections", m_fixture.Plugin.Name);
+        Assert.Equal(Guid.Parse("b8298e01-2697-407a-b44d-aa8dc795e850"), _fixture.Plugin.Id);
+        Assert.Equal("Home Screen Sections", _fixture.Plugin.Name);
     }
 
     [Fact]
     public void Constructor_registers_plugin_pages_configuration_file()
     {
         string pluginPagesConfig = Path.Combine(
-            m_fixture.Paths.PluginConfigurationsPath,
+            _fixture.Paths.PluginConfigurationsPath,
             "Jellyfin.Plugin.PluginPages",
             "config.json");
 
@@ -46,37 +46,37 @@ public class HomeScreenSectionsPluginTests
     [Fact]
     public void GetPages_yields_admin_configuration_page()
     {
-        List<PluginPageInfo> pages = [.. m_fixture.Plugin.GetPages()];
+        List<PluginPageInfo> pages = [.. _fixture.Plugin.GetPages()];
 
         PluginPageInfo page = Assert.Single(pages);
         Assert.Equal("Home Screen Sections", page.Name);
         Assert.EndsWith(".Configuration.config.html", page.EmbeddedResourcePath, StringComparison.Ordinal);
         Assert.True(page.EnableInMainMenu);
-        Assert.NotNull(m_fixture.Plugin.GetType().Assembly.GetManifestResourceStream(page.EmbeddedResourcePath));
+        Assert.NotNull(_fixture.Plugin.GetType().Assembly.GetManifestResourceStream(page.EmbeddedResourcePath));
     }
 
     [Fact]
     public void GetViews_yields_settings_view_with_existing_resource()
     {
-        List<PluginPageInfo> views = [.. m_fixture.Plugin.GetViews()];
+        List<PluginPageInfo> views = [.. _fixture.Plugin.GetViews()];
 
         PluginPageInfo view = Assert.Single(views);
         Assert.Equal("settings", view.Name);
         Assert.EndsWith(".Config.settings.html", view.EmbeddedResourcePath, StringComparison.Ordinal);
-        Assert.NotNull(m_fixture.Plugin.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath));
+        Assert.NotNull(_fixture.Plugin.GetType().Assembly.GetManifestResourceStream(view.EmbeddedResourcePath));
     }
 
     [Fact]
     public void GetCurrentPluginVersion_matches_assembly_version()
     {
         string expected = typeof(HomeScreenSectionsPlugin).Assembly.GetName().Version!.ToString();
-        Assert.Equal(expected, m_fixture.Plugin.GetCurrentPluginVersion());
+        Assert.Equal(expected, _fixture.Plugin.GetCurrentPluginVersion());
     }
 
     [Fact]
     public void UpdateConfiguration_increments_cache_bust_when_developer_mode_turns_on()
     {
-        HomeScreenSectionsPlugin plugin = m_fixture.Plugin;
+        HomeScreenSectionsPlugin plugin = _fixture.Plugin;
         PluginConfiguration original = plugin.Configuration;
         int counter = plugin.Configuration.CacheBustCounter;
         try
@@ -96,7 +96,7 @@ public class HomeScreenSectionsPluginTests
     [Fact]
     public void UpdateConfiguration_preserves_counter_when_developer_mode_stays_on()
     {
-        HomeScreenSectionsPlugin plugin = m_fixture.Plugin;
+        HomeScreenSectionsPlugin plugin = _fixture.Plugin;
         PluginConfiguration original = plugin.Configuration;
         try
         {
@@ -116,7 +116,7 @@ public class HomeScreenSectionsPluginTests
     [Fact]
     public void UpdateConfiguration_preserves_counter_when_developer_mode_turns_off()
     {
-        HomeScreenSectionsPlugin plugin = m_fixture.Plugin;
+        HomeScreenSectionsPlugin plugin = _fixture.Plugin;
         PluginConfiguration original = plugin.Configuration;
         try
         {
@@ -136,9 +136,9 @@ public class HomeScreenSectionsPluginTests
     [Fact]
     public void BustCache_increments_counter_and_clears_user_sections_cache()
     {
-        HomeScreenSectionsPlugin plugin = m_fixture.Plugin;
+        HomeScreenSectionsPlugin plugin = _fixture.Plugin;
         int counter = plugin.Configuration.CacheBustCounter;
-        m_fixture.SectionsCache.Cache[Guid.NewGuid()] = new UserSectionsData
+        _fixture.SectionsCache.Cache[Guid.NewGuid()] = new UserSectionsData
         {
             UserId = Guid.NewGuid(),
             MaxOrderIndex = 1
@@ -148,7 +148,7 @@ public class HomeScreenSectionsPluginTests
             plugin.BustCache();
 
             Assert.Equal(counter + 1, plugin.Configuration.CacheBustCounter);
-            Assert.Empty(m_fixture.SectionsCache.Cache);
+            Assert.Empty(_fixture.SectionsCache.Cache);
         }
         finally
         {
@@ -159,9 +159,9 @@ public class HomeScreenSectionsPluginTests
     [Fact]
     public void UpdateConfiguration_clears_user_sections_cache()
     {
-        HomeScreenSectionsPlugin plugin = m_fixture.Plugin;
+        HomeScreenSectionsPlugin plugin = _fixture.Plugin;
         PluginConfiguration original = plugin.Configuration;
-        m_fixture.SectionsCache.Cache[Guid.NewGuid()] = new UserSectionsData
+        _fixture.SectionsCache.Cache[Guid.NewGuid()] = new UserSectionsData
         {
             UserId = Guid.NewGuid(),
             MaxOrderIndex = 1
@@ -170,7 +170,7 @@ public class HomeScreenSectionsPluginTests
         {
             plugin.UpdateConfiguration(new PluginConfiguration());
 
-            Assert.Empty(m_fixture.SectionsCache.Cache);
+            Assert.Empty(_fixture.SectionsCache.Cache);
         }
         finally
         {
@@ -181,15 +181,15 @@ public class HomeScreenSectionsPluginTests
     [Fact]
     public void ClearUserSectionsDataCache_empties_the_cache()
     {
-        m_fixture.SectionsCache.Cache[Guid.NewGuid()] = new UserSectionsData
+        _fixture.SectionsCache.Cache[Guid.NewGuid()] = new UserSectionsData
         {
             UserId = Guid.NewGuid(),
             MaxOrderIndex = 1
         };
 
-        m_fixture.Plugin.ClearUserSectionsDataCache();
+        _fixture.Plugin.ClearUserSectionsDataCache();
 
-        Assert.Empty(m_fixture.SectionsCache.Cache);
+        Assert.Empty(_fixture.SectionsCache.Cache);
     }
 
     [Fact]

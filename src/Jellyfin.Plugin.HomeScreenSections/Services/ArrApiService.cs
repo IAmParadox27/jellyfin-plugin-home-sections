@@ -19,13 +19,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             PropertyNameCaseInsensitive = true
         };
 
-        private readonly ILogger<ArrApiService> m_logger;
-        private readonly HttpClient m_httpClient;
+        private readonly ILogger<ArrApiService> _logger;
+        private readonly HttpClient _httpClient;
 
         public ArrApiService(ILogger<ArrApiService> logger, HttpClient httpClient)
         {
-            m_logger = logger;
-            m_httpClient = httpClient;
+            _logger = logger;
+            _httpClient = httpClient;
         }
         
         private static PluginConfiguration Config => HomeScreenSectionsPlugin.Instance?.Configuration ?? new PluginConfiguration();
@@ -36,7 +36,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(apiKey))
             {
-                PluginLog.ArrUrlOrKeyMissing(m_logger, serviceName);
+                PluginLog.ArrUrlOrKeyMissing(_logger, serviceName);
                 return null;
             }
 
@@ -46,18 +46,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or NotSupportedException or InvalidOperationException)
             {
-                // ponytail: one filter replaces 5 identical catch bodies
                 if (ex is JsonException)
                 {
-                    PluginLog.ArrCalendarJsonError(m_logger, (JsonException)ex, serviceName);
+                    PluginLog.ArrCalendarJsonError(_logger, (JsonException)ex, serviceName);
                 }
                 else if (ex is HttpRequestException)
                 {
-                    PluginLog.ArrCalendarHttpError(m_logger, (HttpRequestException)ex, serviceName);
+                    PluginLog.ArrCalendarHttpError(_logger, (HttpRequestException)ex, serviceName);
                 }
                 else
                 {
-                    PluginLog.ArrCalendarUnexpectedError(m_logger, ex, serviceName);
+                    PluginLog.ArrCalendarUnexpectedError(_logger, ex, serviceName);
                 }
 
                 return null;
@@ -77,24 +76,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             using HttpRequestMessage request = new(HttpMethod.Get, requestUrl);
             request.Headers.Add("X-API-KEY", apiKey);
 
-            PluginLog.FetchingArrCalendar(m_logger, serviceName, requestUrl);
+            PluginLog.FetchingArrCalendar(_logger, serviceName, requestUrl);
 
-            HttpResponseMessage response = await m_httpClient.SendAsync(request);
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                PluginLog.ArrCalendarHttpFailed(m_logger, serviceName, response.StatusCode, response.ReasonPhrase);
+                PluginLog.ArrCalendarHttpFailed(_logger, serviceName, response.StatusCode, response.ReasonPhrase);
                 return null;
             }
 
             string jsonContent = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(jsonContent))
             {
-                PluginLog.ArrCalendarEmpty(m_logger, serviceName);
+                PluginLog.ArrCalendarEmpty(_logger, serviceName);
                 return [];
             }
 
             T[]? calendarItems = JsonSerializer.Deserialize<T[]>(jsonContent, s_calendarJsonOptions);
-            PluginLog.ArrCalendarFetched(m_logger, calendarItems?.Length ?? 0, serviceName);
+            PluginLog.ArrCalendarFetched(_logger, calendarItems?.Length ?? 0, serviceName);
             return calendarItems ?? [];
         }
 

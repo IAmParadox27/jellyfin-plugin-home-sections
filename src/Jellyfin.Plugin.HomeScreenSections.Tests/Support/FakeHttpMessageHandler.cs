@@ -8,15 +8,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Support;
 /// </summary>
 public sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly Func<HttpRequestMessage, HttpResponseMessage> m_responder;
-    private readonly List<HttpRequestMessage> m_requests = [];
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+    private readonly List<HttpRequestMessage> _requests = [];
 
     public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
-        m_responder = responder;
+        _responder = responder;
     }
 
-    public IReadOnlyList<HttpRequestMessage> Requests => m_requests;
+    public IReadOnlyList<HttpRequestMessage> Requests => _requests;
 
     public static FakeHttpMessageHandler RespondingWithJson(string json)
     {
@@ -36,7 +36,7 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        m_requests.Add(request);
-        return Task.FromResult(m_responder(request));
+        _requests.Add(request);
+        return Task.FromResult(_responder(request));
     }
 }

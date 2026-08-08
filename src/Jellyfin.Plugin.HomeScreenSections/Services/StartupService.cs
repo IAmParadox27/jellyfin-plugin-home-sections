@@ -28,15 +28,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         
         public string Category => "Startup Services";
         
-        private readonly IServerApplicationHost m_serverApplicationHost;
-        private readonly IApplicationPaths m_applicationPaths;
-        private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
+        private readonly IServerApplicationHost _serverApplicationHost;
+        private readonly IApplicationPaths _applicationPaths;
+        private readonly ILogger<HomeScreenSectionsPlugin> _logger;
 
         public StartupService(IServerApplicationHost serverApplicationHost, IApplicationPaths applicationPaths, ILogger<HomeScreenSectionsPlugin> logger)
         {
-            m_serverApplicationHost = serverApplicationHost;
-            m_applicationPaths = applicationPaths;
-            m_logger = logger;
+            _serverApplicationHost = serverApplicationHost;
+            _applicationPaths = applicationPaths;
+            _logger = logger;
         }
 
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
@@ -55,7 +55,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 payloads.Add(payload);
             }
             
-            string[] allJsChunks = Directory.GetFiles(m_applicationPaths.WebPath, "*.chunk.js", SearchOption.AllDirectories);
+            string[] allJsChunks = Directory.GetFiles(_applicationPaths.WebPath, "*.chunk.js", SearchOption.AllDirectories);
             foreach (string jsChunk in allJsChunks)
             {
                 if ((await File.ReadAllTextAsync(jsChunk, cancellationToken)).Contains(",loadSections:", StringComparison.Ordinal))
@@ -65,7 +65,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     Regex r = new Regex(@"(?<base>[^.]+)\.(?<hash>[^.]+)\.chunk.js", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromMilliseconds(250));
                     
                     Guid guid = Guid.NewGuid();
-                    PluginLog.FoundLoadSections(m_logger, fileName, guid);
+                    PluginLog.FoundLoadSections(_logger, fileName, guid);
                     
                     JObject payload = new JObject();
                     payload.Add("id", guid.ToString());

@@ -21,21 +21,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Services;
 [Collection("Plugin Instance")]
 public class HomeScreenSectionServiceTests
 {
-    private readonly Mock<IHomeScreenManager> m_homeScreenManager = new();
-    private readonly Mock<ITranslationManager> m_translationManager = new();
-    private readonly Mock<IServerConfigurationManager> m_serverConfigurationManager = new();
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly Mock<MediaBrowser.Controller.Collections.ICollectionManager> m_collectionManager = new();
-    private readonly Mock<IPlaylistManager> m_playlistManager = new();
-    private readonly UserSectionsDataCache m_dataCache = new();
+    private readonly Mock<IHomeScreenManager> _homeScreenManager = new();
+    private readonly Mock<ITranslationManager> _translationManager = new();
+    private readonly Mock<IServerConfigurationManager> _serverConfigurationManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly Mock<MediaBrowser.Controller.Collections.ICollectionManager> _collectionManager = new();
+    private readonly Mock<IPlaylistManager> _playlistManager = new();
+    private readonly UserSectionsDataCache _dataCache = new();
 
     public HomeScreenSectionServiceTests(PluginFixture fixture)
     {
         _ = fixture;
 
-        m_translationManager
+        _translationManager
             .Setup(manager => manager.Translate(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -43,7 +43,7 @@ public class HomeScreenSectionServiceTests
                 It.IsAny<TranslationMetadata?>()))
             .Returns((string key, string language, string fallback, TranslationMetadata? metadata) => fallback);
 
-        m_serverConfigurationManager
+        _serverConfigurationManager
             .Setup(manager => manager.Configuration)
             .Returns(new ServerConfiguration());
     }
@@ -51,16 +51,16 @@ public class HomeScreenSectionServiceTests
     private HomeScreenSectionService MakeService()
     {
         return new HomeScreenSectionService(
-            m_homeScreenManager.Object,
+            _homeScreenManager.Object,
             NullLogger<HomeScreenSectionsPlugin>.Instance,
-            m_translationManager.Object,
-            m_dataCache,
-            m_serverConfigurationManager.Object,
-            m_userManager.Object,
-            m_libraryManager.Object,
-            m_dtoService.Object,
-            new CollectionManagerProxy(m_collectionManager.Object),
-            m_playlistManager.Object);
+            _translationManager.Object,
+            _dataCache,
+            _serverConfigurationManager.Object,
+            _userManager.Object,
+            _libraryManager.Object,
+            _dtoService.Object,
+            new CollectionManagerProxy(_collectionManager.Object),
+            _playlistManager.Object);
     }
 
     private static PluginDefinedSection MakeSection(string sectionId, string displayText)
@@ -99,7 +99,7 @@ public class HomeScreenSectionServiceTests
         HomeScreenSectionService service = MakeService();
         Guid userId = Guid.NewGuid();
         Guid pageHash = Guid.NewGuid();
-        m_dataCache.Cache[pageHash] = SeedPage(
+        _dataCache.Cache[pageHash] = SeedPage(
             userId,
             (0, MakeSection("First", "First Section")),
             (1, MakeSection("Second", "Second Section")));
@@ -112,7 +112,7 @@ public class HomeScreenSectionServiceTests
         Assert.Equal(0, result[0].OrderIndex);
         Assert.Equal("Second", result[1].Section);
         Assert.Equal(1, result[1].OrderIndex);
-        Assert.NotNull(m_dataCache.Cache[pageHash].LastAccessed);
+        Assert.NotNull(_dataCache.Cache[pageHash].LastAccessed);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class HomeScreenSectionServiceTests
         HomeScreenSectionService service = MakeService();
         Guid userId = Guid.NewGuid();
         Guid pageHash = Guid.NewGuid();
-        m_dataCache.Cache[pageHash] = SeedPage(
+        _dataCache.Cache[pageHash] = SeedPage(
             userId,
             (0, MakeSection("First", "First")),
             (2, MakeSection("Third", "Third")));
@@ -141,7 +141,7 @@ public class HomeScreenSectionServiceTests
             (1, MakeSection("First", "First")),
             (3, MakeSection("Third", "Third")));
         data.OrderIndicesWithoutSections.Add(new IntRange { Start = 2, End = 2 });
-        m_dataCache.Cache[pageHash] = data;
+        _dataCache.Cache[pageHash] = data;
 
         IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(userId, "en", 1, 10, pageHash);
 
@@ -157,7 +157,7 @@ public class HomeScreenSectionServiceTests
         Guid pageHash = Guid.NewGuid();
         UserSectionsData data = SeedPage(userId, (0, MakeSection("First", "First")));
         data.SectionsInProgress[1] = true;
-        m_dataCache.Cache[pageHash] = data;
+        _dataCache.Cache[pageHash] = data;
 
         Assert.Null(service.GetCachedSectionsForUser(userId, "en", 1, 10, pageHash));
     }
@@ -177,7 +177,7 @@ public class HomeScreenSectionServiceTests
             (1, MakeSection("Second", "Second")));
         data.MaxOrderIndex = 2;
         data.SectionsInProgress[2] = true;
-        m_dataCache.Cache[pageHash] = data;
+        _dataCache.Cache[pageHash] = data;
 
         IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(userId, "en", 1, 2, pageHash);
 
@@ -200,10 +200,10 @@ public class HomeScreenSectionServiceTests
         ];
         try
         {
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetUserSettings(userId))
                 .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["TestSection"] });
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new[] { MakeSection("TestSection", "Test") });
 
@@ -228,13 +228,13 @@ public class HomeScreenSectionServiceTests
         Guid userId = Guid.NewGuid();
         Guid pageHash = Guid.NewGuid();
         UserSectionsData seeded = SeedPage(userId);
-        m_dataCache.Cache[pageHash] = seeded;
+        _dataCache.Cache[pageHash] = seeded;
 
         // Second call must not throw or overwrite the existing page.
         service.CacheSectionsForUser(userId, pageHash);
 
-        Assert.Same(seeded, m_dataCache.Cache[pageHash]);
-        m_homeScreenManager.Verify(manager => manager.GetUserSettings(It.IsAny<Guid>()), Times.Never());
+        Assert.Same(seeded, _dataCache.Cache[pageHash]);
+        _homeScreenManager.Verify(manager => manager.GetUserSettings(It.IsAny<Guid>()), Times.Never());
     }
 
     [Fact]
@@ -251,10 +251,10 @@ public class HomeScreenSectionServiceTests
         ];
         try
         {
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetUserSettings(userId))
                 .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["LiveSection"] });
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new[] { MakeSection("LiveSection", "Live") });
 
@@ -283,10 +283,10 @@ public class HomeScreenSectionServiceTests
         config.SectionSettings = [];
         try
         {
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetUserSettings(userId))
                 .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["ContinueWatching"] });
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new[] { MakeSection("ContinueWatching", "Continue Watching") });
 
@@ -314,10 +314,10 @@ public class HomeScreenSectionServiceTests
         config.SectionSettings = [];
         try
         {
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetUserSettings(userId))
                 .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["ContinueWatching"] });
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new[] { MakeSection("ContinueWatching", "Continue Watching") });
 
@@ -355,7 +355,7 @@ public class HomeScreenSectionServiceTests
         try
         {
             // User puts "A" first despite admin ordering.
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetUserSettings(userId))
                 .Returns(new ModularHomeUserSettings
                 {
@@ -363,7 +363,7 @@ public class HomeScreenSectionServiceTests
                     EnabledSections = ["A", "B"],
                     SectionOrder = ["A", "B"]
                 });
-            m_homeScreenManager
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new[] { MakeSection("A", "Section A"), MakeSection("B", "Section B") });
 

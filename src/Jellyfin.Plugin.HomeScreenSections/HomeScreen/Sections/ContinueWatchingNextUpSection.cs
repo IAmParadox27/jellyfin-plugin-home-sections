@@ -19,11 +19,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? AdditionalData { get; set; }
         public object? OriginalPayload => null;
 
-        private ContinueWatchingSection? m_continueWatchingSection;
-        private NextUpSection? m_nextUpSection;
-        private readonly ILibraryManager m_libraryManager;
-        private readonly IUserManager m_userManager;
-        private readonly IUserDataManager m_userDataManager;
+        private ContinueWatchingSection? _continueWatchingSection;
+        private NextUpSection? _nextUpSection;
+        private readonly ILibraryManager _libraryManager;
+        private readonly IUserManager _userManager;
+        private readonly IUserDataManager _userDataManager;
         
         public ContinueWatchingNextUpSection(
             IHomeScreenManager homeScreenManager,
@@ -31,16 +31,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             IUserManager userManager,
             IUserDataManager userDataManager)
         {
-            m_continueWatchingSection = homeScreenManager.GetSection("ContinueWatching") as ContinueWatchingSection;
-            m_nextUpSection = homeScreenManager.GetSection("NextUp") as NextUpSection;
-            m_libraryManager = libraryManager;
-            m_userManager = userManager;
-            m_userDataManager = userDataManager;
+            _continueWatchingSection = homeScreenManager.GetSection("ContinueWatching") as ContinueWatchingSection;
+            _nextUpSection = homeScreenManager.GetSection("NextUp") as NextUpSection;
+            _libraryManager = libraryManager;
+            _userManager = userManager;
+            _userDataManager = userDataManager;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            IReadOnlyList<BaseItemDto>? cwResults = m_continueWatchingSection?.GetResults(payload, queryCollection).Items;
+            IReadOnlyList<BaseItemDto>? cwResults = _continueWatchingSection?.GetResults(payload, queryCollection).Items;
             
             // Apply default Next Up settings, halves performance impact
             // Unfortunately we can't get the user's actual Next Up settings, as they're stored in local storage on the client
@@ -50,7 +50,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 ["NextUpDateCutoff"] = DateTime.UtcNow.AddDays(-365).ToString("O")
             };
             
-            IReadOnlyList<BaseItemDto>? nuResults = m_nextUpSection?.GetResults(payload, new QueryCollection(nuQuery)).Items;
+            IReadOnlyList<BaseItemDto>? nuResults = _nextUpSection?.GetResults(payload, new QueryCollection(nuQuery)).Items;
             
             List<BaseItemDto> returnItems = [];
 
@@ -83,7 +83,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         private Dictionary<Guid, DateTime> BuildSeriesLastPlayedLookup(List<BaseItemDto> items, Guid userId)
         {
             Dictionary<Guid, DateTime> lookup = new();
-            User? user = m_userManager.GetUserById(userId);
+            User? user = _userManager.GetUserById(userId);
             if (user == null)
             {
                 return lookup;
@@ -107,7 +107,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             // Limit 2: most recent + fallback in case first lacks LastPlayedDate
             foreach (Guid seriesId in seriesIds)
             {
-                IReadOnlyList<BaseItem> recentEpisodes = m_libraryManager.GetItemList(new InternalItemsQuery(user)
+                IReadOnlyList<BaseItem> recentEpisodes = _libraryManager.GetItemList(new InternalItemsQuery(user)
                 {
                     AncestorIds = [seriesId],
                     IncludeItemTypes = [BaseItemKind.Episode],
@@ -119,7 +119,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 // Find the first episode with a valid LastPlayedDate
                 foreach (BaseItem episode in recentEpisodes)
                 {
-                    DateTime? lastPlayedDate = m_userDataManager.GetUserData(user, episode)?.LastPlayedDate;
+                    DateTime? lastPlayedDate = _userDataManager.GetUserData(user, episode)?.LastPlayedDate;
                     if (lastPlayedDate != null)
                     {
                         lookup[seriesId] = lastPlayedDate.Value;

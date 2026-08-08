@@ -21,11 +21,11 @@ public class UpcomingSectionBaseTests
     // DateTime.Now internally, which made these tests flaky across midnight.
     private static readonly DateTime s_now = new DateTime(2026, 8, 7, 14, 30, 0, DateTimeKind.Local);
 
-    private readonly PluginFixture m_fixture;
+    private readonly PluginFixture _fixture;
 
     public UpcomingSectionBaseTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public class UpcomingSectionBaseTests
     {
         ImageCacheService imageCacheService = new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient());
 
         return new TestUpcomingSection(
@@ -305,8 +305,8 @@ public class UpcomingSectionBaseTests
 
     private sealed class TestUpcomingSection : UpcomingSectionBase<RadarrCalendarDto>
     {
-        private readonly Func<RadarrCalendarDto[]> m_calendarProvider;
-        private readonly Func<RadarrCalendarDto, BaseItemDto>? m_dtoCreator;
+        private readonly Func<RadarrCalendarDto[]> _calendarProvider;
+        private readonly Func<RadarrCalendarDto, BaseItemDto>? _dtoCreator;
 
         public TestUpcomingSection(
             IUserManager userManager,
@@ -319,8 +319,8 @@ public class UpcomingSectionBaseTests
             Func<RadarrCalendarDto, BaseItemDto>? dtoCreator)
             : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, logger)
         {
-            m_calendarProvider = calendarProvider;
-            m_dtoCreator = dtoCreator;
+            _calendarProvider = calendarProvider;
+            _dtoCreator = dtoCreator;
         }
 
         public override string? Section => "TestUpcoming";
@@ -354,7 +354,7 @@ public class UpcomingSectionBaseTests
 
         protected override RadarrCalendarDto[] GetCalendarItems(DateTime startDate, DateTime endDate)
         {
-            return m_calendarProvider();
+            return _calendarProvider();
         }
 
         protected override IOrderedEnumerable<RadarrCalendarDto> FilterAndSortItems(RadarrCalendarDto[] items)
@@ -369,7 +369,7 @@ public class UpcomingSectionBaseTests
 
         protected override BaseItemDto CreateDto(RadarrCalendarDto item, PluginConfiguration config)
         {
-            return m_dtoCreator?.Invoke(item) ?? new BaseItemDto { Id = Guid.NewGuid(), Name = item.Title };
+            return _dtoCreator?.Invoke(item) ?? new BaseItemDto { Id = Guid.NewGuid(), Name = item.Title };
         }
 
         protected override string GetServiceName()

@@ -25,17 +25,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Services;
 [Collection("Plugin Instance")]
 public class ServiceInternalPathsTests
 {
-    private readonly Mock<IHomeScreenManager> m_homeScreenManager = new();
-    private readonly Mock<ITranslationManager> m_translationManager = new();
-    private readonly Mock<IServerConfigurationManager> m_serverConfigurationManager = new();
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly Mock<ICollectionManager> m_collectionManager = new();
-    private readonly Mock<IPlaylistManager> m_playlistManager = new();
-    private readonly UserSectionsDataCache m_dataCache = new();
-    private readonly User m_user = new("ServiceUser", "AuthProvider", "PasswordResetProvider");
-    private readonly Guid m_userId = Guid.NewGuid();
+    private readonly Mock<IHomeScreenManager> _homeScreenManager = new();
+    private readonly Mock<ITranslationManager> _translationManager = new();
+    private readonly Mock<IServerConfigurationManager> _serverConfigurationManager = new();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly Mock<ICollectionManager> _collectionManager = new();
+    private readonly Mock<IPlaylistManager> _playlistManager = new();
+    private readonly UserSectionsDataCache _dataCache = new();
+    private readonly User _user = new("ServiceUser", "AuthProvider", "PasswordResetProvider");
+    private readonly Guid _userId = Guid.NewGuid();
 
     public ServiceInternalPathsTests(PluginFixture fixture)
     {
@@ -45,11 +45,11 @@ public class ServiceInternalPathsTests
         {
             UICulture = "de-DE"
         };
-        m_serverConfigurationManager
+        _serverConfigurationManager
             .Setup(manager => manager.Configuration)
             .Returns(serverConfiguration);
 
-        m_translationManager
+        _translationManager
             .Setup(manager => manager.Translate(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -57,24 +57,24 @@ public class ServiceInternalPathsTests
                 It.IsAny<TranslationMetadata?>()))
             .Returns((string key, string language, string fallback, TranslationMetadata? metadata) => fallback);
 
-        m_userManager
-            .Setup(manager => manager.GetUserById(m_userId))
-            .Returns(m_user);
+        _userManager
+            .Setup(manager => manager.GetUserById(_userId))
+            .Returns(_user);
     }
 
     private HomeScreenSectionService MakeService(MediaBrowser.Controller.Collections.ICollectionManager? collectionManager = null)
     {
         return new HomeScreenSectionService(
-            m_homeScreenManager.Object,
+            _homeScreenManager.Object,
             NullLogger<HomeScreenSectionsPlugin>.Instance,
-            m_translationManager.Object,
-            m_dataCache,
-            m_serverConfigurationManager.Object,
-            m_userManager.Object,
-            m_libraryManager.Object,
-            m_dtoService.Object,
-            new CollectionManagerProxy(collectionManager ?? m_collectionManager.Object),
-            m_playlistManager.Object);
+            _translationManager.Object,
+            _dataCache,
+            _serverConfigurationManager.Object,
+            _userManager.Object,
+            _libraryManager.Object,
+            _dtoService.Object,
+            new CollectionManagerProxy(collectionManager ?? _collectionManager.Object),
+            _playlistManager.Object);
     }
 
     private static PluginDefinedSection MakeSection(string additionalData)
@@ -90,11 +90,11 @@ public class ServiceInternalPathsTests
         Guid pageHash = Guid.NewGuid();
         UserSectionsData data = new UserSectionsData
         {
-            UserId = m_userId,
+            UserId = _userId,
             MaxOrderIndex = 0
         };
         data.OrderedSections[0] = [section];
-        m_dataCache.Cache[pageHash] = data;
+        _dataCache.Cache[pageHash] = data;
         return pageHash;
     }
 
@@ -104,10 +104,10 @@ public class ServiceInternalPathsTests
         HomeScreenSectionService service = MakeService();
         Guid pageHash = SeedPage(MakeSection(string.Empty));
 
-        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, null, 1, 10, pageHash);
+        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, null, 1, 10, pageHash);
 
         Assert.NotNull(result);
-        m_translationManager.Verify(
+        _translationManager.Verify(
             manager => manager.Translate("LinkSection", "de-DE", "Link Section", null),
             Times.Once());
     }
@@ -119,17 +119,17 @@ public class ServiceInternalPathsTests
         Movie item = new Movie { Id = itemId, Name = "Linked Movie" };
         BaseItemDto marker = new BaseItemDto { Id = itemId, Name = "Linked Movie" };
 
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemById(itemId))
             .Returns(item);
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(item, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(item, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(marker);
 
         HomeScreenSectionService service = MakeService();
         Guid pageHash = SeedPage(MakeSection(itemId.ToString()));
 
-        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
         Assert.Same(marker, Assert.Single(result!).OriginalPayload);
     }
@@ -140,17 +140,17 @@ public class ServiceInternalPathsTests
         Genre genre = new Genre { Id = Guid.NewGuid(), Name = "Action" };
         BaseItemDto marker = new BaseItemDto { Id = genre.Id, Name = "Action" };
 
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetGenre("Action"))
             .Returns(genre);
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(genre, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(genre, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(marker);
 
         HomeScreenSectionService service = MakeService();
         Guid pageHash = SeedPage(MakeSection("Action"));
 
-        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
         Assert.Same(marker, Assert.Single(result!).OriginalPayload);
     }
@@ -167,14 +167,14 @@ public class ServiceInternalPathsTests
         };
         BaseItemDto marker = new BaseItemDto { Id = collection.Id, Name = "My Collection" };
 
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(collection, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(collection, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(marker);
 
         HomeScreenSectionService service = MakeService(new FakeCollectionManager([collection]));
         Guid pageHash = SeedPage(MakeSection("My Collection"));
 
-        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
         Assert.Same(marker, Assert.Single(result!).OriginalPayload);
     }
@@ -190,17 +190,17 @@ public class ServiceInternalPathsTests
         };
         BaseItemDto marker = new BaseItemDto { Id = playlistId, Name = "Road Trip" };
 
-        m_playlistManager
-            .Setup(manager => manager.GetPlaylists(m_userId))
+        _playlistManager
+            .Setup(manager => manager.GetPlaylists(_userId))
             .Returns([playlist]);
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(playlist, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(playlist, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(marker);
 
         HomeScreenSectionService service = MakeService();
         Guid pageHash = SeedPage(MakeSection("Road Trip"));
 
-        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
         Assert.Same(marker, Assert.Single(result!).OriginalPayload);
     }
@@ -209,14 +209,14 @@ public class ServiceInternalPathsTests
     public void TitleLink_stays_null_when_resolution_throws()
     {
         Guid itemId = Guid.NewGuid();
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemById(itemId))
             .Throws(new InvalidOperationException("boom"));
 
         HomeScreenSectionService service = MakeService();
         Guid pageHash = SeedPage(MakeSection(itemId.ToString()));
 
-        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+        IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
         Assert.Null(Assert.Single(result!).OriginalPayload);
     }
@@ -228,7 +228,7 @@ public class ServiceInternalPathsTests
         Guid pageHash = SeedPage(MakeSection(string.Empty));
 
         IReadOnlyList<HomeScreenSectionInfo>? result =
-            service.MonitorLiveUpdatedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+            service.MonitorLiveUpdatedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
         Assert.NotNull(result);
         Assert.Equal("LinkSection", Assert.Single(result!).Section);
@@ -245,10 +245,10 @@ public class ServiceInternalPathsTests
         ];
         try
         {
-            m_homeScreenManager
-                .Setup(manager => manager.GetUserSettings(m_userId))
-                .Returns(new ModularHomeUserSettings { UserId = m_userId, EnabledSections = ["OnDemand"] });
-            m_homeScreenManager
+            _homeScreenManager
+                .Setup(manager => manager.GetUserSettings(_userId))
+                .Returns(new ModularHomeUserSettings { UserId = _userId, EnabledSections = ["OnDemand"] });
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new IHomeScreenSection[]
                 {
@@ -265,10 +265,10 @@ public class ServiceInternalPathsTests
             // otherwise spins up a fire-and-forget background build, which races with the reads
             // below and makes the test flaky; building first keeps it deterministic while still
             // exercising the pageHash branch end to end.
-            service.CacheSectionsForUser(m_userId, pageHash);
+            service.CacheSectionsForUser(_userId, pageHash);
 
             IReadOnlyList<HomeScreenSectionInfo>? result =
-                service.MonitorLiveUpdatedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+                service.MonitorLiveUpdatedSectionsForUser(_userId, "en", 1, 10, pageHash);
 
             Assert.NotNull(result);
             Assert.Equal("OnDemand", Assert.Single(result!).Section);
@@ -290,10 +290,10 @@ public class ServiceInternalPathsTests
         ];
         try
         {
-            m_homeScreenManager
-                .Setup(manager => manager.GetUserSettings(m_userId))
-                .Returns(new ModularHomeUserSettings { UserId = m_userId, EnabledSections = ["Throwing"] });
-            m_homeScreenManager
+            _homeScreenManager
+                .Setup(manager => manager.GetUserSettings(_userId))
+                .Returns(new ModularHomeUserSettings { UserId = _userId, EnabledSections = ["Throwing"] });
+            _homeScreenManager
                 .Setup(manager => manager.GetSectionTypes())
                 .Returns(new IHomeScreenSection[] { new ThrowingSection() });
 
@@ -301,9 +301,9 @@ public class ServiceInternalPathsTests
             Guid pageHash = Guid.NewGuid();
 
             // Must not throw despite the section's CreateInstances exploding.
-            service.CacheSectionsForUser(m_userId, pageHash);
+            service.CacheSectionsForUser(_userId, pageHash);
 
-            IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(m_userId, "en", 1, 10, pageHash);
+            IReadOnlyList<HomeScreenSectionInfo>? result = service.GetCachedSectionsForUser(_userId, "en", 1, 10, pageHash);
             Assert.NotNull(result);
             Assert.Empty(result!);
         }

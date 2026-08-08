@@ -20,48 +20,48 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.HomeScreen.Sections.Extra;
 [Collection("Plugin Instance")]
 public class MultiInstanceSectionsTests
 {
-    private readonly Mock<IUserManager> m_userManager = new();
-    private readonly Mock<ILibraryManager> m_libraryManager = new();
-    private readonly Mock<IDtoService> m_dtoService = new();
-    private readonly Mock<IUserDataManager> m_userDataManager = new();
-    private readonly Mock<IPlaylistManager> m_playlistManager = new();
-    private readonly Mock<ICollectionManager> m_collectionManager = new();
-    private readonly User m_user = new("MultiUser", "AuthProvider", "PasswordResetProvider");
-    private readonly Guid m_userId = Guid.NewGuid();
+    private readonly Mock<IUserManager> _userManager = new();
+    private readonly Mock<ILibraryManager> _libraryManager = new();
+    private readonly Mock<IDtoService> _dtoService = new();
+    private readonly Mock<IUserDataManager> _userDataManager = new();
+    private readonly Mock<IPlaylistManager> _playlistManager = new();
+    private readonly Mock<ICollectionManager> _collectionManager = new();
+    private readonly User _user = new("MultiUser", "AuthProvider", "PasswordResetProvider");
+    private readonly Guid _userId = Guid.NewGuid();
 
     public MultiInstanceSectionsTests(PluginFixture fixture)
     {
         _ = fixture;
 
-        m_userManager
-            .Setup(manager => manager.GetUserById(m_userId))
-            .Returns(m_user);
+        _userManager
+            .Setup(manager => manager.GetUserById(_userId))
+            .Returns(_user);
 
-        TestDtos.StubPassthrough(m_dtoService);
+        TestDtos.StubPassthrough(_dtoService);
     }
 
     [Fact]
     public void Decade_GetResults_requires_valid_year_additional_data()
     {
-        DecadeSection section = new DecadeSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        DecadeSection section = new DecadeSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = null }, new FakeQueryCollection()).Items);
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = "not-a-year" }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId, AdditionalData = null }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId, AdditionalData = "not-a-year" }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
     public void Decade_GetResults_queries_the_ten_years_of_the_decade()
     {
         InternalItemsQuery? captured = null;
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemsResult(It.IsAny<InternalItemsQuery>()))
             .Callback<InternalItemsQuery>(query => captured = query)
             .Returns(new QueryResult<BaseItem>([new Movie { Id = Guid.NewGuid(), Name = "Nineties Movie" }]));
 
-        DecadeSection section = new DecadeSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        DecadeSection section = new DecadeSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
         QueryResult<BaseItemDto> result = section.GetResults(
-            new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = "1990" },
+            new HomeScreenSectionPayload { UserId = _userId, AdditionalData = "1990" },
             new FakeQueryCollection());
 
         Assert.Single(result.Items);
@@ -72,7 +72,7 @@ public class MultiInstanceSectionsTests
     [Fact]
     public void Decade_CreateInstances_picks_decades_present_in_the_sample()
     {
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemsResult(It.IsAny<InternalItemsQuery>()))
             .Returns(new QueryResult<BaseItem>(
             [
@@ -82,9 +82,9 @@ public class MultiInstanceSectionsTests
                 new Movie { Id = Guid.NewGuid() } // no year, ignored
             ]));
 
-        DecadeSection section = new DecadeSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        DecadeSection section = new DecadeSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        List<IHomeScreenSection> instances = [.. section.CreateInstances(m_userId, 5)];
+        List<IHomeScreenSection> instances = [.. section.CreateInstances(_userId, 5)];
 
         Assert.Equal(2, instances.Count);
         string?[] additionalData = instances.Select(instance => instance.AdditionalData).ToArray();
@@ -95,16 +95,16 @@ public class MultiInstanceSectionsTests
     [Fact]
     public void Decade_CreateInstances_yields_nothing_without_user_or_movies()
     {
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemsResult(It.IsAny<InternalItemsQuery>()))
             .Returns(new QueryResult<BaseItem>(Array.Empty<BaseItem>()));
 
-        DecadeSection section = new DecadeSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object);
+        DecadeSection section = new DecadeSection(_userManager.Object, _libraryManager.Object, _dtoService.Object);
 
-        Assert.Empty(section.CreateInstances(m_userId, 3));
+        Assert.Empty(section.CreateInstances(_userId, 3));
 
-        m_userManager.Setup(manager => manager.GetUserById(m_userId)).Returns((User?)null);
-        Assert.Empty(section.CreateInstances(m_userId, 3));
+        _userManager.Setup(manager => manager.GetUserById(_userId)).Returns((User?)null);
+        Assert.Empty(section.CreateInstances(_userId, 3));
     }
 
     [Fact]
@@ -113,14 +113,14 @@ public class MultiInstanceSectionsTests
         Movie matched = new Movie { Id = Guid.NewGuid(), Name = "Matched", Studios = ["A24", "Other"] };
         Movie unmatched = new Movie { Id = Guid.NewGuid(), Name = "Unmatched", Studios = ["Blumhouse"] };
         Movie studioless = new Movie { Id = Guid.NewGuid(), Name = "Studioless" };
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemsResult(It.IsAny<InternalItemsQuery>()))
             .Returns(new QueryResult<BaseItem>([matched, unmatched, studioless]));
 
-        StudioSection section = new StudioSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object, m_userDataManager.Object);
+        StudioSection section = new StudioSection(_userManager.Object, _libraryManager.Object, _dtoService.Object, _userDataManager.Object);
 
         QueryResult<BaseItemDto> result = section.GetResults(
-            new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = "A24" },
+            new HomeScreenSectionPayload { UserId = _userId, AdditionalData = "A24" },
             new FakeQueryCollection());
 
         BaseItemDto dto = Assert.Single(result.Items);
@@ -130,9 +130,9 @@ public class MultiInstanceSectionsTests
     [Fact]
     public void Studio_GetResults_requires_additional_data()
     {
-        StudioSection section = new StudioSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object, m_userDataManager.Object);
+        StudioSection section = new StudioSection(_userManager.Object, _libraryManager.Object, _dtoService.Object, _userDataManager.Object);
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
@@ -140,20 +140,20 @@ public class MultiInstanceSectionsTests
     {
         Movie heavyStudio = new Movie { Id = Guid.NewGuid(), Studios = ["Heavy"] };
         Movie lightStudio = new Movie { Id = Guid.NewGuid(), Studios = ["Light"] };
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemsResult(It.IsAny<InternalItemsQuery>()))
             .Returns(new QueryResult<BaseItem>([heavyStudio, lightStudio]));
 
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, heavyStudio))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, heavyStudio))
             .Returns(new UserItemData { Key = "heavy", PlayCount = 10 });
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, lightStudio))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, lightStudio))
             .Returns(new UserItemData { Key = "light", PlayCount = 1 });
 
-        StudioSection section = new StudioSection(m_userManager.Object, m_libraryManager.Object, m_dtoService.Object, m_userDataManager.Object);
+        StudioSection section = new StudioSection(_userManager.Object, _libraryManager.Object, _dtoService.Object, _userDataManager.Object);
 
-        List<IHomeScreenSection> instances = [.. section.CreateInstances(m_userId, 2)];
+        List<IHomeScreenSection> instances = [.. section.CreateInstances(_userId, 2)];
 
         // Order is randomized; both studios must appear as their own instances.
         string?[] studioNames = instances.Select(instance => instance.AdditionalData).ToArray();
@@ -168,8 +168,8 @@ public class MultiInstanceSectionsTests
     {
         PlaylistsSection section = MakePlaylistsSection();
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = "nope" }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId, AdditionalData = "nope" }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
@@ -180,14 +180,14 @@ public class MultiInstanceSectionsTests
         {
             Id = playlistId
         };
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemById(playlistId))
             .Returns(playlist);
 
         PlaylistsSection section = MakePlaylistsSection();
 
         QueryResult<BaseItemDto> result = section.GetResults(
-            new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = playlistId.ToString() },
+            new HomeScreenSectionPayload { UserId = _userId, AdditionalData = playlistId.ToString() },
             new FakeQueryCollection());
 
         Assert.Single(result.Items);
@@ -197,14 +197,14 @@ public class MultiInstanceSectionsTests
     public void Playlists_GetResults_returns_empty_for_non_playlist_item()
     {
         Guid otherId = Guid.NewGuid();
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemById(otherId))
             .Returns(new Movie());
 
         PlaylistsSection section = MakePlaylistsSection();
 
         Assert.Empty(section.GetResults(
-            new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = otherId.ToString() },
+            new HomeScreenSectionPayload { UserId = _userId, AdditionalData = otherId.ToString() },
             new FakeQueryCollection()).Items);
     }
 
@@ -229,17 +229,17 @@ public class MultiInstanceSectionsTests
             Name = "Empty"
         };
 
-        m_playlistManager
-            .Setup(manager => manager.GetPlaylists(m_user.Id))
+        _playlistManager
+            .Setup(manager => manager.GetPlaylists(_user.Id))
             .Returns(new[] { keep, myList, empty });
 
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(keep, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(keep, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(new BaseItemDto { Id = keepId, Name = "Road Trip Mix" });
 
         PlaylistsSection section = MakePlaylistsSection();
 
-        List<IHomeScreenSection> instances = [.. section.CreateInstances(m_userId, 5)];
+        List<IHomeScreenSection> instances = [.. section.CreateInstances(_userId, 5)];
 
         PlaylistsSection instance = Assert.IsType<PlaylistsSection>(Assert.Single(instances));
         Assert.Equal(keepId.ToString("N"), instance.AdditionalData);
@@ -258,21 +258,21 @@ public class MultiInstanceSectionsTests
         {
             Id = collectionId
         };
-        m_libraryManager
+        _libraryManager
             .Setup(manager => manager.GetItemById(collectionId))
             .Returns(boxSet);
 
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, watched))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, watched))
             .Returns(new UserItemData { Key = "w", Played = true });
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, unwatched))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, unwatched))
             .Returns((UserItemData?)null);
 
         UnwatchedCollectionsSection section = MakeUnwatchedCollectionsSection();
 
         QueryResult<BaseItemDto> result = section.GetResults(
-            new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = collectionId.ToString() },
+            new HomeScreenSectionPayload { UserId = _userId, AdditionalData = collectionId.ToString() },
             new FakeQueryCollection());
 
         BaseItemDto dto = Assert.Single(result.Items);
@@ -284,8 +284,8 @@ public class MultiInstanceSectionsTests
     {
         UnwatchedCollectionsSection section = MakeUnwatchedCollectionsSection();
 
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId }, new FakeQueryCollection()).Items);
-        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = m_userId, AdditionalData = "bad" }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId }, new FakeQueryCollection()).Items);
+        Assert.Empty(section.GetResults(new HomeScreenSectionPayload { UserId = _userId, AdditionalData = "bad" }, new FakeQueryCollection()).Items);
     }
 
     [Fact]
@@ -317,27 +317,27 @@ public class MultiInstanceSectionsTests
             Name = "Tiny"
         };
 
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, watchedChild))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, watchedChild))
             .Returns(new UserItemData { Key = "wc", Played = true });
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, watchedChild2))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, watchedChild2))
             .Returns(new UserItemData { Key = "wc2", Played = true });
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, unwatchedChild))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, unwatchedChild))
             .Returns((UserItemData?)null);
-        m_userDataManager
-            .Setup(manager => manager.GetUserData(m_user, onlyChild))
+        _userDataManager
+            .Setup(manager => manager.GetUserData(_user, onlyChild))
             .Returns((UserItemData?)null);
 
         FakeCollectionManager collectionManager = new FakeCollectionManager([fullyWatched, partial, tooSmall]);
         UnwatchedCollectionsSection section = MakeUnwatchedCollectionsSection(collectionManager);
 
-        m_dtoService
-            .Setup(service => service.GetBaseItemDto(partial, It.IsAny<DtoOptions>(), m_user, It.IsAny<BaseItem>()))
+        _dtoService
+            .Setup(service => service.GetBaseItemDto(partial, It.IsAny<DtoOptions>(), _user, It.IsAny<BaseItem>()))
             .Returns(new BaseItemDto { Id = partialId });
 
-        List<IHomeScreenSection> instances = [.. section.CreateInstances(m_userId, 3)];
+        List<IHomeScreenSection> instances = [.. section.CreateInstances(_userId, 3)];
 
         UnwatchedCollectionsSection instance = Assert.IsType<UnwatchedCollectionsSection>(Assert.Single(instances));
         Assert.Equal(partialId.ToString("N"), instance.AdditionalData);
@@ -347,29 +347,29 @@ public class MultiInstanceSectionsTests
     [Fact]
     public void UnwatchedCollections_CreateInstances_requires_user()
     {
-        m_userManager.Setup(manager => manager.GetUserById(m_userId)).Returns((User?)null);
+        _userManager.Setup(manager => manager.GetUserById(_userId)).Returns((User?)null);
         UnwatchedCollectionsSection section = MakeUnwatchedCollectionsSection();
 
-        Assert.Empty(section.CreateInstances(m_userId, 2));
+        Assert.Empty(section.CreateInstances(_userId, 2));
         Assert.Empty(section.CreateInstances(null, 2));
     }
 
     private PlaylistsSection MakePlaylistsSection()
     {
         return new PlaylistsSection(
-            m_userManager.Object,
-            m_dtoService.Object,
-            m_playlistManager.Object,
-            m_libraryManager.Object);
+            _userManager.Object,
+            _dtoService.Object,
+            _playlistManager.Object,
+            _libraryManager.Object);
     }
 
     private UnwatchedCollectionsSection MakeUnwatchedCollectionsSection(ICollectionManager? collectionManager = null)
     {
         return new UnwatchedCollectionsSection(
-            m_userManager.Object,
-            m_dtoService.Object,
-            new CollectionManagerProxy(collectionManager ?? m_collectionManager.Object),
-            m_libraryManager.Object,
-            m_userDataManager.Object);
+            _userManager.Object,
+            _dtoService.Object,
+            new CollectionManagerProxy(collectionManager ?? _collectionManager.Object),
+            _libraryManager.Object,
+            _userDataManager.Object);
     }
 }

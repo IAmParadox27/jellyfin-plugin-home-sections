@@ -33,9 +33,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         public object? OriginalPayload => null;
         
-        private readonly IUserViewManager m_userViewManager;
-        private readonly IUserManager m_userManager;
-        private readonly IDtoService m_dtoService;
+        private readonly IUserViewManager _userViewManager;
+        private readonly IUserManager _userManager;
+        private readonly IDtoService _dtoService;
 
         /// <summary>
         /// Constructor.
@@ -47,15 +47,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             IUserManager userManager,
             IDtoService dtoService)
         {
-            m_userViewManager = userViewManager;
-            m_userManager = userManager;
-            m_dtoService = dtoService;
+            _userViewManager = userViewManager;
+            _userManager = userManager;
+            _dtoService = dtoService;
         }
 
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            User? user = m_userManager.GetUserById(payload.UserId);
+            User? user = _userManager.GetUserById(payload.UserId);
 
             if (user == null)
             {
@@ -68,7 +68,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 IncludeHidden = false
             };
 
-            Folder[]? folders = m_userViewManager.GetUserViews(query);
+            Folder[]? folders = _userViewManager.GetUserViews(query);
 
             DtoOptions dtoOptions = new DtoOptions();
             List<ItemFields> f = [ItemFields.PrimaryImageAspectRatio,
@@ -76,7 +76,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
             dtoOptions.Fields = f.ToArray();
 
-            BaseItemDto[] dtos = folders.Select(i => m_dtoService.GetBaseItemDto(i, dtoOptions, user))
+            BaseItemDto[] dtos = folders.Select(i => _dtoService.GetBaseItemDto(i, dtoOptions, user))
                 .ToArray();
 
             return new QueryResult<BaseItemDto>(dtos);

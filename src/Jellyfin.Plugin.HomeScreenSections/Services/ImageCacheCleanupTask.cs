@@ -14,32 +14,32 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         
         public string Category => "Maintenance";
         
-        private readonly ImageCacheService m_imageCacheService;
-        private readonly ILogger<ImageCacheCleanupTask> m_logger;
+        private readonly ImageCacheService _imageCacheService;
+        private readonly ILogger<ImageCacheCleanupTask> _logger;
 
         public ImageCacheCleanupTask(ImageCacheService imageCacheService, ILogger<ImageCacheCleanupTask> logger)
         {
-            m_imageCacheService = imageCacheService;
-            m_logger = logger;
+            _imageCacheService = imageCacheService;
+            _logger = logger;
         }
 
         public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
             try
             {
-                PluginLog.ImageCacheCleanupStarted(m_logger);
+                PluginLog.ImageCacheCleanupStarted(_logger);
                 progress?.Report(0);
                 
-                m_imageCacheService.ClearExpiredCache();
+                _imageCacheService.ClearExpiredCache();
                 
                 progress?.Report(100);
-                PluginLog.ImageCacheCleanupCompleted(m_logger);
+                PluginLog.ImageCacheCleanupCompleted(_logger);
                 
                 return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                PluginLog.ImageCacheCleanupError(m_logger, ex);
+                PluginLog.ImageCacheCleanupError(_logger, ex);
                 throw;
             }
         }

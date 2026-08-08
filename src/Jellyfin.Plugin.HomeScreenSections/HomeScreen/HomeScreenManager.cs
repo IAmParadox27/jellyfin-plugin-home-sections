@@ -25,14 +25,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
     /// </summary>
     public class HomeScreenManager : IHomeScreenManager
     {
-        private Dictionary<string, IHomeScreenSection> m_delegates = new(StringComparer.Ordinal);
-        private Dictionary<Guid, bool> m_userFeatureEnabledStates = [];
+        private Dictionary<string, IHomeScreenSection> _delegates = new(StringComparer.Ordinal);
+        private Dictionary<Guid, bool> _userFeatureEnabledStates = [];
 
-        private readonly IServiceProvider m_serviceProvider;
-        private readonly IApplicationPaths m_applicationPaths;
-        private readonly ILogger m_logger;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IApplicationPaths _applicationPaths;
+        private readonly ILogger _logger;
 
-        private const string c_settingsFile = "ModularHomeSettings.json";
+        private const string SettingsFile = "ModularHomeSettings.json";
 
         /// <summary>
         /// Constructor.
@@ -41,20 +41,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
         public HomeScreenManager(IServiceProvider serviceProvider, IApplicationPaths applicationPaths, ILogger<HomeScreenManager> logger)
         {
-            m_logger = logger;
-            m_serviceProvider = serviceProvider;
-            m_applicationPaths = applicationPaths;
+            _logger = logger;
+            _serviceProvider = serviceProvider;
+            _applicationPaths = applicationPaths;
 
-            string userFeatureEnabledPath = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, "userFeatureEnabled.json");
+            string userFeatureEnabledPath = Path.Combine(_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, "userFeatureEnabled.json");
             if (File.Exists(userFeatureEnabledPath))
             {
-                m_userFeatureEnabledStates = JsonConvert.DeserializeObject<Dictionary<Guid, bool>>(File.ReadAllText(userFeatureEnabledPath)) ?? [];
+                _userFeatureEnabledStates = JsonConvert.DeserializeObject<Dictionary<Guid, bool>>(File.ReadAllText(userFeatureEnabledPath)) ?? [];
             }
         }
         
         public void RegisterBuiltInResultsDelegates()
         {
-            // ponytail: table-driven — was 30 hand-written RegisterResultsDelegate<X>() lines
             Type[] sectionTypes =
             [
                 typeof(MyMediaSection), typeof(ContinueWatchingSection), typeof(NextUpSection), typeof(ContinueWatchingNextUpSection),
@@ -76,18 +75,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public IEnumerable<IHomeScreenSection> GetSectionTypes()
         {
-            return m_delegates.Values;
+            return _delegates.Values;
         }
 
         public IHomeScreenSection? GetSection(string sectionName)
         {
-            return m_delegates.GetValueOrDefault(sectionName);
+            return _delegates.GetValueOrDefault(sectionName);
         }
 
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> InvokeResultsDelegate(string key, HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            if (m_delegates.TryGetValue(key, out IHomeScreenSection? section))
+            if (_delegates.TryGetValue(key, out IHomeScreenSection? section))
             {
                 return section.GetResults(payload, queryCollection);
             }
@@ -98,7 +97,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public void RegisterResultsDelegate<T>() where T : IHomeScreenSection
         {
-            T handler = ActivatorUtilities.CreateInstance<T>(m_serviceProvider);
+            T handler = ActivatorUtilities.CreateInstance<T>(_serviceProvider);
 
             RegisterResultsDelegate(handler);
         }
@@ -107,24 +106,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         {
             if (handler.Section != null)
             {
-                // Refuse duplicates instead of silently overwriting: an overwrite would let an
-                // external RegisterSection call swap out a built-in handler (upstream #258).
-                if (!m_delegates.TryAdd(handler.Section, handler))
+                // Refuse duplicates: an overwrite would let external RegisterSection calls
+                // swap out built-in handlers (upstream #258).
+                if (!_delegates.TryAdd(handler.Section, handler))
                 {
-                    PluginLog.DuplicateSectionRegistration(m_logger, handler.Section, m_delegates[handler.Section].GetType().FullName);
+                    PluginLog.DuplicateSectionRegistration(_logger, handler.Section, _delegates[handler.Section].GetType().FullName);
                 }
             }
         }
 
         public void RegisterResultsDelegate(Type homeScreenSectionType)
         {
-            IHomeScreenSection handler = (IHomeScreenSection)ActivatorUtilities.CreateInstance(m_serviceProvider, homeScreenSectionType);
+            IHomeScreenSection handler = (IHomeScreenSection)ActivatorUtilities.CreateInstance(_serviceProvider, homeScreenSectionType);
 
             if (handler.Section != null)
             {
-                if (!m_delegates.TryAdd(handler.Section, handler))
+                if (!_delegates.TryAdd(handler.Section, handler))
                 {
-                    throw new InvalidOperationException($"Section type '{handler.Section}' has already been registered to type '{m_delegates[handler.Section].GetType().FullName}'.");
+                    throw new InvalidOperationException($"Section type '{handler.Section}' has already been registered to type '{_delegates[handler.Section].GetType().FullName}'.");
                 }
             }
         }
@@ -132,12 +131,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public bool GetUserFeatureEnabled(Guid userId)
         {
-            if (m_userFeatureEnabledStates.TryGetValue(userId, out bool enabled))
+            if (_userFeatureEnabledStates.TryGetValue(userId, out bool enabled))
             {
                 return enabled;
             }
 
-            m_userFeatureEnabledStates[userId] = false;
+            _userFeatureEnabledStates[userId] = false;
 
             return false;
         }
@@ -145,17 +144,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public void SetUserFeatureEnabled(Guid userId, bool enabled)
         {
-            m_userFeatureEnabledStates[userId] = enabled;
+            _userFeatureEnabledStates[userId] = enabled;
 
-            string userFeatureEnabledPath = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, "userFeatureEnabled.json");
+            string userFeatureEnabledPath = Path.Combine(_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, "userFeatureEnabled.json");
             new FileInfo(userFeatureEnabledPath).Directory?.Create();
-            File.WriteAllText(userFeatureEnabledPath, JObject.FromObject(m_userFeatureEnabledStates).ToString(Formatting.Indented));
+            File.WriteAllText(userFeatureEnabledPath, JObject.FromObject(_userFeatureEnabledStates).ToString(Formatting.Indented));
         }
 
         /// <inheritdoc/>
         public ModularHomeUserSettings? GetUserSettings(Guid userId)
         {
-            string pluginSettings = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, c_settingsFile);
+            string pluginSettings = Path.Combine(_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, SettingsFile);
 
             IEnumerable<SectionSettings> adminLockedSections =
                 HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => !x.AllowUserOverride);
@@ -216,19 +215,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public bool UpdateUserSettings(Guid userId, ModularHomeUserSettings userSettings)
         {
-            PluginLog.UpdatingUserSettings(m_logger, userId);
-            if (m_logger.IsEnabled(LogLevel.Information))
+            PluginLog.UpdatingUserSettings(_logger, userId);
+            if (_logger.IsEnabled(LogLevel.Information))
             {
                 string userSettingsJson = JsonConvert.SerializeObject(userSettings);
-                PluginLog.UserSettingsJsonReceived(m_logger, userSettingsJson);
+                PluginLog.UserSettingsJsonReceived(_logger, userSettingsJson);
             }
             
-            string pluginSettings = Path.Combine(m_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, c_settingsFile);
-            PluginLog.PluginSettingsFile(m_logger, pluginSettings);
+            string pluginSettings = Path.Combine(_applicationPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!, SettingsFile);
+            PluginLog.PluginSettingsFile(_logger, pluginSettings);
             
             FileInfo fInfo = new FileInfo(pluginSettings);
             
-            PluginLog.CreatingSettingsDirectory(m_logger, fInfo.Directory?.FullName);
+            PluginLog.CreatingSettingsDirectory(_logger, fInfo.Directory?.FullName);
             fInfo.Directory?.Create();
 
             JArray settings = new JArray();
@@ -236,21 +235,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             // not written out as an empty array.
             List<ModularHomeUserSettings?> newSettings = [userSettings];
 
-            PluginLog.CheckingExistingUserSettings(m_logger, userId);
+            PluginLog.CheckingExistingUserSettings(_logger, userId);
             if (File.Exists(pluginSettings))
             {
-                PluginLog.UserSettingsFileExists(m_logger);
+                PluginLog.UserSettingsFileExists(_logger);
                 settings = JArray.Parse(File.ReadAllText(pluginSettings));
                 
-                if (m_logger.IsEnabled(LogLevel.Information))
+                if (_logger.IsEnabled(LogLevel.Information))
                 {
                     string settingsJson = settings.ToString(Formatting.None);
-                    PluginLog.ParsedUserSettings(m_logger, settingsJson);
+                    PluginLog.ParsedUserSettings(_logger, settingsJson);
                 }
 
                 newSettings = settings.Select(x => JsonConvert.DeserializeObject<ModularHomeUserSettings>(x.ToString())).ToList()!;
                 
-                PluginLog.RemovingExistingUserSettings(m_logger, userId);
+                PluginLog.RemovingExistingUserSettings(_logger, userId);
                 newSettings.RemoveAll(x => x != null && x.UserId.Equals(userId));
 
                 newSettings.Add(userSettings);
@@ -258,22 +257,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
                 settings.Clear();
             }
 
-            PluginLog.AddingUserSettings(m_logger, userId);
+            PluginLog.AddingUserSettings(_logger, userId);
             foreach (ModularHomeUserSettings? userSetting in newSettings)
             {
                 settings.Add(JObject.FromObject(userSetting ?? new ModularHomeUserSettings()));
             }
 
-            PluginLog.WritingUserSettings(m_logger, pluginSettings);
+            PluginLog.WritingUserSettings(_logger, pluginSettings);
             File.WriteAllText(pluginSettings, settings.ToString(Formatting.Indented));
 
-            if (m_logger.IsEnabled(LogLevel.Information))
+            if (_logger.IsEnabled(LogLevel.Information))
             {
                 string writtenJson = File.ReadAllText(pluginSettings);
-                PluginLog.WrittenSettingsContent(m_logger, writtenJson);
+                PluginLog.WrittenSettingsContent(_logger, writtenJson);
             }
             
-            PluginLog.UserSettingsUpdated(m_logger);
+            PluginLog.UserSettingsUpdated(_logger);
             return true;
         }
     }

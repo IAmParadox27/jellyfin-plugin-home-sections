@@ -16,11 +16,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Tests.Services;
 [Collection("Plugin Instance")]
 public class ImageCacheServiceTests
 {
-    private readonly PluginFixture m_fixture;
+    private readonly PluginFixture _fixture;
 
     public ImageCacheServiceTests(PluginFixture fixture)
     {
-        m_fixture = fixture;
+        _fixture = fixture;
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class ImageCacheServiceTests
     {
         _ = MakeService(FakeHttpMessageHandler.RespondingWithStatus(HttpStatusCode.OK));
 
-        Assert.True(Directory.Exists(Path.Combine(m_fixture.Paths.CachePath, "HomeScreenSections", "Images")));
+        Assert.True(Directory.Exists(Path.Combine(_fixture.Paths.CachePath, "HomeScreenSections", "Images")));
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class ImageCacheServiceTests
     {
         return new ImageCacheService(
             NullLogger<ImageCacheService>.Instance,
-            m_fixture.Paths,
+            _fixture.Paths,
             new HttpClient(handler));
     }
 

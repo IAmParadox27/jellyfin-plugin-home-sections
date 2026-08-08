@@ -28,20 +28,20 @@ public class ComingSoonInLibrarySection : IHomeScreenSection
 
     public object? OriginalPayload => null;
 
-    private readonly IUserManager m_userManager;
-    private readonly ILibraryManager m_libraryManager;
-    private readonly IDtoService m_dtoService;
+    private readonly IUserManager _userManager;
+    private readonly ILibraryManager _libraryManager;
+    private readonly IDtoService _dtoService;
 
     public ComingSoonInLibrarySection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService)
     {
-        m_userManager = userManager;
-        m_libraryManager = libraryManager;
-        m_dtoService = dtoService;
+        _userManager = userManager;
+        _libraryManager = libraryManager;
+        _dtoService = dtoService;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
     {
-        User? user = m_userManager.GetUserById(payload.UserId);
+        User? user = _userManager.GetUserById(payload.UserId);
         if (user == null)
         {
             return new QueryResult<BaseItemDto>();
@@ -50,7 +50,7 @@ public class ComingSoonInLibrarySection : IHomeScreenSection
         DtoOptions dtoOptions = SectionDtoHelper.CreateDefaultDtoOptions();
         DateTime today = DateTime.UtcNow.Date;
 
-        QueryResult<BaseItem> items = m_libraryManager.GetItemsResult(new InternalItemsQuery(user)
+        QueryResult<BaseItem> items = _libraryManager.GetItemsResult(new InternalItemsQuery(user)
         {
             IncludeItemTypes = SectionDtoHelper.MovieSeriesEpisodeKinds,
             Recursive = true,
@@ -62,7 +62,7 @@ public class ComingSoonInLibrarySection : IHomeScreenSection
             EnableTotalRecordCount = false
         });
 
-        return new QueryResult<BaseItemDto>(m_dtoService.GetBaseItemDtos(items.Items, dtoOptions, user));
+        return new QueryResult<BaseItemDto>(_dtoService.GetBaseItemDtos(items.Items, dtoOptions, user));
     }
 
     public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
