@@ -33,6 +33,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly IDtoService m_dtoService;
         private readonly CollectionManagerProxy m_collectionManagerProxy;
         private readonly IPlaylistManager m_playlistManager;
+
+        // Tracks background page-build tasks so waiters can fail fast on faults
+        // instead of busy-waiting for a cache entry that will never appear.
+        private readonly ConcurrentDictionary<Guid, Task> m_buildTasks = new();
     
         public HomeScreenSectionService(
             IHomeScreenManager homeScreenManager,
@@ -99,7 +103,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
 
             EnsureCacheStarted(userId, pageHash.Value);
-            WaitUntilCachePresent(pageHash.Value);
+            if (!WaitUntilCachePresent(pageHash.Value))
+            {
+                // The background build faulted; return an empty page instead of hanging.
+                return [];
+            }
+
             WaitUntilCacheHasStartedWork(pageHash.Value);
 
             return WaitForPageSections(userId, language, page, pageSize, pageHash.Value);
@@ -204,16 +213,32 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         {
             if (!m_dataCache.Cache.ContainsKey(pageHash))
             {
-                _ = Task.Run(() => CacheSectionsForUser(userId, pageHash));
+                m_buildTasks.GetOrAdd(pageHash, _ => Task.Run(() => CacheSectionsForUser(userId, pageHash)));
             }
         }
 
-        private void WaitUntilCachePresent(Guid pageHash)
+        private bool WaitUntilCachePresent(Guid pageHash)
         {
             while (!m_dataCache.Cache.ContainsKey(pageHash))
             {
+                // The build task adds the cache entry before doing any heavy work, so a
+                // completed task without an entry means it faulted; fail fast instead of
+                // spinning forever (upstream #247 turned this into an infinite hang).
+                if (m_buildTasks.TryGetValue(pageHash, out Task? buildTask) && buildTask.IsCompleted)
+                {
+                    if (buildTask.Exception != null)
+                    {
+                        PluginLog.SectionCacheBuildFailed(m_logger, buildTask.Exception.GetBaseException(), pageHash);
+                    }
+
+                    return m_dataCache.Cache.ContainsKey(pageHash);
+                }
+
                 Thread.Sleep(10);
             }
+
+            m_buildTasks.TryRemove(pageHash, out _);
+            return true;
         }
 
         private void WaitUntilCacheHasStartedWork(Guid pageHash)
@@ -265,10 +290,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             UserSectionsData userSectionsData = new UserSectionsData()
             {
                 UserId = userId,
-                MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
+                // DefaultIfEmpty guards the fresh-install case where no admin SectionSettings
+                // exist yet; Enumerable.Max on an empty sequence used to throw and 500 the
+                // whole endpoint (upstream #247).
+                MaxOrderIndex = groupedOrderedSections.Select(x => x.Key).DefaultIfEmpty(0).Max()
             };
-            
+
             m_dataCache.Cache.TryAdd(pageHash, userSectionsData);
+
+            if (groupedOrderedSections.Length == 0)
+            {
+                // Seed a sentinel order group so the wait helpers see a complete (empty)
+                // page instead of spinning until SectionsInProgress/OrderedSections fill up.
+                userSectionsData.OrderedSections.TryAdd(0, []);
+            }
 
             foreach (int orderIndex in groupedOrderedSections.Select(x => x.Key).OrderBy(x => x))
             {

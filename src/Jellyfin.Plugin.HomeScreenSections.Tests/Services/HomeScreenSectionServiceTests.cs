@@ -270,6 +270,70 @@ public class HomeScreenSectionServiceTests
     }
 
     [Fact]
+    public void MonitorLiveUpdatedSectionsForUser_with_empty_section_settings_returns_empty_page()
+    {
+        // Regression for upstream #247: a fresh install has no admin SectionSettings yet.
+        // The unguarded Enumerable.Max used to throw "Sequence contains no elements" and
+        // 500 the whole endpoint; it must return an empty page instead.
+        HomeScreenSectionService service = MakeService();
+        Guid userId = Guid.NewGuid();
+
+        PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
+        SectionSettings[] original = config.SectionSettings;
+        config.SectionSettings = [];
+        try
+        {
+            m_homeScreenManager
+                .Setup(manager => manager.GetUserSettings(userId))
+                .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["ContinueWatching"] });
+            m_homeScreenManager
+                .Setup(manager => manager.GetSectionTypes())
+                .Returns(new[] { MakeSection("ContinueWatching", "Continue Watching") });
+
+            IReadOnlyList<HomeScreenSectionInfo>? result = service.MonitorLiveUpdatedSectionsForUser(userId, "en", 1);
+
+            Assert.NotNull(result);
+            Assert.Empty(result!);
+        }
+        finally
+        {
+            config.SectionSettings = original;
+        }
+    }
+
+    [Fact(Timeout = 30000)]
+    public void MonitorLiveUpdatedSectionsForUser_with_empty_section_settings_and_page_hash_does_not_hang()
+    {
+        // Same fresh-install scenario as above, but through the paginated path where the
+        // cache is built on a background task and the request busy-waits for it.
+        HomeScreenSectionService service = MakeService();
+        Guid userId = Guid.NewGuid();
+
+        PluginConfiguration config = HomeScreenSectionsPlugin.Instance.Configuration;
+        SectionSettings[] original = config.SectionSettings;
+        config.SectionSettings = [];
+        try
+        {
+            m_homeScreenManager
+                .Setup(manager => manager.GetUserSettings(userId))
+                .Returns(new ModularHomeUserSettings { UserId = userId, EnabledSections = ["ContinueWatching"] });
+            m_homeScreenManager
+                .Setup(manager => manager.GetSectionTypes())
+                .Returns(new[] { MakeSection("ContinueWatching", "Continue Watching") });
+
+            IReadOnlyList<HomeScreenSectionInfo>? result =
+                service.MonitorLiveUpdatedSectionsForUser(userId, "en", 1, 10, Guid.NewGuid());
+
+            Assert.NotNull(result);
+            Assert.Empty(result!);
+        }
+        finally
+        {
+            config.SectionSettings = original;
+        }
+    }
+
+    [Fact]
     public void CacheSectionsForUser_honours_user_defined_section_order()
     {
         HomeScreenSectionService service = MakeService();

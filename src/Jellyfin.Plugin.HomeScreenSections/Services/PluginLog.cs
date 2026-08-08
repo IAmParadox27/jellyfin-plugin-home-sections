@@ -99,6 +99,9 @@ internal static partial class PluginLog
     [LoggerMessage(EventId = 1301, Level = LogLevel.Debug, Message = "Failed to resolve section title link for AdditionalData '{AdditionalData}' and user '{UserId}'")]
     public static partial void SectionTitleLinkResolveFailed(ILogger logger, Exception exception, string additionalData, Guid userId);
 
+    [LoggerMessage(EventId = 1302, Level = LogLevel.Error, Message = "Failed to build home screen section cache for page '{PageHash}'")]
+    public static partial void SectionCacheBuildFailed(ILogger logger, Exception exception, Guid pageHash);
+
     // --- RecentlyAddedShowsSection ---
     [LoggerMessage(EventId = 1400, Level = LogLevel.Information, Message = "Season '{SeasonName}' has been sorted based on an episode having a date created of: {DateCreated}.")]
     public static partial void SeasonSortedByEpisodeDate(ILogger logger, string seasonName, DateTime? dateCreated);
