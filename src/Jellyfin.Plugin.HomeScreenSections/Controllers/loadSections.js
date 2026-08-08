@@ -123,7 +123,9 @@
         
         var index = 0;
         items.forEach(function (item) {
-            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
+            // tabindex makes the card a spatial-navigation stop on TV clients; without it
+            // WebOS remotes cannot focus/scroll past these rows at all (upstream #233).
+            html += '<div tabindex="0" class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
             html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
@@ -215,7 +217,7 @@
                 cardScalableClass = 'upcomingBookCard';
             }
 
-            html += '<div class="card ' + cardShapeClass + ' card-hoverable card-withuserdata ' + cardClass + '" data-index="' + index + '" data-content-type="' + contentType + '">';
+            html += '<div tabindex="0" class="card ' + cardShapeClass + ' card-hoverable card-withuserdata ' + cardClass + '" data-index="' + index + '" data-content-type="' + contentType + '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
             html += '       <div class="cardScalable ' + cardScalableClass + '">';
             html += '           <div class="cardPadder ' + cardPadderClass + ' lazy-hidden-children"></div>';
@@ -300,7 +302,9 @@
                 }
             }
 
-            var hasTitleLink = !!(titleRoute && titleRoute !== '#' && titleRoute !== 'undefined' && String(titleRoute).length > 1);
+            // Reject 'undefined' anywhere in the route, not just as the whole string:
+            // custom sections used to render links like /details?id=undefined (upstream #196).
+            var hasTitleLink = !!(titleRoute && titleRoute !== '#' && String(titleRoute).indexOf('undefined') === -1 && String(titleRoute).length > 1);
             if (hasTitleLink) {
                 html += '<a is="emby-linkbutton" href="' + titleRoute + '" class="button-flat button-flat-mini sectionTitleTextButton" title="' + (sectionInfo.DisplayText || '') + '">';
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
@@ -428,10 +432,18 @@
                 userSettings: userSettings
             };
             
-            window.addEventListener('scroll', function () {
+            // Store the handler on window and remove any leftover from a previous home
+            // visit before re-adding it; without this every navigation back to the home
+            // screen stacked another listener (and stale HssPageMeta references) on top
+            // of the last, slowing scrolling down over time (upstream #242).
+            if (typeof window.HssScrollHandler === 'function') {
+                window.removeEventListener('scroll', window.HssScrollHandler);
+            }
+
+            window.HssScrollHandler = function () {
                 var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
-                
+
                 if (window.HssPageMeta.Finished !== true && window.HssPageMeta.IsLoading !== true && scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < window.scrollY) {
                     window.HssPageMeta.IsLoading = true;
                     
@@ -472,7 +484,9 @@
                         D.body.clientHeight, D.documentElement.clientHeight
                     );
                 }
-            });
+            };
+
+            window.addEventListener('scroll', window.HssScrollHandler);
         }
         
         var getSectionsData = {
