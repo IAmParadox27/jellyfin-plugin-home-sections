@@ -1,13 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <JellyfinVersion>10.11.5</JellyfinVersion>
+        <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">12.0.0</JellyfinVersion>
         <JellyfinNugetVersion Condition="!$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11.1'))">10.11.0</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11.0'))">10.11.0</JellyfinNugetVersion>
+        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('12.'))">12.0.0-rc5</JellyfinNugetVersion>
         <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11'))">net9.0</TargetFramework>
         <TargetFramework Condition="'$(JellyfinVersion)' == '10.10.7'">net8.0</TargetFramework>
+        <TargetFramework Condition="$(JellyfinVersion.StartsWith('12.'))">net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -15,13 +17,27 @@
         <RepositoryUrl>https://github.com/IAmParadox27/jellyfin-plugin-home-sections</RepositoryUrl>
         <RepositoryType>GitHub</RepositoryType>
     </PropertyGroup>
+
+    <PropertyGroup>
+        <!-- Harmony 2.4.0 throws PlatformNotSupportedException on CoreCLR 10.
+             2.4.2 ships a net10.0 target. Bump only for Jellyfin 12.x. -->
+        <HarmonyVersion>2.4.0</HarmonyVersion>
+        <HarmonyVersion Condition="$(JellyfinVersion.StartsWith('12.'))">2.4.2</HarmonyVersion>
+        <HarmonyTfm>net8.0</HarmonyTfm>
+        <HarmonyTfm Condition="$(JellyfinVersion.StartsWith('12.'))">net10.0</HarmonyTfm>
+    </PropertyGroup>
+
     
     <PropertyGroup>
         <GitBranch Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git\HEAD'))">$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
     </PropertyGroup>
     <PropertyGroup Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git'))">
         <GitHeadLocation>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git').Replace('gitdir: ', '').Trim())</GitHeadLocation>
-        <GitBranch>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\$(GitHeadLocation)\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+        <!-- gitdir: in a worktree's .git file is an ABSOLUTE path, so it must not be
+             appended to the project-relative prefix. Path.Combine returns the second
+             argument unchanged when it is already rooted, which keeps this correct for
+             both a normal clone (relative gitdir) and a linked worktree. -->
+        <GitBranch>$([System.IO.File]::ReadAllText($([System.IO.Path]::Combine('$(MsBuildThisFileDirectory)..\..', '$(GitHeadLocation)', 'HEAD'))).Replace('ref: refs/heads/', '').Trim())</GitBranch>
     </PropertyGroup>
     
     <ItemGroup>
@@ -29,7 +45,7 @@
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
-      <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
+      <PackageReference Include="Lib.Harmony" Version="$(HarmonyVersion)" GeneratePathProperty="true" />
       <PackageReference Include="SkiaSharp" Version="3.116.1" />
     </ItemGroup>
     
@@ -73,7 +89,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Include="$(PkgLib_Harmony)\lib\net8.0\0Harmony.dll" />
+      <EmbeddedResource Include="$(PkgLib_Harmony)\lib\$(HarmonyTfm)\0Harmony.dll" />
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\README.md" />
@@ -114,4 +130,11 @@
         <Exec Condition="$(JellyfinVersion.StartsWith('10.11'))"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections&quot; /y" />
         <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />
     </Target>
+
+    <!-- Remove 12.0 Specific Code from non 12.x builds -->
+    <ItemGroup Condition="!$(JellyfinVersion.StartsWith('12.'))">
+        <None Include="JellyfinVersionSpecific/12.0/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/12.0/*.cs" />
+    </ItemGroup>
+
 </Project>
