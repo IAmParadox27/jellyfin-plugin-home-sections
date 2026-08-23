@@ -36,13 +36,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 		
 		private IUserDataManager UserDataManager { get; set; }
 		private IUserManager UserManager { get; set; }
-		private ILibraryManager LibraryManager { get; set; }
+		internal ILibraryManager LibraryManager { get; set; }
 		private IDtoService DtoService { get; set; }
 		private ICollectionManager CollectionManager { get; set; }
 		private CollectionManagerProxy CollectionManagerProxy { get; set; }
+		internal IServiceProvider ServiceProvider { get; set; }
 
 		public BecauseYouWatchedSection(IUserDataManager userDataManager, IUserManager userManager, ILibraryManager libraryManager, 
-			IDtoService dtoService, ICollectionManager collectionManager, CollectionManagerProxy collectionProxy)
+			IDtoService dtoService, ICollectionManager collectionManager, CollectionManagerProxy collectionProxy, IServiceProvider serviceProvider)
 		{
 			UserDataManager = userDataManager;
 			UserManager = userManager;
@@ -50,6 +51,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			DtoService = dtoService;
 			CollectionManager = collectionManager;
 			CollectionManagerProxy = collectionProxy;
+			ServiceProvider = serviceProvider;
 		}
 
 		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
@@ -128,7 +130,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				}
 
 				pickedMovies.Add(elementToConsider);
-				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy)
+				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy, ServiceProvider)
 				{
 					AdditionalData = elementToConsider.Id.ToString(),
 					DisplayText = "Because You Watched " + elementToConsider.Name,
@@ -164,67 +166,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			BaseItem? item = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
 
-            var config = HomeScreenSectionsPlugin.Instance?.Configuration;
-			var sectionSettings = config?.SectionSettings.FirstOrDefault(x => x.SectionId == Section);
-            // If HideWatchedItems is enabled for this section, set isPlayed to false to hide watched items; otherwise, include all.
-            bool? isPlayed = sectionSettings?.HideWatchedItems == true ? false : null;
-
-            VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
-	            .Where(x => x.CollectionType == CollectionTypeOptions.movies || x.IsMixedFolder(LibraryManager))
-	            .FilterToUserPermitted(LibraryManager, user);
+            IReadOnlyList<BaseItem> similarItems = this.GetSimilarItems(item, dtoOptions, user).GetAwaiter().GetResult();
             
-            IList<BaseItem>? similar = folders.SelectMany(x =>
-            {
-	            var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-	            if (item is not Folder folder)
-	            {
-		            folder = LibraryManager.GetUserRootFolder();
-	            }
-
-	            return folder.GetItems(new InternalItemsQuery(user)
-	            {
-		            IncludeItemTypes = new[]
-		            {
-			            BaseItemKind.Movie
-		            },
-		            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Descending) },
-		            User = user,
-		            IsPlayed = isPlayed,
-		            DtoOptions = dtoOptions,
-		            Limit = 24,
-		            Recursive = true,
-		            ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
-	            }.ApplySimilarSettings(item)).Items;
-            }).ToList();
-            
-            // Scoring system to prefer more similar titles
-            var scoredSimilar = similar.Select(x =>
-            {
-	            int sharedGenreWeight = 5;
-	            
-	            int sharedTags = x.Tags.Count(y => item.Tags.Contains(y));
-	            int sharedGenres = x.Genres.Count(y => item.Genres.Contains(y));
-
-	            if (sharedGenres == 0)
-	            {
-		            return new
-		            {
-			            Item = x,
-			            Score = 0
-		            };
-	            }
-	            
-	            return new
-	            {
-			    	Item = x,
-			    	Score = (sharedGenres * sharedGenreWeight) + sharedTags 
-	            };
-            }).Where(x => x.Score > 0).OrderByDescending(x => x.Score).Take(24).ToList();
-            
-            scoredSimilar.Shuffle();
-            
-			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(scoredSimilar.Take(16).Select(x => x.Item).ToArray(), dtoOptions, user));
+			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similarItems.Take(16).ToArray(), dtoOptions, user));
 		}
 		
 		public HomeScreenSectionInfo GetInfo()
