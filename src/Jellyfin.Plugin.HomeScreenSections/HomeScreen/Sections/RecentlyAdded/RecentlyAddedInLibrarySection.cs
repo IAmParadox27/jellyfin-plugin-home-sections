@@ -28,7 +28,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         public override string? DisplayText { get; set; } = "Recently Added In Library";
 
         /// <inheritdoc/>
-        public override string? Route => null;
+        public override string? Route => "originalpayload";
 
         /// <inheritdoc/>
         public override string? AdditionalData { get; set; } = null;
@@ -44,7 +44,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         protected override SectionViewMode DefaultViewMode => SectionViewMode.Landscape;
 
         public override int? Limit => 999;
-
+        
         public override TranslationMetadata? TranslationMetadata { get; protected set; } = null;
 
         public RecentlyAddedInLibrarySection(IUserViewManager userViewManager,
@@ -128,7 +128,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 originalPayload = Array.ConvertAll(new[] { folder }, i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)).First();
                 
                 RecentlyAddedInLibrarySection instance = (ActivatorUtilities.CreateInstance(m_serviceProvider, GetType(), m_userViewManager, m_userManager, m_libraryManager, m_dtoService) as RecentlyAddedInLibrarySection)!;
-                
+
                 instance.AdditionalData = folder.Id.ToString();
                 instance.DisplayText = DisplayText;
                 instance.OriginalPayload = originalPayload;

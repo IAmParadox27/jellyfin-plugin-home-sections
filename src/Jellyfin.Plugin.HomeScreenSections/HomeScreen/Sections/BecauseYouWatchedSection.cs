@@ -26,11 +26,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public int? Limit => 5;
 
-		public string? Route => null;
+		public string? Route => "originalpayload";
 
 		public string? AdditionalData { get; set; }
 
-		public object? OriginalPayload => null;
+		public object? OriginalPayload { get; set; }
 
 		public TranslationMetadata? TranslationMetadata { get; private set; }
 		
@@ -132,6 +132,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				pickedMovies.Add(elementToConsider);
 				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy, ServiceProvider)
 				{
+					OriginalPayload = DtoService.GetBaseItemDto(elementToConsider, dtoOptions, user),
 					AdditionalData = elementToConsider.Id.ToString(),
 					DisplayText = "Because You Watched " + elementToConsider.Name,
 					TranslationMetadata = new TranslationMetadata()

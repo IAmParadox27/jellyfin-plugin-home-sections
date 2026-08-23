@@ -16,6 +16,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
     public class LatestShowsSection : LatestSectionBase
     {
         public override string? Section => "LatestShows";
+        
+        public override string? Route => "tvshows";
 
         public override string? DisplayText { get; set; } = "Latest Shows";
 
