@@ -53,7 +53,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 }, "AdminRecentlyAddedShowsItemTypeDropdown", "shows", true);
         }
 
-        protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed, HomeScreenSectionPayload payload)
+        protected override IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed, HomeScreenSectionPayload payload, Folder? folderOverride = null)
         {
             string itemType = HomeScreenSectionPayload.GetEffectiveStringConfig(Section ?? string.Empty, "itemType", "shows");
 

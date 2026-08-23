@@ -38,12 +38,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected abstract string? LibraryId { get; }
 
         protected abstract SectionViewMode DefaultViewMode { get; }
-        
+
+        public virtual TranslationMetadata? TranslationMetadata { get; protected set; } = null;
+
         protected readonly IUserViewManager m_userViewManager;
         protected readonly IUserManager m_userManager;
         protected readonly ILibraryManager m_libraryManager;
         protected readonly IDtoService m_dtoService;
-        private readonly IServiceProvider m_serviceProvider;
+        protected readonly IServiceProvider m_serviceProvider;
 
         protected RecentlyAddedSectionBase(IUserViewManager userViewManager,
             IUserManager userManager,
@@ -71,7 +73,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             yield break;
         }
 
-        public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
+        public virtual QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             User? user = m_userManager.GetUserById(payload.UserId);
 
@@ -108,6 +110,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
+        {
+            return CreateInstancesInternal(userId);
+        }
+
+        protected virtual IEnumerable<IHomeScreenSection> CreateInstancesInternal(Guid? userId)
         {
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
 
@@ -161,7 +168,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             };
         }
 
-        protected virtual IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed, HomeScreenSectionPayload payload)
+        protected virtual IEnumerable<BaseItem> GetItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders, bool? isPlayed, HomeScreenSectionPayload payload, Folder? folderOverride = null)
         {
             // Default behaviour is to get the 16 most recently added items from each library that matches, then order that by date created and take 16.
             // The reason we do this is to ensure that we always get 16 items, even if there is only 1 library that matches our type.
