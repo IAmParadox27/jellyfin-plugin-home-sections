@@ -65,6 +65,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<RecentlyAddedBooksSection>();
             RegisterResultsDelegate<RecentlyAddedAudioBooksSection>();
             RegisterResultsDelegate<RecentlyAddedMusicVideosSection>();
+            RegisterResultsDelegate<RecentlyAddedInLibrarySection>();
             
             RegisterResultsDelegate<LatestMoviesSection>();
             RegisterResultsDelegate<LatestShowsSection>();

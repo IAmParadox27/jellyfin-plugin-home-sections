@@ -25,6 +25,7 @@
   "RecentlyAddedMovies": "Recently Added Movies",
   "RecentlyAddedMusicVideos": "Recently Added Music Videos",
   "RecentlyAddedShows": "Recently Added Shows",
+  "RecentlyAddedInLibrary": "Recently Added in {0}",
   "Starring": "Starring {0}",
   "TopTen": "Top Ten",
   "UpcomingBooks": "Upcoming Books",
@@ -212,6 +213,9 @@
   "AdminPerSectionSetting_Configuration": "Configuration",
   "AdminPerSectionSetting_Value": "Value",
 
+  "AdminRecentlyAddedInLibraryGroupEpisodes": "Group Episodes to Seasons/Series",
+  "AdminRecentlyAddedInLibraryGroupEpisodes_Desc": "Do you want to group newly added episodes into seasons/series? (Note: this will make the section slower to load)",
+  
   "AdminRecentlyAddedShowsItemTypeDropdown": "Item Type",
   "AdminRecentlyAddedShowsItemTypeDropdown_Desc": "What type of item do you want to display?",
   "AdminRecentlyAddedShowsItemTypeDropdown_shows": "Shows",
