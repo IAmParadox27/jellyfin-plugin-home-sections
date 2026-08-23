@@ -105,7 +105,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     }
                 }
             }
+            else
+            {
+                m_logger.LogWarning("FileTransformation plugin not found. Please ensure you install FileTransformation otherwise HomeScreenSections will not work.");
+            }
 
+            Assembly? pluginPagesAssembly =
+                AssemblyLoadContext.All.SelectMany(x => x.Assemblies).FirstOrDefault(x =>
+                    x.FullName?.Contains(".PluginPages") ?? false);
+
+            if (pluginPagesAssembly == null)
+            {
+                m_logger.LogWarning("PluginPages plugin not found. Please ensure you install PluginPages otherwise you will not be able to have user overrides in HomeScreenSections.");
+            }
+            
             List<VirtualFolderInfo> libraries = m_libraryManager.GetVirtualFolders();
 
             foreach (VirtualFolderInfo library in libraries)
