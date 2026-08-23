@@ -20,9 +20,9 @@ public class GenreSection : IHomeScreenSection
     public string? Section => "Genre";
     public string? DisplayText { get; set; } = "Genre";
     public int? Limit => 5;
-    public string? Route => null;
+    public string? Route => "originalpayload";
     public string? AdditionalData { get; set; }
-    public object? OriginalPayload => null;
+    public object? OriginalPayload { get; set; }
     public TranslationMetadata? TranslationMetadata { get; private set; }
 
     private readonly IUserManager m_userManager;
@@ -176,6 +176,7 @@ public class GenreSection : IHomeScreenSection
 
                 yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
                 {
+                    OriginalPayload = m_dtoService.GetBaseItemDto(m_libraryManager.GetGenre(selectedGenre), new DtoOptions(), user),
                     AdditionalData = selectedGenre,
                     DisplayText = $"{selectedGenre} Movies",
                     TranslationMetadata = new TranslationMetadata()
