@@ -141,6 +141,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         private string SaveImageToDisk(string cacheKey, byte[] imageData, string contentType)
         {
+            // Use DirectoryInfo so that it will recursively create directories if needed
+            DirectoryInfo dirInfo = Directory.CreateDirectory(m_cacheDirectory);
+            dirInfo.Create();
+            
             string extension = GetExtensionFromContentType(contentType);
             string filePath = Path.Combine(m_cacheDirectory, $"{cacheKey}{extension}");
             File.WriteAllBytes(filePath, imageData);
