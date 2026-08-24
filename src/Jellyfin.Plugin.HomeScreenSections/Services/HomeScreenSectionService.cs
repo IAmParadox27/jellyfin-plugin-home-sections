@@ -40,6 +40,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             // Make sure that it's flagged as being used, even if we don't return anything here the page is still active
             // as we've received a request for it.
             userSectionsData.LastAccessed = DateTime.UtcNow;
+            m_dataCache.PageHashExpiry.TryUpdate(pageHash, DateTime.UtcNow.AddHours(1), m_dataCache.PageHashExpiry[pageHash]); // TODO: In a future update we should make this configurable.
             
             // Check if the userSectionsData has the data we're after
             int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
