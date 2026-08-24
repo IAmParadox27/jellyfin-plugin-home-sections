@@ -7,6 +7,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
     {
         // The GUID here represents the page hash
         public ConcurrentDictionary<Guid, UserSectionsData> Cache { get; set; } = new ConcurrentDictionary<Guid, UserSectionsData>();
+        
+        public ConcurrentDictionary<Guid, Guid> PageHashOwnerIds { get; set; } = new ConcurrentDictionary<Guid, Guid>();
+        
+        public ConcurrentDictionary<Guid, DateTime> PageHashExpiry { get; set; } = new ConcurrentDictionary<Guid, DateTime>();
     }
 
     public class UserSectionsData

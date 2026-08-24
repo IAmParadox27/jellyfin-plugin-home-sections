@@ -84,18 +84,41 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             return null;
         }
 
+        private Guid GeneratePageHash(Guid userId)
+        {
+            Guid pageHash = Guid.NewGuid();
+            m_dataCache.PageHashOwnerIds.TryAdd(pageHash, userId);
+            m_dataCache.PageHashExpiry.TryAdd(pageHash, DateTime.UtcNow.AddHours(1)); // TODO: In a future update we should make this configurable.
+            
+            return pageHash;
+        }
+
         public List<HomeScreenSectionInfo>? MonitorLiveUpdatedSectionsForUser(Guid userId, string? language, int page, int? pageSize = null, Guid? pageHash = null)
         {
+            // Kick off the task to remove the expired "temp" user caches to avoid a memory leak.
+            Task.Run(() => ClearExpiredUserCaches(userId));
+
+            // If the sections have been requested with a page hash that wasn't generated for this user, generate a new one.
+            if (pageHash.HasValue && !DoesPageBelongToUser(pageHash.Value, userId))
+            {
+                pageHash = GeneratePageHash(userId);
+            }
+            
             if (pageHash == null)
             {
-                pageHash = Guid.NewGuid();
-                
-                CacheSectionsForUser(userId, pageHash.Value);
+                pageHash = GetActiveTempPageCacheForUser(userId);
 
-                int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
-                return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
+                if (pageHash == null)
+                {
+                    pageHash = GeneratePageHash(userId);
+                    
+                    CacheSectionsForUser(userId, pageHash.Value);
+
+                    int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
+                    return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
+                }
             }
-
+            
             if (!m_dataCache.Cache.ContainsKey(pageHash.Value))
             {
                 Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash.Value));
@@ -260,6 +283,52 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             
             return info;
+        }
+
+        private async Task ClearExpiredUserCaches(Guid userId)
+        {
+            await Task.Yield();
+            
+            Guid[] userPageHashes = m_dataCache.PageHashOwnerIds
+                .Where(x => x.Value == userId)
+                .Select(x => x.Key)
+                .ToArray();
+            Guid[] expiredPageHashes = m_dataCache.PageHashExpiry
+                .Where(x => userPageHashes.Any(y => y == x.Key))
+                .Where(x => x.Value < DateTime.UtcNow)
+                .Select(x => x.Key)
+                .ToArray();
+
+            foreach (Guid pageHash in expiredPageHashes)
+            {
+                m_dataCache.Cache.TryRemove(pageHash, out _);
+            }
+        }
+
+        private Guid? GetActiveTempPageCacheForUser(Guid userId)
+        {
+            Guid[] userPageHashes = m_dataCache.PageHashOwnerIds
+                .Where(x => x.Value == userId)
+                .Select(x => x.Key)
+                .ToArray();
+            Guid[] activePageHashes = m_dataCache.PageHashExpiry
+                .Where(x => userPageHashes.Any(y => y == x.Key))
+                .Where(x => x.Value > DateTime.UtcNow)
+                .OrderByDescending(x => x.Value)
+                .Select(x => x.Key)
+                .ToArray();
+
+            if (activePageHashes.Length == 0)
+            {
+                return null;
+            }
+            
+            return activePageHashes.First();
+        }
+        
+        private bool DoesPageBelongToUser(Guid pageHash, Guid userId)
+        {
+            return m_dataCache.PageHashOwnerIds.TryGetValue(pageHash, out Guid ownerId) && ownerId == userId;
         }
     }
 
