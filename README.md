@@ -10,6 +10,7 @@
 	<a href="https://github.com/IAmParadox27/jellyfin-plugin-home-sections/releases">
 		<img alt="Current Release" src="https://img.shields.io/github/release/IAmParadox27/jellyfin-plugin-home-sections.svg" />
 	</a>
+	<a href='https://ko-fi.com/iamparadox27' target='_blank'><img height='20' style='border:0px;height:20px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 </p>
 
 <details>
