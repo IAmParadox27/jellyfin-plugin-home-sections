@@ -21,6 +21,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
         [JsonPropertyName("series")]
         public SonarrSeriesDto? Series { get; set; }
+
+        [JsonIgnore]
+        public int? TotalEpisodesInGroup { get; set; }
+
+        [JsonIgnore]
+        public int? LastEpisodeNumberInGroup { get; set; }
+
+        [JsonIgnore]
+        public string? GroupFrequencyText { get; set; }
     }
 
     public class SonarrSeriesDto

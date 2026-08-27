@@ -27,15 +27,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected IDtoService DtoService { get; }
         protected ArrApiService ArrApiService { get; }
         protected ImageCacheService ImageCacheService { get; }
+        protected ITranslationManager TranslationManager { get; }
         protected ILogger Logger { get; }
 
-        protected UpcomingSectionBase(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger logger)
+        protected UpcomingSectionBase(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger logger)
         {
             UserManager = userManager;
             LibraryManager = libraryManager;
             DtoService = dtoService;
             ArrApiService = arrApiService;
             ImageCacheService = imageCacheService;
+            TranslationManager = translationManager;
             Logger = logger;
         }
 
@@ -72,7 +74,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     return new QueryResult<BaseItemDto>();
                 }
 
-                T[] upcomingItems = [.. FilterAndSortItems(calendarItems).Take(16)];
+                string language = queryCollection["language"].FirstOrDefault() ?? queryCollection["Language"].FirstOrDefault() ?? "en";
+                Logger.LogInformation("GetResults for {SectionName} using language: {Language} (Query values: language={QueryLang}, Language={QueryLangUpper})", GetSectionName(), language, queryCollection["language"].FirstOrDefault(), queryCollection["Language"].FirstOrDefault());
+                T[] upcomingItems = [.. FilterAndSortItems(calendarItems, language).Take(16)];
+
+                if (config.FilterUpcomingByLibraryAccess)
+                {
+                    upcomingItems = FilterByLibraryAccess(upcomingItems, payload.UserId);
+                }
 
                 if (config.FilterUpcomingByLibraryAccess)
                 {
@@ -81,7 +90,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 Logger.LogDebug("Found {Count} upcoming items after filtering", upcomingItems.Length);
 
-                BaseItemDto[] dtoItems = [.. upcomingItems.Select(item => CreateDto(item, config))];
+                BaseItemDto[] dtoItems = [.. upcomingItems.Select(item => CreateDto(item, config, language))];
 
                 return new QueryResult<BaseItemDto>(dtoItems);
             }
@@ -139,7 +148,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             return path.Replace('\\', '/').TrimEnd('/');
         }
 
-        protected string CalculateCountdown(DateTime releaseDate, PluginConfiguration config)
+        protected string CalculateCountdown(DateTime releaseDate, PluginConfiguration config, string language = "en")
         {
             DateTime releaseDateLocal = releaseDate.ToLocalTime();
             // Calculate the difference in calendar days
@@ -147,24 +156,28 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             
             string countdownText = totalDays switch
             {
-                <= 0 => "Today!",
-                < 7 => $"{totalDays} {(totalDays == 1 ? "Day" : "Days")}",
-                < 30 => FormatTimeUnit(totalDays / 7, totalDays % 7, "Week", "Day"),
-                < 365 => FormatTimeUnit(totalDays / 30, (totalDays % 30) / 7, "Month", "Week"),
-                _ => FormatTimeUnit(totalDays / 365, (totalDays % 365) / 30, "Year", "Month")
+                <= 0 => TranslationManager.Translate("CountdownToday", language, "Today!"),
+                < 7  => $"{totalDays} {TranslationManager.Translate(totalDays == 1 ? "CountdownDay" : "CountdownDays", language, totalDays == 1 ? "day" : "days")}",
+                < 30 => FormatTimeUnit(totalDays / 7, totalDays % 7, "Week", "Day", language),
+                < 365 => FormatTimeUnit(totalDays / 30, (totalDays % 30) / 7, "Month", "Week", language),
+                _ => FormatTimeUnit(totalDays / 365, (totalDays % 365) / 30, "Year", "Month", language)
             };
 
             return $"{countdownText} - {ArrApiService.FormatDate(releaseDateLocal, config.DateFormat, config.DateDelimiter)}";
         }
 
-        private static string FormatTimeUnit(int primaryValue, int secondaryValue, string primaryUnit, string secondaryUnit)
+        private string FormatTimeUnit(int primaryValue, int secondaryValue, string primaryUnit, string secondaryUnit, string language)
         {
-            string primaryText = $"{primaryValue} {(primaryValue == 1 ? primaryUnit : $"{primaryUnit}s")}";
+            string primaryUnitPlural = primaryUnit + "s";
+            string primaryTranslatedUnit = primaryValue == 1 ? TranslationManager.Translate($"Countdown{primaryUnit}", language, primaryUnit) : TranslationManager.Translate($"Countdown{primaryUnitPlural}", language, primaryUnitPlural);
+            string primaryText = $"{primaryValue} {primaryTranslatedUnit}";
             
             if (secondaryValue > 0)
             {
-                string secondaryText = $"{secondaryValue} {(secondaryValue == 1 ? secondaryUnit : $"{secondaryUnit}s")}";
-            return $"{primaryText}, {secondaryText}";
+                string secondaryUnitPlural = secondaryUnit + "s";
+                string secondaryTranslatedUnit = secondaryValue == 1 ? TranslationManager.Translate($"Countdown{secondaryUnit}", language, secondaryUnit) : TranslationManager.Translate($"Countdown{secondaryUnitPlural}", language, secondaryUnitPlural);
+                string secondaryText = $"{secondaryValue} {secondaryTranslatedUnit}";
+                return $"{primaryText}, {secondaryText}";
             }
             
             return primaryText;
@@ -189,9 +202,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected abstract (string? url, string? apiKey) GetServiceConfiguration(PluginConfiguration config);
         protected abstract (int value, TimeframeUnit unit) GetTimeframeConfiguration(PluginConfiguration config);
         protected abstract T[] GetCalendarItems(DateTime startDate, DateTime endDate);
-        protected abstract IOrderedEnumerable<T> FilterAndSortItems(T[] items);
+        protected abstract IOrderedEnumerable<T> FilterAndSortItems(T[] items, string language);
         protected abstract string? GetItemPath(T item);
-        protected abstract BaseItemDto CreateDto(T item, PluginConfiguration config);
+        protected abstract BaseItemDto CreateDto(T item, PluginConfiguration config, string language);
         protected abstract string GetServiceName();
         protected abstract string GetSectionName();
 

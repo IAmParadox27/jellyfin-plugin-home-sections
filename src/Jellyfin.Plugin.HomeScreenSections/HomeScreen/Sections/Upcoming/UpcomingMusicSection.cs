@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Music";
 
-        public UpcomingMusicSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingMusicSection> logger)
-            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, logger)
+        public UpcomingMusicSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger<UpcomingMusicSection> logger)
+            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, translationManager, logger)
         {
         }
 
@@ -35,7 +35,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return ArrApiService.GetArrCalendarAsync<LidarrCalendarDto>(ArrServiceType.Lidarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
-        protected override IOrderedEnumerable<LidarrCalendarDto> FilterAndSortItems(LidarrCalendarDto[] items)
+        protected override IOrderedEnumerable<LidarrCalendarDto> FilterAndSortItems(LidarrCalendarDto[] items, string language)
         {
             return items
                 .Where(item => item.Monitored && !item.HasFile && item.ReleaseDate.HasValue)
@@ -49,11 +49,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return $"https://placehold.co/300x300/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\n{missingItem.Artist?.ArtistName}\nImage Not Found")}";
         }
 
-        protected override BaseItemDto CreateDto(LidarrCalendarDto calendarItem, PluginConfiguration config)
+        protected override BaseItemDto CreateDto(LidarrCalendarDto calendarItem, PluginConfiguration config, string language)
         {
 
             DateTime releaseDate = calendarItem.ReleaseDate ?? DateTime.Now;
-            string countdownText = CalculateCountdown(releaseDate, config);
+            string countdownText = CalculateCountdown(releaseDate, config, language);
 
             ArrImageDto? albumImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));
@@ -90,7 +90,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingMusicSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingMusicSection>)Logger)
+            yield return new UpcomingMusicSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, TranslationManager, (ILogger<UpcomingMusicSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,

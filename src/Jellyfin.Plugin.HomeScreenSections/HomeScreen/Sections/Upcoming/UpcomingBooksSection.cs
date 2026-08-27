@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Books";
 
-        public UpcomingBooksSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingBooksSection> logger)
-            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, logger)
+        public UpcomingBooksSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger<UpcomingBooksSection> logger)
+            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, translationManager, logger)
         {
         }
 
@@ -35,7 +35,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return ArrApiService.GetArrCalendarAsync<ReadarrCalendarDto>(ArrServiceType.Readarr, startDate, endDate).GetAwaiter().GetResult() ?? [];
         }
 
-        protected override IOrderedEnumerable<ReadarrCalendarDto> FilterAndSortItems(ReadarrCalendarDto[] items)
+        protected override IOrderedEnumerable<ReadarrCalendarDto> FilterAndSortItems(ReadarrCalendarDto[] items, string language)
         {
             return items
                 .Where(item => item.Monitored && !item.HasFile && item.ReleaseDate.HasValue)
@@ -49,10 +49,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\n{missingItem.Author?.AuthorName}\nImage Not Found")}";
         }
 
-        protected override BaseItemDto CreateDto(ReadarrCalendarDto calendarItem, PluginConfiguration config)
+        protected override BaseItemDto CreateDto(ReadarrCalendarDto calendarItem, PluginConfiguration config, string language)
         {
             DateTime releaseDate = calendarItem.ReleaseDate ?? DateTime.Now;
-            string countdownText = CalculateCountdown(releaseDate, config);
+            string countdownText = CalculateCountdown(releaseDate, config, language);
 
             ArrImageDto? posterImage = calendarItem.Images?.FirstOrDefault(img => 
                 string.Equals(img.CoverType, "cover", StringComparison.OrdinalIgnoreCase));
@@ -89,7 +89,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingBooksSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingBooksSection>)Logger)
+            yield return new UpcomingBooksSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, TranslationManager, (ILogger<UpcomingBooksSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,

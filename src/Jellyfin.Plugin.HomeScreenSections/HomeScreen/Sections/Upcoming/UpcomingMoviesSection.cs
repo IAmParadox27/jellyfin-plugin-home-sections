@@ -15,8 +15,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
         
         public override string? DisplayText { get; set; } = "Upcoming Movies";
 
-        public UpcomingMoviesSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger<UpcomingMoviesSection> logger)
-            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, logger)
+        public UpcomingMoviesSection(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ITranslationManager translationManager, ILogger<UpcomingMoviesSection> logger)
+            : base(userManager, libraryManager, dtoService, arrApiService, imageCacheService, translationManager, logger)
         {
         }
 
@@ -46,7 +46,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return candidates.Where(date => date.HasValue).Select(date => date!.Value).Min();
         }
 
-        protected override IOrderedEnumerable<RadarrCalendarDto> FilterAndSortItems(RadarrCalendarDto[] items)
+        protected override IOrderedEnumerable<RadarrCalendarDto> FilterAndSortItems(RadarrCalendarDto[] items, string language)
         {
             var config = HomeScreenSectionsPlugin.Instance.Configuration;
             return items
@@ -72,10 +72,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString($"{missingItem.Title}\nImage Not Found")}";
         }
 
-        protected override BaseItemDto CreateDto(RadarrCalendarDto calendarItem, PluginConfiguration config)
+        protected override BaseItemDto CreateDto(RadarrCalendarDto calendarItem, PluginConfiguration config, string language)
         {
             DateTime releaseDate = GetEarliestReleaseDate(calendarItem, config);
-            string countdownText = CalculateCountdown(releaseDate, config);
+            string countdownText = CalculateCountdown(releaseDate, config, language);
 
             string yearInfo = calendarItem.Year > 0 ? $" ({calendarItem.Year})" : "";
 
@@ -117,7 +117,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         public override IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
-            yield return new UpcomingMoviesSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, (ILogger<UpcomingMoviesSection>)Logger)
+            yield return new UpcomingMoviesSection(UserManager, LibraryManager, DtoService, ArrApiService, ImageCacheService, TranslationManager, (ILogger<UpcomingMoviesSection>)Logger)
             {
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
