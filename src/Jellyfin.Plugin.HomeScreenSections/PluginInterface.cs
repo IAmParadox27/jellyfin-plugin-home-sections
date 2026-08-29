@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.Loader;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model;
@@ -71,6 +72,16 @@ namespace Jellyfin.Plugin.HomeScreenSections
                     }
                 });
             }
+        }
+
+        public static bool IsModularHomePageEnabled(string id)
+        {
+            if (Assembly.GetCallingAssembly().GetName().Name != "Jellyfin.Plugin.PluginPages")
+            {
+                throw new InvalidOperationException("IsModularHomePageEnabled can only be called from the PluginPages plugin.");
+            }
+            
+            return HomeScreenSectionsPlugin.Instance.Configuration.AllowUserOverride;
         }
     }
 }
