@@ -170,7 +170,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 userSectionsData = new UserSectionsData()
                 {
                     UserId = userId,
-                    MaxOrderIndex = groupedOrderedSections.Max(x => x.Key)
+                    // Max() throws InvalidOperationException("Sequence contains no elements")
+                    // when the user has no sections configured, which surfaces as a 500 from
+                    // GET /HomeScreen/Sections and stops the home screen rendering at all.
+                    // An unconfigured plugin should return no sections, not fail the request.
+                    MaxOrderIndex = groupedOrderedSections.Select(x => x.Key).DefaultIfEmpty(0).Max()
                 };
                 
                 m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData);
