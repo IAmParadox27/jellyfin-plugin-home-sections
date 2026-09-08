@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading.Channels;
-using HarmonyLib;
+// using HarmonyLib;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Services;
@@ -14,7 +14,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers;
 
 public class PatchHelpers
 {
-    private static Harmony s_harmony = new Harmony("dev.iamparadox.jellyfin.hss");
+    //private static Harmony s_harmony = new Harmony("dev.iamparadox.jellyfin.hss");
     private static bool s_patched = false;
 
     public static void SetupPatches()
@@ -24,21 +24,21 @@ public class PatchHelpers
             return;
         }
         
-        HarmonyMethod streamyfinConfigurationPatch = new HarmonyMethod(typeof(PatchHelpers).GetMethod(nameof(PatchHelpers.Patch_Streamyfin_Configuration), BindingFlags.NonPublic | BindingFlags.Static));
-
-        Type? streamyfinControllerType = AssemblyLoadContext.All.SelectMany(x => x.Assemblies)
-            .FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.Streamyfin") ?? false)?
-            .GetTypes()
-            .FirstOrDefault(x => x.Name == "StreamyfinController");
-
-        // If the type couldn't be found the user probably doesn't have Streamyfin plugin, so there's nothing
-        // we can do about that.
-        if (streamyfinControllerType != null)
-        {
-            s_harmony.Patch(streamyfinControllerType.GetMethod("getConfig"),
-                postfix: streamyfinConfigurationPatch);
-            s_patched = true;
-        }
+        // HarmonyMethod streamyfinConfigurationPatch = new HarmonyMethod(typeof(PatchHelpers).GetMethod(nameof(PatchHelpers.Patch_Streamyfin_Configuration), BindingFlags.NonPublic | BindingFlags.Static));
+        //
+        // Type? streamyfinControllerType = AssemblyLoadContext.All.SelectMany(x => x.Assemblies)
+        //     .FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.Streamyfin") ?? false)?
+        //     .GetTypes()
+        //     .FirstOrDefault(x => x.Name == "StreamyfinController");
+        //
+        // // If the type couldn't be found the user probably doesn't have Streamyfin plugin, so there's nothing
+        // // we can do about that.
+        // if (streamyfinControllerType != null)
+        // {
+        //     s_harmony.Patch(streamyfinControllerType.GetMethod("getConfig"),
+        //         postfix: streamyfinConfigurationPatch);
+        //     s_patched = true;
+        // }
     }
 
     private static void Patch_Streamyfin_Configuration(ref object __result, object __instance)

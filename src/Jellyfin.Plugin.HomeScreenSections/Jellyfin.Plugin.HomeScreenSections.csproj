@@ -28,7 +28,7 @@
       <PackageReference Include="Jellyfin.Model" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinNugetVersion)" />
       <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
-      <PackageReference Include="Lib.Harmony" Version="2.4.0" GeneratePathProperty="true" />
+<!--      <PackageReference Include="Lib.Harmony" Version="2.4.2" GeneratePathProperty="true" />-->
     </ItemGroup>
     
     <!-- 10.11.x References -->
@@ -75,9 +75,11 @@
       <EmbeddedResource Include="_Localization\**" />
     </ItemGroup>
 
-    <ItemGroup>
-      <EmbeddedResource Include="$(PkgLib_Harmony)\lib\net8.0\0Harmony.dll" />
-    </ItemGroup>
+<!--    <ItemGroup>-->
+<!--        <EmbeddedResource Condition="$(TargetFramework) == 'net8.0'" Include="$(PkgLib_Harmony)\lib\net8.0\0Harmony.dll" />-->
+<!--        <EmbeddedResource Condition="$(TargetFramework) == 'net9.0'" Include="$(PkgLib_Harmony)\lib\net9.0\0Harmony.dll" />-->
+<!--        <EmbeddedResource Condition="$(TargetFramework) == 'net10.0'" Include="$(PkgLib_Harmony)\lib\net10.0\0Harmony.dll" />-->
+<!--    </ItemGroup>-->
     <ItemGroup>
         <None Include="..\..\README.md" />
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
