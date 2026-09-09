@@ -7,7 +7,7 @@
   "Discover": "Descobreix",
   "DiscoverMovies": "Descobreix pel·lícules",
   "DiscoverTV": "Descobreix sèries",
-  "Genre": "Pel·lícules de {0}",
+  "Genre": "Pel·lícules · {0}",
   "LatestAlbums": "Últims àlbums",
   "LatestAudioBooks": "Últims audiollibres",
   "LatestBooks": "Últims llibres",
@@ -133,7 +133,7 @@
 
   "AdminJellyseerr": "Jellyseerr",
   "AdminJellyseerrInternalUrl": "URL de Jellyseerr (interna)",
-  "AdminJellyseerrInternalUrlDesc": "URL interna de Jellyseerr per a les peticions d'API des del rerefons del connector.",
+  "AdminJellyseerrInternalUrlDesc": "URL interna de Jellyseerr per a les peticions d'API des del backend del connector.",
   "AdminJellyseerrExternalUrl": "URL de Jellyseerr (externa)",
   "AdminJellyseerrExternalUrlDesc": "URL externa per als enllaços de Jellyseerr a la interfície. Deixa-ho buit per utilitzar la URL interna.",
   "AdminJellyseerrApiKey": "Clau API de Jellyseerr",
