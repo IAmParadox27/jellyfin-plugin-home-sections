@@ -15,6 +15,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
 
     public class UserSectionsData
     {
+        internal TaskCompletionSource<bool> Initialized { get; } = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Dictionary<int, Task> SectionTasks { get; } = new Dictionary<int, Task>();
+        internal Task Completion { get; set; } = Task.CompletedTask;
+        internal Exception? InitializationError { get; set; }
+
         public DateTime? LastAccessed { get; set; } = null;
         
         public required Guid UserId { get; set; }

@@ -40,6 +40,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private readonly IApplicationPaths m_applicationPaths;
         private readonly HomeScreenSectionService m_homeScreenSectionService;
         private readonly ImageCacheService m_imageCacheService;
+        private readonly SeerrApiService m_seerrApiService;
 
         public HomeScreenController(
             IHomeScreenManager homeScreenManager,
@@ -47,7 +48,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             IServerApplicationHost serverApplicationHost, 
             IApplicationPaths applicationPaths,
             HomeScreenSectionService homeScreenSectionService,
-            ImageCacheService imageCacheService)
+            ImageCacheService imageCacheService,
+            SeerrApiService seerrApiService)
         {
             m_homeScreenManager = homeScreenManager;
             m_displayPreferencesManager = displayPreferencesManager;
@@ -55,6 +57,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             m_applicationPaths = applicationPaths;
             m_homeScreenSectionService = homeScreenSectionService;
             m_imageCacheService = imageCacheService;
+            m_seerrApiService = seerrApiService;
         }
 
         /// <summary>
@@ -240,25 +243,36 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [HttpGet("Sections")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [Authorize]
-        public ActionResult<QueryResult<HomeScreenSectionInfo>> GetHomeScreenSections(
+        public async Task<ActionResult<QueryResult<HomeScreenSectionInfo>>> GetHomeScreenSections(
             [FromQuery] Guid? userId,
             [FromQuery] string? language,
             [FromQuery] int? page = null,
             [FromQuery] int? numResultsPerPage = null,
             [FromQuery] Guid? pageHash = null)
         {
-            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
-                page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
-
-            return new QueryResult<HomeScreenSectionInfo>(
-                0,
-                sections.Count,
-                sections);
+            try
+            {
+                List<HomeScreenSectionInfo> sections = await m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUserAsync(
+                    userId ?? Guid.Empty, language, page ?? 1, numResultsPerPage, pageHash, HttpContext.RequestAborted);
+                return new QueryResult<HomeScreenSectionInfo>(0, sections.Count, sections);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return BadRequest(new { message = "Page and page size must be positive." });
+            }
+            catch (TimeoutException)
+            {
+                return StatusCode(StatusCodes.Status504GatewayTimeout, new { message = "Section generation timed out." });
+            }
+            catch (InvalidOperationException)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Section initialization failed." });
+            }
         }
 
         [HttpGet("Section/{sectionType}")]
         [Authorize]
-        public QueryResult<BaseItemDto> GetSectionContent(
+        public async Task<ActionResult<QueryResult<BaseItemDto>>> GetSectionContent(
             [FromRoute] string sectionType,
             [FromQuery, Required] Guid userId,
             [FromQuery] string? additionalData,
@@ -270,7 +284,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 AdditionalData = additionalData
             };
 
-            return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
+            try
+            {
+                if (m_homeScreenManager.GetSection(sectionType) is IAsyncHomeScreenSection asyncSection)
+                {
+                    return await asyncSection.GetResultsAsync(payload, Request.Query, HttpContext.RequestAborted);
+                }
+
+                return m_homeScreenManager.InvokeResultsDelegate(sectionType, payload, Request.Query);
+            }
+            catch (SeerrRequestException exception)
+            {
+                return StatusCode((int)exception.StatusCode, new { message = exception.Message });
+            }
         }
 
         [HttpPost("RegisterSection")]
@@ -304,58 +330,48 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         public async Task<ActionResult> MakeDiscoverRequest([FromServices] IUserManager userManager, [FromBody] DiscoverRequestPayload payload)
         {
             string? userIdString = User.Claims.FirstOrDefault(x => x.Type.Equals("Jellyfin-UserId", StringComparison.OrdinalIgnoreCase))?.Value;
-            Guid userId = string.IsNullOrEmpty(userIdString) ? Guid.Empty : Guid.Parse(userIdString);
-
-            if (userId == Guid.Empty)
+            if (!Guid.TryParse(userIdString, out Guid userId) || userId == Guid.Empty)
             {
                 return Forbid();
             }
-            
+
             User? user = userManager.GetUserById(userId);
-            string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
-
-            if (jellyseerrUrl == null)
+            if (user == null)
             {
-                return BadRequest();
+                return Forbid();
             }
-            
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(jellyseerrUrl);
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
 
-            if (jellyseerrUserId == null)
+            if (payload.MediaId <= 0 || (payload.MediaType != "movie" && payload.MediaType != "tv"))
             {
-                return BadRequest();
+                return BadRequest(new { message = "A positive media ID and movie or tv media type are required." });
             }
-            
-            client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
 
-            HttpResponseMessage requestResponse;
-            if (payload.MediaType == "tv")
+            using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted);
+            deadline.CancelAfter(SeerrApiService.RequestTimeout);
+            try
             {
-                requestResponse = await client.PostAsync("/api/v1/request", JsonContent.Create(new JellyseerrTvShowRequestPayload
+                int? jellyseerrUserId = await m_seerrApiService.GetUserIdAsync(user.Username, deadline.Token);
+                if (jellyseerrUserId == null)
                 {
-                    MediaId = payload.MediaId,
-                    MediaType = payload.MediaType,
-                    Seasons = "all"
-                }));
-            }
-            else
-            {
-                requestResponse = await client.PostAsync("/api/v1/request", JsonContent.Create(new JellyseerrRequestPayload
+                    return BadRequest(new { message = "The Jellyfin user was not found in Seerr." });
+                }
+
+                (System.Net.HttpStatusCode statusCode, JObject response) = await m_seerrApiService.RequestAsync(payload, jellyseerrUserId.Value, deadline.Token);
+                return new ContentResult()
                 {
-                    MediaId = payload.MediaId,
-                    MediaType = payload.MediaType
-                }));
+                    StatusCode = (int)statusCode,
+                    ContentType = "application/json",
+                    Content = response.ToString(Formatting.None)
+                };
             }
-            
-            string responseContent = await requestResponse.Content.ReadAsStringAsync();
-            
-            return Content(responseContent, requestResponse.Content.Headers.ContentType.MediaType);
+            catch (SeerrRequestException exception)
+            {
+                return StatusCode((int)exception.StatusCode, new { message = exception.Message });
+            }
+            catch (OperationCanceledException) when (!HttpContext.RequestAborted.IsCancellationRequested)
+            {
+                return StatusCode(StatusCodes.Status504GatewayTimeout, new { message = "The Seerr request timed out." });
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Globalization;
+using System.Net;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -12,10 +13,13 @@ using Newtonsoft.Json.Linq;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
-    public class DiscoverSection : IHomeScreenSection
+    public class DiscoverSection : IHomeScreenSection, IAsyncHomeScreenSection
     {
         private readonly IUserManager m_userManager;
         private readonly ImageCacheService m_imageCacheService;
+        private readonly SeerrApiService m_seerrApiService;
+        private const int c_resultLimit = 20;
+        private const int c_maxPages = 40;
         
         public virtual string? Section => "Discover";
 
@@ -26,109 +30,146 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public object? OriginalPayload { get; } = null;
 
         protected virtual string JellyseerEndpoint => "/api/v1/discover/trending";
+        protected virtual string? DefaultMediaType => null;
         
-        public DiscoverSection(IUserManager userManager, ImageCacheService imageCacheService)
+        public DiscoverSection(IUserManager userManager, ImageCacheService imageCacheService, SeerrApiService seerrApiService)
         {
             m_userManager = userManager;
             m_imageCacheService = imageCacheService;
+            m_seerrApiService = seerrApiService;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            List<BaseItemDto> returnItems = new List<BaseItemDto>();
-            
-            // TODO: Get Jellyseerr Url
-            string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
-            string? jellyseerrExternalUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl;
-            
-            // Use external URL for frontend links if configured, otherwise fall back to internal URL
-            string? jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl) ? jellyseerrExternalUrl : jellyseerrUrl;
+            return GetResultsAsync(payload, queryCollection, CancellationToken.None).GetAwaiter().GetResult();
+        }
 
+        public async Task<QueryResult<BaseItemDto>> GetResultsAsync(HomeScreenSectionPayload payload, IQueryCollection queryCollection, CancellationToken cancellationToken)
+        {
+            string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
             if (string.IsNullOrEmpty(jellyseerrUrl))
             {
                 return new QueryResult<BaseItemDto>();
             }
-            
-            User? user = m_userManager.GetUserById(payload.UserId);
-            
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(jellyseerrUrl);
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
 
+            User? user = m_userManager.GetUserById(payload.UserId);
+            if (user == null)
+            {
+                throw new SeerrRequestException(HttpStatusCode.BadRequest, "The Jellyfin user does not exist.");
+            }
+
+            using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(SeerrApiService.RequestTimeout);
+            try
+            {
+                return await GetDiscoverResultsAsync(user.Username, deadline.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new SeerrRequestException(HttpStatusCode.GatewayTimeout, "The Seerr discovery request timed out.");
+            }
+        }
+
+        private async Task<QueryResult<BaseItemDto>> GetDiscoverResultsAsync(string username, CancellationToken cancellationToken)
+        {
+            int? jellyseerrUserId = await m_seerrApiService.GetUserIdAsync(username, cancellationToken);
             if (jellyseerrUserId == null)
             {
                 return new QueryResult<BaseItemDto>();
             }
-            
-            client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
 
-            // Make the API call to discover and get the 20 results
-            int page = 1;
-            do 
+            string? jellyseerrExternalUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl;
+            string jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl)
+                ? jellyseerrExternalUrl : HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl!;
+            string[] preferredLanguages = (HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages ?? string.Empty)
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            List<BaseItemDto> returnItems = new List<BaseItemDto>();
+            HashSet<string> seenItems = new HashSet<string>();
+
+            for (int page = 1; page <= c_maxPages && returnItems.Count < c_resultLimit; page++)
             {
-                HttpResponseMessage discoverResponse = client.GetAsync($"{JellyseerEndpoint}?page={page}").GetAwaiter().GetResult();
-
-                if (discoverResponse.IsSuccessStatusCode)
+                cancellationToken.ThrowIfCancellationRequested();
+                JObject response = await m_seerrApiService.GetAsync($"{JellyseerEndpoint}?page={page}", jellyseerrUserId, cancellationToken);
+                JArray results = SeerrApiService.GetResults(response);
+                if (results.Count == 0)
                 {
-                    string jsonRaw = discoverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    JObject? jsonResponse = JObject.Parse(jsonRaw);
+                    break;
+                }
 
-                    if (jsonResponse != null)
+                bool madeProgress = false;
+                foreach (JObject item in results.OfType<JObject>())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (item["id"]?.Type != JTokenType.Integer || !int.TryParse(item["id"]?.ToString(), out int itemId) || itemId <= 0)
                     {
-                        foreach (JObject item in jsonResponse.Value<JArray>("results")!.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
-                        {
-                            if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) && 
-                                !HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages.Split(',')
-                                    .Select(x => x.Trim()).Contains(item.Value<string>("originalLanguage")))
-                            {
-                                continue;
-                            }
-                            
-                            if (item.Value<JObject>("mediaInfo") == null)
-                            {
-                                string dateTimeString = item.Value<string>("firstAirDate") ??
-                                                        item.Value<string>("releaseDate") ?? "1970-01-01";
-                                
-                                if (string.IsNullOrWhiteSpace(dateTimeString))
-                                {
-                                    dateTimeString = "1970-01-01";
-                                }
-                                
-                                string posterPath = item.Value<string>("posterPath") ?? "404";
-                                string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
-                                float rating = item.Value<float?>("vote_average") ?? item.Value<float?>("voteAverage") ?? 0f;
+                        continue;
+                    }
 
-                                returnItems.Add(new BaseItemDto()
-                                {
-                                    Name = item.Value<string>("title") ?? item.Value<string>("name"),
-                                    OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
-                                    SourceType = item.Value<string>("mediaType"),
-                                    CommunityRating = rating > 0 ? rating : null,
-                                    ProviderIds = new Dictionary<string, string>()
-                                    {
-                                        { "JellyseerrRoot", jellyseerrDisplayUrl },
-                                        { "Jellyseerr", item.Value<int>("id").ToString() },
-                                        { "JellyseerrPoster", cachedImageUrl }
-                                    },
-                                    PremiereDate = DateTime.Parse(dateTimeString)
-                                });
-                            }
-                        }
+                    string? mediaType = GetString(item, "mediaType") ?? DefaultMediaType;
+                    if (mediaType != "movie" && mediaType != "tv")
+                    {
+                        continue;
+                    }
+
+                    if (!seenItems.Add($"{mediaType}:{itemId}"))
+                    {
+                        continue;
+                    }
+
+                    // Progress means new remote IDs, not eligible cards: a filtered page can precede an eligible one.
+                    madeProgress = true;
+                    if ((item["adult"] != null && item["adult"]!.Type != JTokenType.Null &&
+                        (item["adult"]!.Type != JTokenType.Boolean || item.Value<bool>("adult"))) ||
+                        (item["mediaInfo"] != null && item["mediaInfo"]!.Type != JTokenType.Null) ||
+                        (preferredLanguages.Length > 0 && !preferredLanguages.Contains(GetString(item, "originalLanguage"))))
+                    {
+                        continue;
+                    }
+
+                    string? dateText = GetString(item, "firstAirDate") ?? GetString(item, "releaseDate");
+                    DateTime premiereDate = DateTime.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsedDate)
+                        ? parsedDate : new DateTime(1970, 1, 1);
+                    string posterPath = GetString(item, "posterPath") ?? "404";
+                    string cachedImageUrl = await ImageCacheHelper.GetCachedImageUrlAsync(m_imageCacheService, $"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}", cancellationToken);
+                    float rating = float.TryParse((item["vote_average"] ?? item["voteAverage"])?.ToString(), NumberStyles.Float,
+                        CultureInfo.InvariantCulture, out float parsedRating) && float.IsFinite(parsedRating) ? parsedRating : 0f;
+                    returnItems.Add(new BaseItemDto()
+                    {
+                        Name = GetString(item, "title") ?? GetString(item, "name"),
+                        OriginalTitle = GetString(item, "originalTitle") ?? GetString(item, "originalName"),
+                        SourceType = mediaType,
+                        CommunityRating = rating > 0 ? rating : null,
+                        ProviderIds = new Dictionary<string, string>()
+                        {
+                            { "JellyseerrRoot", jellyseerrDisplayUrl },
+                            { "Jellyseerr", itemId.ToString(CultureInfo.InvariantCulture) },
+                            { "JellyseerrPoster", cachedImageUrl }
+                        },
+                        PremiereDate = premiereDate
+                    });
+                    if (returnItems.Count == c_resultLimit)
+                    {
+                        break;
                     }
                 }
 
-                page++;
-            } while (returnItems.Count < 20);
+                if (!madeProgress || (int.TryParse(response["totalPages"]?.ToString(), out int totalPages) && page >= totalPages))
+                {
+                    break;
+                }
+            }
+
             return new QueryResult<BaseItemDto>()
             {
                 Items = returnItems,
                 StartIndex = 0,
                 TotalRecordCount = returnItems.Count
             };
+        }
+
+        private static string? GetString(JObject item, string property)
+        {
+            return item[property]?.Type == JTokenType.String ? item.Value<string>(property) : null;
         }
 
         protected string GetCachedImageUrl(string sourceUrl)

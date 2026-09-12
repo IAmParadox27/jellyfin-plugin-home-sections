@@ -19,8 +19,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected override string JellyseerEndpoint => "/api/v1/discover/movies";
 
-        public DiscoverMoviesSection(IUserManager userManager, ImageCacheService imageCacheService) 
-            : base(userManager, imageCacheService)
+        protected override string? DefaultMediaType => "movie";
+
+        public DiscoverMoviesSection(IUserManager userManager, ImageCacheService imageCacheService, SeerrApiService seerrApiService)
+            : base(userManager, imageCacheService, seerrApiService)
         {
         }
     }

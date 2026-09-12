@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading.Channels;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Data;
@@ -18,6 +17,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
         private readonly ITranslationManager m_translationManager;
         private readonly UserSectionsDataCache m_dataCache;
+        private readonly object m_cacheCreationLock = new object();
+        private static readonly TimeSpan c_generationTimeout = TimeSpan.FromSeconds(60);
     
         public HomeScreenSectionService(IHomeScreenManager homeScreenManager,
             ILogger<HomeScreenSectionsPlugin> logger, ITranslationManager translationManager,
@@ -37,6 +38,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 return null;
             }
             
+            if (!userSectionsData.Initialized.Task.IsCompleted)
+            {
+                return null;
+            }
+
             // Make sure that it's flagged as being used, even if we don't return anything here the page is still active
             // as we've received a request for it.
             userSectionsData.LastAccessed = DateTime.UtcNow;
@@ -50,13 +56,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             for (int i = 0; i < orderedKeys.Length; i++)
             {
                 int key = orderedKeys[i];
-                int prevKey = i > 0 ? orderedKeys[i - 1] : orderedKeys[i] - 1;
+                long prevKey = i > 0 ? orderedKeys[i - 1] : (long)orderedKeys[i] - 1;
 
                 bool cohesive = (key - prevKey) == 1;
-                if (prevKey > 0 && key - prevKey > 1)
+                if (key - prevKey > 1)
                 {
                     // If any of the ranges contain both the "key before" and "key after" then we can safely know this is cohesive.
-                    if (userSectionsData.OrderIndicesWithoutSections.Any(x => x.Contains(key - 1) && x.Contains(prevKey + 1)))
+                    if (userSectionsData.OrderIndicesWithoutSections.Any(x => x.Contains(key - 1) && x.Contains((int)(prevKey + 1))))
                     {
                         cohesive = true;
                     }
@@ -73,7 +79,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 }
             }
             
-            sectionsToReturn = sectionsToReturn.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            long offset = ((long)page - 1) * pageSize;
+            sectionsToReturn = offset > int.MaxValue
+                ? new List<(IHomeScreenSection, int)>()
+                : sectionsToReturn.Skip((int)offset).Take(pageSize).ToList();
             if ((isComplete && !userSectionsData.SectionsInProgress.Any()) || sectionsToReturn.Count == pageSize)
             {
                 return sectionsToReturn
@@ -96,176 +105,212 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public List<HomeScreenSectionInfo>? MonitorLiveUpdatedSectionsForUser(Guid userId, string? language, int page, int? pageSize = null, Guid? pageHash = null)
         {
-            // Kick off the task to remove the expired "temp" user caches to avoid a memory leak.
-            Task.Run(() => ClearExpiredUserCaches(userId));
+            return MonitorLiveUpdatedSectionsForUserAsync(userId, language, page, pageSize, pageHash, CancellationToken.None).GetAwaiter().GetResult();
+        }
 
-            // If the sections have been requested with a page hash that wasn't generated for this user, generate a new one.
+        public async Task<List<HomeScreenSectionInfo>> MonitorLiveUpdatedSectionsForUserAsync(Guid userId, string? language, int page, int? pageSize, Guid? pageHash, CancellationToken cancellationToken)
+        {
+            if (page < 1 || pageSize < 1 || (pageSize.HasValue && (long)(page - 1) * pageSize.Value > int.MaxValue))
+            {
+                throw new ArgumentOutOfRangeException(nameof(page), "Page and page size must be positive.");
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await ClearExpiredUserCaches(userId);
             if (pageHash.HasValue && !DoesPageBelongToUser(pageHash.Value, userId))
             {
                 pageHash = GeneratePageHash(userId);
             }
-            
-            if (pageHash == null)
-            {
-                pageHash = GetActiveTempPageCacheForUser(userId);
 
-                if (pageHash == null)
+            pageHash ??= GetActiveTempPageCacheForUser(userId) ?? GeneratePageHash(userId);
+            UserSectionsData cache = GetOrStartSectionsForUser(userId, pageHash.Value);
+            using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(c_generationTimeout);
+            try
+            {
+                await cache.Initialized.Task.WaitAsync(deadline.Token);
+                ThrowIfInitializationFailed(cache);
+
+                foreach (Task sectionTask in cache.SectionTasks.OrderBy(x => x.Key).Select(x => x.Value))
                 {
-                    pageHash = GeneratePageHash(userId);
-                    
-                    CacheSectionsForUser(userId, pageHash.Value);
-
-                    int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
-                    return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
+                    await sectionTask.WaitAsync(deadline.Token);
+                    List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page,
+                        pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value);
+                    if (sections != null && pageSize.HasValue)
+                    {
+                        return sections;
+                    }
                 }
-            }
-            
-            if (!m_dataCache.Cache.ContainsKey(pageHash.Value))
-            {
-                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash.Value));
-                cacheThread.Start();
-            }
 
-            SpinWait spinWait = new SpinWait();
-            while (!m_dataCache.Cache.ContainsKey(pageHash.Value))
-            {
-                spinWait.SpinOnce();
+                // Empty configuration and groups producing no instances are successful completed results.
+                return GetCachedSectionsForUser(userId, language, page,
+                    pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value) ?? new List<HomeScreenSectionInfo>();
             }
-            spinWait.Reset();
-
-            // If there's no data at all then we wait until its started.
-            while (!m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash.Value].OrderedSections.Any())
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                spinWait.SpinOnce();
+                throw new TimeoutException("Section generation timed out.");
             }
-            
-            // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
-            // If its still in progress then we'll wait for it to finish.
-            UserSectionsData cache = m_dataCache.Cache[pageHash.Value];
-            int lowestSectionIndex = Math.Min(
-                m_dataCache.Cache[pageHash.Value].OrderedSections.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].OrderedSections.Min(x => x.Key) 
-                    : int.MaxValue,
-                m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].SectionsInProgress.Min(x => x.Key) 
-                    : int.MaxValue);
-
-            for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
-            {
-                if (cache.OrderIndicesWithoutSections.Any(x => x.Contains(i)))
-                {
-                    continue;
-                }
-                
-                while (cache.SectionsInProgress.ContainsKey(i))
-                {
-                    spinWait.SpinOnce();
-                }
-                
-                List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value);
-                if (sections != null)
-                {
-                    return sections;
-                }
-            }
-            
-            return null;
         }
-    
+
         public void CacheSectionsForUser(Guid userId, Guid? pageHash = null)
         {
-            if (m_dataCache.Cache.ContainsKey(pageHash ?? Guid.Empty))
+            UserSectionsData cache = GetOrStartSectionsForUser(userId, pageHash ?? GeneratePageHash(userId));
+            cache.Completion.WaitAsync(c_generationTimeout).GetAwaiter().GetResult();
+            ThrowIfInitializationFailed(cache);
+        }
+
+        private static void ThrowIfInitializationFailed(UserSectionsData cache)
+        {
+            if (cache.InitializationError is OperationCanceledException || cache.InitializationError is TimeoutException)
             {
-                return;
+                throw new TimeoutException("Section generation timed out.");
             }
-            
-            ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
 
-            List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes().Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
-
-            IGrouping<int, SectionSettings>[] groupedOrderedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
-                .OrderBy(x => x.OrderIndex)
-                .GroupBy(x => x.OrderIndex)
-                .ToArray();
-
-            UserSectionsData? userSectionsData = null;
-            if (pageHash != null)
+            if (cache.InitializationError != null)
             {
-                userSectionsData = new UserSectionsData()
-                {
-                    UserId = userId,
-                    MaxOrderIndex = groupedOrderedSections.Select(g => g.Key).DefaultIfEmpty(0).Max()
-                };
-                
-                m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData);
+                throw new InvalidOperationException("Section initialization failed.", cache.InitializationError);
+            }
+        }
 
-                foreach (int orderIndex in groupedOrderedSections.Select(x => x.Key).OrderBy(x => x))
+        private UserSectionsData GetOrStartSectionsForUser(Guid userId, Guid pageHash)
+        {
+            lock (m_cacheCreationLock)
+            {
+                if (m_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? existing))
                 {
-                    userSectionsData.SectionsInProgress.TryAdd(orderIndex, true);
+                    return existing;
                 }
 
-                int[] sectionIndices = userSectionsData.SectionsInProgress.Keys.OrderBy(x => x).ToArray();
+                UserSectionsData cache = new UserSectionsData() { UserId = userId, MaxOrderIndex = 0 };
+                m_dataCache.Cache[pageHash] = cache;
+                cache.Completion = Task.Run(() => BuildSectionsForUserAsync(userId, cache));
+                return cache;
+            }
+        }
+
+        private async Task BuildSectionsForUserAsync(Guid userId, UserSectionsData cache)
+        {
+            using CancellationTokenSource deadline = new CancellationTokenSource(c_generationTimeout);
+            try
+            {
+                // Third-party factories keep their synchronous contract. Waiting is bounded even if one ignores cancellation.
+                (List<IHomeScreenSection> sectionTypes, IGrouping<int, SectionSettings>[] groupedSections) =
+                    await Task.Run(() => GetSectionConfiguration(userId)).WaitAsync(deadline.Token);
+                cache.MaxOrderIndex = groupedSections.Select(x => x.Key).DefaultIfEmpty(0).Max();
+                foreach (IGrouping<int, SectionSettings> group in groupedSections)
+                {
+                    cache.SectionsInProgress.TryAdd(group.Key, true);
+                }
+
+                int[] sectionIndices = cache.SectionsInProgress.Keys.OrderBy(x => x).ToArray();
                 for (int i = 1; i < sectionIndices.Length; i++)
                 {
-                    int prevIndex = sectionIndices[i - 1];
-                    int currentIndex = sectionIndices[i];
-
-                    if (currentIndex - prevIndex > 1)
+                    if ((long)sectionIndices[i] - sectionIndices[i - 1] > 1)
                     {
-                        userSectionsData.OrderIndicesWithoutSections.Add(new IntRange()
-                        {
-                            Start = prevIndex + 1, 
-                            End = currentIndex - 1
-                        });
+                        cache.OrderIndicesWithoutSections.Add(new IntRange() { Start = sectionIndices[i - 1] + 1, End = sectionIndices[i] - 1 });
                     }
                 }
+
+                foreach (IGrouping<int, SectionSettings> group in groupedSections)
+                {
+                    cache.SectionTasks.Add(group.Key, BuildSectionGroupAsync(userId, cache, sectionTypes, group, deadline.Token));
+                }
+
+                cache.Initialized.TrySetResult(true);
+                await Task.WhenAll(cache.SectionTasks.Values);
             }
-            
-            Parallel.ForEach(groupedOrderedSections, orderedSections =>
+            catch (Exception exception)
             {
-                ConcurrentBag<IHomeScreenSection?> tmpPluginSections = new ConcurrentBag<IHomeScreenSection?>(); // we want these randomly distributed among each other.
+                cache.InitializationError = exception;
+                m_logger.LogError(exception, "Section initialization failed for user {UserId}.", userId);
+            }
+            finally
+            {
+                cache.SectionsInProgress.Clear();
+                cache.Initialized.TrySetResult(true);
+            }
+        }
 
-                Parallel.ForEach(orderedSections, sectionSettings =>
+        private (List<IHomeScreenSection> SectionTypes, IGrouping<int, SectionSettings>[] Groups) GetSectionConfiguration(Guid userId)
+        {
+            ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
+            List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes()
+                .Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
+            IGrouping<int, SectionSettings>[] groupedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
+                .OrderBy(x => x.OrderIndex).GroupBy(x => x.OrderIndex).ToArray();
+            return (sectionTypes, groupedSections);
+        }
+
+        private async Task BuildSectionGroupAsync(Guid userId, UserSectionsData cache, List<IHomeScreenSection> sectionTypes,
+            IGrouping<int, SectionSettings> group, CancellationToken cancellationToken)
+        {
+            try
+            {
+                List<IHomeScreenSection> sections = await Task.Run(() => CreateSectionGroup(userId, sectionTypes, group, cancellationToken))
+                    .WaitAsync(cancellationToken);
+                cache.OrderedSections.TryAdd(group.Key, sections);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                m_logger.LogWarning("Section group {OrderIndex} timed out for user {UserId}.", group.Key, userId);
+                cache.OrderedSections.TryAdd(group.Key, Array.Empty<IHomeScreenSection>());
+                throw new TimeoutException("Section generation timed out.");
+            }
+            catch (Exception exception)
+            {
+                m_logger.LogError(exception, "Section group {OrderIndex} failed for user {UserId}.", group.Key, userId);
+                cache.OrderedSections.TryAdd(group.Key, Array.Empty<IHomeScreenSection>());
+            }
+            finally
+            {
+                cache.SectionsInProgress.TryRemove(group.Key, out _);
+            }
+        }
+
+        private List<IHomeScreenSection> CreateSectionGroup(Guid userId, List<IHomeScreenSection> sectionTypes,
+            IGrouping<int, SectionSettings> group, CancellationToken cancellationToken)
+        {
+            ConcurrentBag<IHomeScreenSection> sections = new ConcurrentBag<IHomeScreenSection>();
+            Parallel.ForEach(group, new ParallelOptions() { CancellationToken = cancellationToken }, sectionSettings =>
+            {
+                IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
+                if (sectionType == null)
                 {
-                    IHomeScreenSection? sectionType =
-                        sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
+                    return;
+                }
 
-                    if (sectionType != null)
+                try
+                {
+                    int instanceCount = 1;
+                    if (sectionType.Limit > 1)
                     {
-                        int instanceCount = 1;
-                        if (sectionType.Limit > 1)
+                        if (sectionSettings.LowerLimit < 0 || sectionSettings.UpperLimit < sectionSettings.LowerLimit || sectionSettings.UpperLimit > sectionType.Limit)
                         {
-                            Random rnd = new Random();
-                            instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
+                            throw new ArgumentOutOfRangeException(nameof(sectionSettings), "Invalid section instance bounds.");
                         }
 
-                        try
-                        {
-                            IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
-
-                            foreach (IHomeScreenSection sectionInstance in instances)
-                            {
-                                tmpPluginSections.Add(sectionInstance);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            // Adding an error log here to stop issues like #128 from completely breaking the home screen.
-                            // Whatever this section is won't work, but the rest of the home screen will still work.
-                            m_logger.LogError(e, $"An error occurred while creating section instances for user '{userId}' and section '{sectionType.Section}'.");
-                        }
+                        instanceCount = Random.Shared.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
                     }
-                });
 
-                List<IHomeScreenSection> sectionList = tmpPluginSections.Where(x => x != null).Select(x => x!).ToList();
-                sectionList.Shuffle();
-
-                if (userSectionsData != null)
+                    foreach (IHomeScreenSection section in sectionType.CreateInstances(userId, instanceCount))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        sections.Add(section);
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    userSectionsData.OrderedSections.TryAdd(orderedSections.Key, sectionList);
-                    userSectionsData.SectionsInProgress.Remove(orderedSections.Key, out _);
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    // A failed factory must not stop other rows or strand the page's completion.
+                    m_logger.LogError(exception, "An error occurred while creating section instances for user {UserId} and section {Section}.", userId, sectionType.Section);
                 }
             });
+            List<IHomeScreenSection> result = sections.ToList();
+            result.Shuffle();
+            return result;
         }
 
         private HomeScreenSectionInfo SectionToInfo(IHomeScreenSection section, int configuredOrder, string? language)
