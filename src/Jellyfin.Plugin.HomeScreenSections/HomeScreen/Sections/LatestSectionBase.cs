@@ -82,67 +82,35 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .Where(x => x.CollectionType == CollectionTypeOptions || x.IsMixedFolder(m_libraryManager))
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            List<(BaseItem Item, DateTime? PremiereDate)> selectedItems = new List<(BaseItem, DateTime?)>();
-            int dayIncrement = 30;
             DateTime currentDate = DateTime.Now;
-            DateTime stopDate = DateTime.Parse("01/01/1887"); // The first movie ever was 1888 so this should be safe, we never expect to get as far back as this but we need an escape.
-            bool continueSearching = true;
-
-            do
+            BaseItem[] selectedItems = folders.SelectMany(x =>
             {
-                var latestMovies = folders.Select(x =>
+                BaseItem item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+                if (item is not Folder folder)
                 {
-                    var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
-
-                    if (item is not Folder folder)
-                    {
-                        folder = m_libraryManager.GetUserRootFolder();
-                    }
-
-                    var items = folder.GetItems(new InternalItemsQuery(user)
-                    {
-                        IncludeItemTypes = new[]
-                        {
-                            SectionItemKind
-                        },
-                        Limit = 16,
-                        OrderBy = new[]
-                        {
-                            (ItemSortBy.PremiereDate, SortOrder.Descending)
-                        },
-                        IsPlayed = isPlayed,
-                        ParentId = Guid.Parse(x.ItemId),
-                        Recursive = true,
-                        MaxPremiereDate = currentDate,
-                        MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
-                        EnableTotalRecordCount = true // This might have to go
-                    });
-
-                    return (Items: items.Items, items.Items.Count, items.TotalRecordCount);
-                }).ToArray();
-                
-                var itemsToAdd = latestMovies
-                    .SelectMany(x => x.Items)
-                    .Where(x => selectedItems.All(y => y.Item.Id != x.Id))
-                    .Select(x => (Item: x, PremiereDate: x.PremiereDate))
-                    .ToList();
-                
-                selectedItems.AddRange(itemsToAdd);
-
-                if (selectedItems.Count >= 16)
-                {
-                    continueSearching = false;
+                    folder = m_libraryManager.GetUserRootFolder();
                 }
-                
-                currentDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement));
-                
-                if (currentDate < stopDate)
-                {
-                    break;
-                }
-            } while (continueSearching);
 
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(selectedItems.OrderByDescending(x => x.PremiereDate).Select(x => x.Item).ToArray(),
+                return folder.GetItems(new InternalItemsQuery(user)
+                {
+                    IncludeItemTypes = new[] { SectionItemKind },
+                    Limit = 16,
+                    OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
+                    IsPlayed = isPlayed,
+                    ParentId = Guid.Parse(x.ItemId),
+                    Recursive = true,
+                    MaxPremiereDate = currentDate,
+                    MinPremiereDate = new DateTime(1887, 1, 1),
+                    EnableTotalRecordCount = false
+                }).Items;
+            })
+            .DistinctBy(x => x.Id)
+            .OrderByDescending(x => x.PremiereDate)
+            .Take(16)
+            .ToArray();
+
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(selectedItems,
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
         

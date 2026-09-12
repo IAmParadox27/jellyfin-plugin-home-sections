@@ -7,6 +7,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
@@ -100,11 +101,119 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 candidateShows = candidateShows.Where(x => x.IsPlayedVersionSpecific(user) == isPlayed.Value);
             }
 
-            // Materialize to prevent re-execution, then sort by latest episode date
-            return candidateShows
-                .ToArray()
-                .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
+            BaseItem[] shows = candidateShows.ToArray();
+            if (shows.Length == 0)
+            {
+                return shows;
+            }
+
+            Dictionary<Guid, DateTime> sortDates = new Dictionary<Guid, DateTime>();
+            Dictionary<string, DateTime?> episodeDates = new Dictionary<string, DateTime?>();
+
+            if (shows.Length <= 16)
+            {
+                ResolveSortDates(shows, user, dtoOptions, sortDates, episodeDates);
+            }
+            else
+            {
+                // Hints only identify candidates. The original user-scoped lookup supplies every score.
+                HashSet<string> recentSeriesKeys = GetEpisodeSeriesKeys(null, 200);
+                HashSet<string> candidateSeriesKeys = shows.OfType<Series>()
+                    .Select(x => x.GetPresentationUniqueKey())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToHashSet();
+                if (recentSeriesKeys.Count(candidateSeriesKeys.Contains) < 16)
+                {
+                    // A backfill may fill the raw hint page with one series. Grouped hints only seed more exact lookups.
+                    recentSeriesKeys.UnionWith(GetEpisodeSeriesKeys(null, 200, true));
+                }
+                HashSet<Guid> newestShows = shows.OrderByDescending(x => x.DateCreated)
+                    .Take(16)
+                    .Select(x => x.Id)
+                    .ToHashSet();
+                ResolveSortDates(shows.Where(x => newestShows.Contains(x.Id)
+                    || x is not Series
+                    || string.IsNullOrWhiteSpace(x.GetPresentationUniqueKey())
+                    || recentSeriesKeys.Contains(x.GetPresentationUniqueKey())),
+                    user, dtoOptions, sortDates, episodeDates);
+
+                DateTime cutoff = sortDates.Values.OrderByDescending(x => x).ElementAt(15);
+                // Grouping after the date filter finds every key that might beat or tie the cutoff.
+                // A representative episode's date is never treated as the series maximum.
+                HashSet<string> possibleSeriesKeys = GetEpisodeSeriesKeys(cutoff, null);
+                ResolveSortDates(shows.Where(x => !sortDates.ContainsKey(x.Id)
+                    && (x.DateCreated >= cutoff || possibleSeriesKeys.Contains(x.GetPresentationUniqueKey()))),
+                    user, dtoOptions, sortDates, episodeDates);
+            }
+
+            return shows.Where(x => sortDates.ContainsKey(x.Id))
+                .OrderByDescending(x => sortDates[x.Id])
                 .Take(16);
+        }
+
+        private HashSet<string> GetEpisodeSeriesKeys(DateTime? minDateCreated, int? limit, bool groupBySeries = false)
+        {
+            // The per-series score query can see presentation versions outside the candidate folder.
+            // Keep these hints a superset, without user/library filters; never return their items or dates.
+            IReadOnlyList<BaseItem> episodes = m_libraryManager.GetItemList(new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                IsMissing = false,
+                IsVirtualItem = false,
+                GroupByPresentationUniqueKey = false,
+                GroupBySeriesPresentationUniqueKey = minDateCreated.HasValue || groupBySeries,
+                MinDateCreated = minDateCreated,
+                OrderBy = limit.HasValue ? new[] { (ItemSortBy.DateCreated, SortOrder.Descending) } : Array.Empty<(ItemSortBy, SortOrder)>(),
+                Limit = limit,
+                EnableTotalRecordCount = false,
+                DtoOptions = new DtoOptions { EnableImages = false, Fields = Array.Empty<ItemFields>() }
+            });
+
+            return episodes.OfType<Episode>()
+                .Select(x => x.SeriesPresentationUniqueKey)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .ToHashSet();
+        }
+
+        private void ResolveSortDates(IEnumerable<BaseItem> shows, User? user, DtoOptions dtoOptions,
+            Dictionary<Guid, DateTime> sortDates, Dictionary<string, DateTime?> episodeDates)
+        {
+            foreach (BaseItem item in shows)
+            {
+                if (item is Series series && !string.IsNullOrWhiteSpace(series.GetPresentationUniqueKey()))
+                {
+                    string seriesKey = series.GetPresentationUniqueKey();
+                    if (!episodeDates.TryGetValue(seriesKey, out DateTime? episodeDate))
+                    {
+                        episodeDate = GetLatestEpisodeDate(seriesKey, user, dtoOptions);
+                        episodeDates[seriesKey] = episodeDate;
+                    }
+
+                    sortDates[item.Id] = episodeDate ?? item.DateCreated;
+                }
+                else
+                {
+                    sortDates[item.Id] = GetSortDateForItem(item, user, dtoOptions);
+                }
+            }
+        }
+
+        private DateTime? GetLatestEpisodeDate(string? seriesKey, User? user, DtoOptions dtoOptions)
+        {
+            InternalItemsQuery query = new InternalItemsQuery(user)
+            {
+                AncestorWithPresentationUniqueKey = null,
+                SeriesPresentationUniqueKey = seriesKey,
+                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+                DtoOptions = dtoOptions,
+                IsMissing = false,
+                IsVirtualItem = false,
+                EnableTotalRecordCount = false,
+                Limit = 1
+            };
+
+            return m_libraryManager.GetItemList(query).FirstOrDefault()?.DateCreated;
         }
 
         private IEnumerable<BaseItem> GetEpisodeItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders,
@@ -144,24 +253,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
             
             if (item is Series series)
             {
-                string? seriesKey = series.GetPresentationUniqueKey();
-
-                InternalItemsQuery query = new InternalItemsQuery(user)
-                {
-                    AncestorWithPresentationUniqueKey = null,
-                    SeriesPresentationUniqueKey = seriesKey,
-                    IncludeItemTypes = new[] { BaseItemKind.Episode },
-                    OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
-                    DtoOptions = dtoOptions,
-                    IsMissing = false,
-                    IsVirtualItem = false,
-                    EnableTotalRecordCount = false,
-                    Limit = 1
-                };
-
-                BaseItem? latestItemAddedForShow = m_libraryManager.GetItemList(query).FirstOrDefault();
-
-                dateCreated = latestItemAddedForShow?.DateCreated;
+                dateCreated = GetLatestEpisodeDate(series.GetPresentationUniqueKey(), user, dtoOptions);
             }
             else if (item is Season season)
             {
