@@ -11,6 +11,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
             string? sourceUrl, 
             ILogger? logger = null)
         {
+            return GetCachedImageUrlAsync(imageCacheService, sourceUrl, CancellationToken.None, logger).GetAwaiter().GetResult();
+        }
+
+        public static async Task<string> GetCachedImageUrlAsync(
+            ImageCacheService imageCacheService,
+            string? sourceUrl,
+            CancellationToken cancellationToken,
+            ILogger? logger = null)
+        {
             if (string.IsNullOrEmpty(sourceUrl))
             {
                 return string.Empty;
@@ -21,9 +30,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                 PluginConfiguration? config = HomeScreenSectionsPlugin.Instance?.Configuration;
                 int cacheTimeout = config?.CacheTimeoutSeconds ?? 86400;
 
-                string? cacheKey = imageCacheService.GetOrCacheImage(sourceUrl, cacheTimeout)
-                    .GetAwaiter()
-                    .GetResult();
+                string? cacheKey = await imageCacheService.GetOrCacheImage(sourceUrl, cacheTimeout, cancellationToken);
 
                 if (!string.IsNullOrEmpty(cacheKey))
                 {
@@ -32,6 +39,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
 
                 logger?.LogWarning("Failed to cache image from {SourceUrl}, using original URL", sourceUrl);
                 return sourceUrl;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

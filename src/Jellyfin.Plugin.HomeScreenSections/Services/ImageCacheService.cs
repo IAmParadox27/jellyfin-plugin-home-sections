@@ -31,8 +31,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             LoadCacheIndex();
         }
 
-        public async Task<string?> GetOrCacheImage(string sourceUrl, int cacheTimeoutSeconds)
+        public Task<string?> GetOrCacheImage(string sourceUrl, int cacheTimeoutSeconds)
         {
+            return GetOrCacheImage(sourceUrl, cacheTimeoutSeconds, CancellationToken.None);
+        }
+
+        public async Task<string?> GetOrCacheImage(string sourceUrl, int cacheTimeoutSeconds, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(sourceUrl))
             {
                 return null;
@@ -53,7 +59,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 EvictOldEntries();
             }
-            return await DownloadAndCacheImage(sourceUrl, cacheKey, cacheTimeoutSeconds);
+            return await DownloadAndCacheImage(sourceUrl, cacheKey, cacheTimeoutSeconds, cancellationToken);
         }
 
         private bool IsValidCacheKey(string cacheKey)
@@ -104,13 +110,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        private async Task<string?> DownloadAndCacheImage(string sourceUrl, string cacheKey, int cacheTimeoutSeconds)
+        private async Task<string?> DownloadAndCacheImage(string sourceUrl, string cacheKey, int cacheTimeoutSeconds, CancellationToken cancellationToken)
         {
             try
             {
                 m_logger.LogDebug("Downloading image from {SourceUrl}", sourceUrl);
 
-                using HttpResponseMessage response = await m_httpClient.GetAsync(sourceUrl);
+                using HttpResponseMessage response = await m_httpClient.GetAsync(sourceUrl, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
                     m_logger.LogWarning("Failed to download image from {SourceUrl}, status: {StatusCode}",
@@ -118,7 +124,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     return null;
                 }
 
-                byte[] imageData = await response.Content.ReadAsByteArrayAsync();
+                byte[] imageData = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                 string contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
                 byte[] processedImageData = ProcessImage(imageData);
                 if (processedImageData.Length > 0)
@@ -127,10 +133,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     contentType = "image/jpeg";
                 }
                 
+                cancellationToken.ThrowIfCancellationRequested();
                 string filePath = SaveImageToDisk(cacheKey, imageData, contentType);
                 StoreCacheInfo(cacheKey, sourceUrl, filePath, contentType, cacheTimeoutSeconds);
                 m_logger.LogDebug("Cached image {CacheKey} from {SourceUrl}", cacheKey, sourceUrl);
                 return cacheKey;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
