@@ -38,7 +38,30 @@
         return result;
     }
 
+    function disposePage(pageMeta) {
+        if (!pageMeta || pageMeta.Disposed) {
+            return;
+        }
+        pageMeta.Disposed = true;
+        window.removeEventListener('scroll', pageMeta.ScrollHandler);
+        window.removeEventListener('hashchange', pageMeta.RouteHandler);
+        window.removeEventListener('popstate', pageMeta.RouteHandler);
+        window.removeEventListener('pagehide', pageMeta.DisposeHandler);
+        document.removeEventListener('viewbeforehide', pageMeta.ViewHideHandler);
+        clearInterval(pageMeta.ScrollFixerHandle);
+        pageMeta.ScrollFixerHandle = undefined;
+        pageMeta.IsLoading = false;
+        var indicator = pageMeta.Element.querySelector('#hssLoadingIndicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+        if (window.HssPageMeta === pageMeta) {
+            window.HssPageCache = null;
+        }
+    }
+
     if (!isHomePage()) {
+        disposePage(window.HssPageMeta);
         if (this && typeof this.originalLoadSections === "function") {
             return this.originalLoadSections(elem, apiClient, user, userSettings);
         }
@@ -273,7 +296,7 @@
         var appRouterParent = {{appRouterParent_hook}};
         console.log("Loading section: ." + sectionClass + ", could also be .section" + options.sectionIndex);
         
-        var var5_, var6_, var7_, var8_, elem = page.querySelector('.' + sectionClass + '[data-page="' + window.HssPageMeta.Page + '"]');
+        var var5_, var6_, var7_, var8_, elem = page.querySelector('.' + sectionClass + '[data-page="' + requestedPage + '"]');
         if (null !== elem) {
             var html = "";
             var layoutManager = {{layoutmanager_hook}}.A;
@@ -391,68 +414,132 @@
     }
     
     var _this = this;
+    var pageMeta = window.HssPageMeta;
+    if (page === null) {
+        if (pageMeta && pageMeta.ViewElement) {
+            pageMeta.ViewElement.removeEventListener('viewshow', pageMeta.ViewShowHandler);
+            pageMeta.ViewElement.removeEventListener('viewdestroy', pageMeta.ViewDestroyHandler);
+        }
+        disposePage(pageMeta);
+        pageMeta = {
+            Page: 1,
+            LastScrollHeight: 0,
+            ScrollThreshold: 10,
+            PageHash: uuidv4(),
+            ScrollHandler: null,
+            Element: elem,
+            Location: location.href,
+            Disposed: false,
+            IsLoading: true
+        };
+        window.HssPageMeta = pageMeta;
+        window.HssPageCache = { elem: elem, apiClient: apiClient, user: user, userSettings: userSettings };
+        pageMeta.DisposeHandler = function () {
+            disposePage(pageMeta);
+        };
+        pageMeta.RouteHandler = function () {
+            if (location.href !== pageMeta.Location) {
+                disposePage(pageMeta);
+            }
+        };
+        pageMeta.ViewHideHandler = function (event) {
+            if (event.target === elem || (event.target.contains && event.target.contains(elem))) {
+                disposePage(pageMeta);
+            }
+        };
+        window.addEventListener('hashchange', pageMeta.RouteHandler);
+        window.addEventListener('popstate', pageMeta.RouteHandler);
+        window.addEventListener('pagehide', pageMeta.DisposeHandler);
+        document.addEventListener('viewbeforehide', pageMeta.ViewHideHandler);
+
+        var viewElement = elem;
+        while (viewElement.parentElement && !viewElement.classList.contains('page')) {
+            viewElement = viewElement.parentElement;
+        }
+        if (viewElement.classList.contains('page')) {
+            pageMeta.ViewElement = viewElement;
+            // Legacy views are cached and can return without calling loadSections again.
+            pageMeta.ViewShowHandler = function () {
+                if (pageMeta.Disposed && window.HssPageMeta === pageMeta) {
+                    _this.loadSections(elem, apiClient, user, userSettings).catch(function (error) {
+                        console.error("Error reloading the cached HSS view:", error);
+                    });
+                }
+            };
+            pageMeta.ViewDestroyHandler = function () {
+                disposePage(pageMeta);
+                viewElement.removeEventListener('viewshow', pageMeta.ViewShowHandler);
+                viewElement.removeEventListener('viewdestroy', pageMeta.ViewDestroyHandler);
+                if (window.HssPageMeta === pageMeta) {
+                    window.HssPageMeta = null;
+                }
+            };
+            viewElement.addEventListener('viewshow', pageMeta.ViewShowHandler);
+            viewElement.addEventListener('viewdestroy', pageMeta.ViewDestroyHandler);
+        }
+    }
+
+    function isCurrentPage() {
+        return pageMeta && !pageMeta.Disposed && window.HssPageMeta === pageMeta;
+    }
+
+    if (!isCurrentPage()) {
+        return Promise.resolve();
+    }
+    var requestedPage = page === null ? 1 : page;
 
     return getHomeScreenSectionsMeta(apiClient).then(function (hssMeta) {
+        if (!isCurrentPage()) {
+            return;
+        }
         var useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
-        
+
         if (!useHss) {
+            disposePage(pageMeta);
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
         }
 
-        if (page !== null) {
-            window.HssPageMeta.Page = page;
-        } else {
-            window.HssPageMeta = {
-                UsePagination: hssMeta.PaginationEnabled,
-                Page: 1,
-                ResultsPerPage: hssMeta.NumResultsPerPage,
-                LastScrollHeight: 0,
-                ScrollThreshold: 10,
-                PageHash: uuidv4(),
-                ScrollHandler: null
-            };
-            
-            // Setup the scrolly event
-            window.HssPageCache = {
-                elem: elem,
-                apiClient: apiClient,
-                user: user,
-                userSettings: userSettings
-            };
+        if (page === null) {
+            pageMeta.UsePagination = hssMeta.PaginationEnabled;
+            pageMeta.ResultsPerPage = hssMeta.NumResultsPerPage;
+
+            function finishLoading() {
+                var indicator = isCurrentPage() ? elem.querySelector('#hssLoadingIndicator') : null;
+                if (indicator) {
+                    indicator.style.display = 'none';
+                }
+                pageMeta.IsLoading = false;
+                clearInterval(pageMeta.ScrollFixerHandle);
+                pageMeta.ScrollFixerHandle = undefined;
+            }
 
             function hssScrollHandler() {
                 var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
 
-                if (window.HssPageMeta.Finished !== true && window.HssPageMeta.IsLoading !== true && scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < window.scrollY) {
-                    window.HssPageMeta.IsLoading = true;
+                if (isCurrentPage() && pageMeta.Finished !== true && pageMeta.IsLoading !== true && scrollPosition > windowHeight - pageMeta.ScrollThreshold && pageMeta.LastScrollHeight < window.scrollY) {
+                    pageMeta.IsLoading = true;
+                    var indicator = elem.querySelector('#hssLoadingIndicator');
+                    if (indicator) {
+                        indicator.style.display = 'block';
+                    }
 
-                    document.querySelector('#hssLoadingIndicator').style.display = 'block';
-
-                    // Do the calculation after the scroller is turned on
                     windowHeight = getDocHeight();
-                    window.scroll(0, windowHeight - (window.innerHeight + window.HssPageMeta.ScrollThreshold));
-
-                    window.HssPageMeta.LastScrollHeight = window.scrollY;
-                    window.HssPageMeta.LastWindowHeight = windowHeight;
-
-                    window.HssPageMeta.ScrollFixerHandle = setInterval(function () {
-                        window.scroll(0, window.HssPageMeta.LastScrollHeight);
-
-                        if (getDocHeight() > window.HssPageMeta.LastWindowHeight) {
-                            clearInterval(window.HssPageMeta.ScrollFixerHandle);
-                            window.HssPageMeta.ScrollFixerHandle = undefined;
+                    window.scroll(0, windowHeight - (window.innerHeight + pageMeta.ScrollThreshold));
+                    pageMeta.LastScrollHeight = window.scrollY;
+                    pageMeta.LastWindowHeight = windowHeight;
+                    pageMeta.ScrollFixerHandle = setInterval(function () {
+                        if (!isCurrentPage() || getDocHeight() > pageMeta.LastWindowHeight) {
+                            clearInterval(pageMeta.ScrollFixerHandle);
+                            pageMeta.ScrollFixerHandle = undefined;
+                            return;
                         }
+                        window.scroll(0, pageMeta.LastScrollHeight);
                     }, 1);
 
-                    _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
-                        document.querySelector('#hssLoadingIndicator').style.display = 'none';
-
-                        window.HssPageMeta.IsLoading = false;
-
-                        if (window.HssPageMeta.ScrollFixerHandle) {
-                            clearInterval(window.HssPageMeta.ScrollFixerHandle);
-                        }
+                    _this.loadSections(elem, apiClient, user, userSettings, pageMeta.Page + 1).then(finishLoading, function (error) {
+                        finishLoading();
+                        console.error("Error loading the next HSS page:", error);
                     });
                 }
 
@@ -465,34 +552,34 @@
                     );
                 }
             }
-            
-            if (window.HssPageMeta.ScrollHandler !== null) {
-                window.removeEventListener('scroll', window.HssPageMeta.ScrollHandler);
+
+            pageMeta.ScrollHandler = hssScrollHandler;
+            if (pageMeta.UsePagination) {
+                window.addEventListener('scroll', hssScrollHandler);
             }
-            
-            window.HssPageMeta.ScrollHandler = hssScrollHandler;
-            
-            window.addEventListener('scroll', hssScrollHandler);
         }
-        
+
         var getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
             Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
         };
         
-        if (window.HssPageMeta.UsePagination) {
-            getSectionsData.Page = window.HssPageMeta.Page;
-            getSectionsData.NumResultsPerPage = window.HssPageMeta.ResultsPerPage;
-            getSectionsData.PageHash = window.HssPageMeta.PageHash;
+        if (pageMeta.UsePagination) {
+            getSectionsData.Page = requestedPage;
+            getSectionsData.NumResultsPerPage = pageMeta.ResultsPerPage;
+            getSectionsData.PageHash = pageMeta.PageHash;
         } else {
-            window.HssPageMeta.Finished = true;
+            pageMeta.Finished = true;
         }
 
         var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
 
         return apiClient.getJSON(getSectionsUrl).then(function (response) {
-            if (response.TotalRecordCount === 0 && window.HssPageMeta.Page > 1) {
-                window.HssPageMeta.Finished = true;
+            if (!isCurrentPage()) {
+                return;
+            }
+            if (response.TotalRecordCount === 0 && requestedPage > 1) {
+                pageMeta.Finished = true;
                 // Just a do nothing function
                 return function (elem, apiClient, user, userSettings) { };
             }
@@ -584,9 +671,9 @@
                                     if (existingContainer !== null) {
                                         existingSections = existingContainer.children.length;
                                     }
-                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + (existingSections + var44_5) + '"></div>';
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + requestedPage + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (requestedPage - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + (existingSections + var44_5) + '"></div>';
                                     
-                                    if (window.HssPageMeta.Page !== 1) {
+                                    if (requestedPage !== 1) {
                                         var tempContainer = document.createElement("div");
                                         tempContainer.innerHTML = var44_3;
                                         
@@ -607,10 +694,13 @@
                                         for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], options.sectionIndex = var44_7, var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                                 }
                                 return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function () {
+                                    if (!isCurrentPage()) {
+                                        return;
+                                    }
                                     var var134_2, var134_3, var134_4;
                                     return var134_2 = {
                                         refresh: !0
-                                    }, var134_3 = elem.querySelectorAll('[data-page="' + window.HssPageMeta.Page + '"] .itemsContainer'), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
+                                    }, var134_3 = elem.querySelectorAll('[data-page="' + requestedPage + '"] .itemsContainer'), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
                                         param139_.resume && var134_4.push(param139_.resume(var134_2))
                                     })), Promise.all(var134_4)
                                 }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function () {
@@ -643,12 +733,44 @@
                     }
                     fn175_((var39_4 = var39_4.apply(var39_, [])).next())
                 }))
-            }(elem, apiClient, user, userSettings);
+            }(elem, apiClient, user, userSettings).then(function () {
+                if (isCurrentPage()) {
+                    pageMeta.Page = requestedPage;
+                }
+            }, function (error) {
+                if (isCurrentPage() && requestedPage > 1) {
+                    var failedRows = elem.querySelectorAll('[data-page="' + requestedPage + '"]');
+                    Array.prototype.forEach.call(failedRows, function (row) {
+                        row.parentNode.removeChild(row);
+                    });
+                }
+                throw error;
+            });
         }, function (error) {
+            if (!isCurrentPage()) {
+                return;
+            }
+            if (requestedPage > 1) {
+                throw error;
+            }
+            disposePage(pageMeta);
             console.error("Error fetching sections with HSS, defaulting back to Jellyfin:", error);
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
         });
     }, function (err) {
+        if (!isCurrentPage()) {
+            return;
+        }
+        if (requestedPage > 1) {
+            throw err;
+        }
+        disposePage(pageMeta);
         return _this.originalLoadSections(elem, apiClient, user, userSettings);
+    }).then(function (result) {
+        pageMeta.IsLoading = false;
+        return result;
+    }, function (error) {
+        pageMeta.IsLoading = false;
+        throw error;
     });
 }
