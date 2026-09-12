@@ -40,7 +40,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             // Make sure that it's flagged as being used, even if we don't return anything here the page is still active
             // as we've received a request for it.
             userSectionsData.LastAccessed = DateTime.UtcNow;
-            m_dataCache.PageHashExpiry.TryUpdate(pageHash, DateTime.UtcNow.AddHours(1), m_dataCache.PageHashExpiry[pageHash]); // TODO: In a future update we should make this configurable.
+            m_dataCache.Touch(pageHash);
             
             // Check if the userSectionsData has the data we're after
             int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
@@ -50,6 +50,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             for (int i = 0; i < orderedKeys.Length; i++)
             {
                 int key = orderedKeys[i];
+                if (userSectionsData.SectionsInProgress.Keys.Any(x => x < key))
+                {
+                    isComplete = false;
+                    break;
+                }
+
                 int prevKey = i > 0 ? orderedKeys[i - 1] : orderedKeys[i] - 1;
 
                 bool cohesive = (key - prevKey) == 1;
@@ -85,69 +91,57 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             return null;
         }
 
-        private Guid GeneratePageHash(Guid userId)
-        {
-            Guid pageHash = Guid.NewGuid();
-            m_dataCache.PageHashOwnerIds.TryAdd(pageHash, userId);
-            m_dataCache.PageHashExpiry.TryAdd(pageHash, DateTime.UtcNow.AddHours(1)); // TODO: In a future update we should make this configurable.
-            
-            return pageHash;
-        }
-
         public List<HomeScreenSectionInfo>? MonitorLiveUpdatedSectionsForUser(Guid userId, string? language, int page, int? pageSize = null, Guid? pageHash = null)
         {
-            // Kick off the task to remove the expired "temp" user caches to avoid a memory leak.
-            Task.Run(() => ClearExpiredUserCaches(userId));
-
-            // If the sections have been requested with a page hash that wasn't generated for this user, generate a new one.
-            if (pageHash.HasValue && !DoesPageBelongToUser(pageHash.Value, userId))
+            Guid activePageHash = m_dataCache.BeginUse(userId, pageHash);
+            try
             {
-                pageHash = GeneratePageHash(userId);
+                return MonitorCachedSectionsForUser(userId, language, page, pageSize, activePageHash);
             }
-            
-            if (pageHash == null)
+            finally
             {
-                pageHash = GetActiveTempPageCacheForUser(userId);
-
-                if (pageHash == null)
-                {
-                    pageHash = GeneratePageHash(userId);
-                    
-                    CacheSectionsForUser(userId, pageHash.Value);
-
-                    int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
-                    return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
-                }
+                m_dataCache.EndUse(activePageHash);
             }
-            
-            if (!m_dataCache.Cache.ContainsKey(pageHash.Value))
+        }
+
+        private List<HomeScreenSectionInfo>? MonitorCachedSectionsForUser(Guid userId, string? language, int page, int? pageSize, Guid pageHash)
+        {
+            if (!m_dataCache.Cache.ContainsKey(pageHash))
             {
-                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash.Value));
+                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash));
                 cacheThread.Start();
             }
 
             SpinWait spinWait = new SpinWait();
-            while (!m_dataCache.Cache.ContainsKey(pageHash.Value))
+            while (!m_dataCache.Cache.ContainsKey(pageHash))
             {
                 spinWait.SpinOnce();
             }
             spinWait.Reset();
 
             // If there's no data at all then we wait until its started.
-            while (!m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash.Value].OrderedSections.Any())
+            while (!m_dataCache.Cache[pageHash].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash].OrderedSections.Any())
             {
                 spinWait.SpinOnce();
             }
             
+            if (!pageSize.HasValue)
+            {
+                while (m_dataCache.Cache[pageHash].SectionsInProgress.Any())
+                {
+                    spinWait.SpinOnce();
+                }
+            }
+
             // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
             // If its still in progress then we'll wait for it to finish.
-            UserSectionsData cache = m_dataCache.Cache[pageHash.Value];
+            UserSectionsData cache = m_dataCache.Cache[pageHash];
             int lowestSectionIndex = Math.Min(
-                m_dataCache.Cache[pageHash.Value].OrderedSections.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].OrderedSections.Min(x => x.Key) 
+                m_dataCache.Cache[pageHash].OrderedSections.Any()
+                    ? m_dataCache.Cache[pageHash].OrderedSections.Min(x => x.Key)
                     : int.MaxValue,
-                m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].SectionsInProgress.Min(x => x.Key) 
+                m_dataCache.Cache[pageHash].SectionsInProgress.Any()
+                    ? m_dataCache.Cache[pageHash].SectionsInProgress.Min(x => x.Key)
                     : int.MaxValue);
 
             for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
@@ -162,7 +156,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     spinWait.SpinOnce();
                 }
                 
-                List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value);
+                List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash);
                 if (sections != null)
                 {
                     return sections;
@@ -197,8 +191,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     MaxOrderIndex = groupedOrderedSections.Select(g => g.Key).DefaultIfEmpty(0).Max()
                 };
                 
-                m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData);
-
                 foreach (int orderIndex in groupedOrderedSections.Select(x => x.Key).OrderBy(x => x))
                 {
                     userSectionsData.SectionsInProgress.TryAdd(orderIndex, true);
@@ -218,6 +210,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                             End = currentIndex - 1
                         });
                     }
+                }
+
+                if (!m_dataCache.Cache.TryAdd(pageHash.Value, userSectionsData))
+                {
+                    return;
                 }
             }
             
@@ -284,52 +281,6 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             
             return info;
-        }
-
-        private async Task ClearExpiredUserCaches(Guid userId)
-        {
-            await Task.Yield();
-            
-            Guid[] userPageHashes = m_dataCache.PageHashOwnerIds
-                .Where(x => x.Value == userId)
-                .Select(x => x.Key)
-                .ToArray();
-            Guid[] expiredPageHashes = m_dataCache.PageHashExpiry
-                .Where(x => userPageHashes.Any(y => y == x.Key))
-                .Where(x => x.Value < DateTime.UtcNow)
-                .Select(x => x.Key)
-                .ToArray();
-
-            foreach (Guid pageHash in expiredPageHashes)
-            {
-                m_dataCache.Cache.TryRemove(pageHash, out _);
-            }
-        }
-
-        private Guid? GetActiveTempPageCacheForUser(Guid userId)
-        {
-            Guid[] userPageHashes = m_dataCache.PageHashOwnerIds
-                .Where(x => x.Value == userId)
-                .Select(x => x.Key)
-                .ToArray();
-            Guid[] activePageHashes = m_dataCache.PageHashExpiry
-                .Where(x => userPageHashes.Any(y => y == x.Key))
-                .Where(x => x.Value > DateTime.UtcNow)
-                .OrderByDescending(x => x.Value)
-                .Select(x => x.Key)
-                .ToArray();
-
-            if (activePageHashes.Length == 0)
-            {
-                return null;
-            }
-            
-            return activePageHashes.First();
-        }
-        
-        private bool DoesPageBelongToUser(Guid pageHash, Guid userId)
-        {
-            return m_dataCache.PageHashOwnerIds.TryGetValue(pageHash, out Guid ownerId) && ownerId == userId;
         }
     }
 

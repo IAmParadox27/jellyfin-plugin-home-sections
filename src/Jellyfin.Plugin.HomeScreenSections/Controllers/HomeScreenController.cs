@@ -247,13 +247,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             [FromQuery] int? numResultsPerPage = null,
             [FromQuery] Guid? pageHash = null)
         {
-            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
-                page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
+            try
+            {
+                List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language,
+                    page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
 
-            return new QueryResult<HomeScreenSectionInfo>(
-                0,
-                sections.Count,
-                sections);
+                return new QueryResult<HomeScreenSectionInfo>(
+                    0,
+                    sections.Count,
+                    sections);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpGet("Section/{sectionType}")]
