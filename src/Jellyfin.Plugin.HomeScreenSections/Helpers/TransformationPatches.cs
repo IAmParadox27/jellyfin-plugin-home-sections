@@ -39,7 +39,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                 replacementText = replacementText.Replace("{{cardbuilder_hook}}", "p.Ay");
                 replacementText = replacementText.Replace("{{appRouterParent_hook}}", "T");
                 replacementText = replacementText.Replace("{{shapebuilder_hook}}", "I");
-                replacementText = replacementText.Replace("{{layoutmanager_hook}}", "i"); // TODO: lookup the first "assigned" variable after `var`
+                replacementText = replacementText.Replace("{{layoutmanager_hook}}", "r(46782)"); // TODO: lookup the first "assigned" variable after `var`
             }
             
             string regex = content.Contents.Replace(",loadSections:", $",loadSections:{replacementText},originalLoadSections:");
