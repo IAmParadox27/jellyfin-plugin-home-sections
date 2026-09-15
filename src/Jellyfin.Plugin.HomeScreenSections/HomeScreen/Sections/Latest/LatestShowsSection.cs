@@ -108,6 +108,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest
                     startIndex += page.Items.Count;
                     List<(Guid SeriesId, DateTime? PremiereDate)> episodes = page.Items.OfType<Episode>()
                         .Where(x => !x.IsUnaired)
+#if !NET10_0_OR_GREATER
+                        .Where(x => user == null || x.IsVisible(user))
+#endif
                         .Select(x => (SeriesId: x.SeriesId == Guid.Empty ? x.Series?.Id ?? Guid.Empty : x.SeriesId,
                             PremiereDate: x.PremiereDate))
                         .Where(x => x.SeriesId != Guid.Empty)

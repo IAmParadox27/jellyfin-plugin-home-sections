@@ -107,21 +107,51 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 return shows;
             }
 
+            if (shows.Length <= 16)
+            {
+                return shows.OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
+                    .Take(16);
+            }
+
+            return GetSortedShows(shows, user);
+        }
+
+        private IEnumerable<BaseItem> GetSortedShows(BaseItem[] shows, User? user)
+        {
+            DtoOptions scoreOptions = new DtoOptions { EnableImages = false, EnableUserData = false, Fields = Array.Empty<ItemFields>() };
             Dictionary<Guid, DateTime> sortDates = new Dictionary<Guid, DateTime>();
             Dictionary<string, DateTime?> episodeDates = new Dictionary<string, DateTime?>();
 
-            if (shows.Length <= 16)
+            HashSet<string> candidateSeriesKeys = shows.OfType<Series>()
+                .Select(x => x.GetPresentationUniqueKey())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet();
+            int exactLookupCount = candidateSeriesKeys.Count + shows.Count(x => x is not Series
+                || string.IsNullOrWhiteSpace(x.GetPresentationUniqueKey()));
+
+            // A small selection is cheaper to score directly than to search the entire episode library for hints.
+            bool useEpisodeHints = false;
+            if (exactLookupCount > 200)
             {
-                ResolveSortDates(shows, user, dtoOptions, sortDates, episodeDates);
+                int catalogSeriesCount = m_libraryManager.GetCount(new InternalItemsQuery
+                {
+                    IncludeItemTypes = new[] { BaseItemKind.Series },
+                    GroupByPresentationUniqueKey = false,
+                    EnableTotalRecordCount = false
+                });
+
+                // Physical versions only lower this coverage estimate. Small selections should not search a much larger catalog.
+                useEpisodeHints = catalogSeriesCount > 0 && (long)candidateSeriesKeys.Count * 10 >= (long)catalogSeriesCount * 9;
+            }
+
+            if (!useEpisodeHints)
+            {
+                ResolveSortDates(shows, user, scoreOptions, sortDates, episodeDates);
             }
             else
             {
                 // Hints only identify candidates. The original user-scoped lookup supplies every score.
                 HashSet<string> recentSeriesKeys = GetEpisodeSeriesKeys(null, 200);
-                HashSet<string> candidateSeriesKeys = shows.OfType<Series>()
-                    .Select(x => x.GetPresentationUniqueKey())
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .ToHashSet();
                 if (recentSeriesKeys.Count(candidateSeriesKeys.Contains) < 16)
                 {
                     // A backfill may fill the raw hint page with one series. Grouped hints only seed more exact lookups.
@@ -135,7 +165,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                     || x is not Series
                     || string.IsNullOrWhiteSpace(x.GetPresentationUniqueKey())
                     || recentSeriesKeys.Contains(x.GetPresentationUniqueKey())),
-                    user, dtoOptions, sortDates, episodeDates);
+                    user, scoreOptions, sortDates, episodeDates);
 
                 DateTime cutoff = sortDates.Values.OrderByDescending(x => x).ElementAt(15);
                 // Grouping after the date filter finds every key that might beat or tie the cutoff.
@@ -143,7 +173,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 HashSet<string> possibleSeriesKeys = GetEpisodeSeriesKeys(cutoff, null);
                 ResolveSortDates(shows.Where(x => !sortDates.ContainsKey(x.Id)
                     && (x.DateCreated >= cutoff || possibleSeriesKeys.Contains(x.GetPresentationUniqueKey()))),
-                    user, dtoOptions, sortDates, episodeDates);
+                    user, scoreOptions, sortDates, episodeDates);
             }
 
             return shows.Where(x => sortDates.ContainsKey(x.Id))
@@ -166,7 +196,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
                 OrderBy = limit.HasValue ? new[] { (ItemSortBy.DateCreated, SortOrder.Descending) } : Array.Empty<(ItemSortBy, SortOrder)>(),
                 Limit = limit,
                 EnableTotalRecordCount = false,
-                DtoOptions = new DtoOptions { EnableImages = false, Fields = Array.Empty<ItemFields>() }
+                DtoOptions = new DtoOptions { EnableImages = false, EnableUserData = false, Fields = Array.Empty<ItemFields>() }
             });
 
             return episodes.OfType<Episode>()
