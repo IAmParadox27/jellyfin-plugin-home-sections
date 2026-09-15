@@ -34,7 +34,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                 replacementText = replacementText.Replace("{{shapebuilder_hook}}", "y");
                 replacementText = replacementText.Replace("{{layoutmanager_hook}}", "n"); // TODO: lookup the first "assigned" variable after `var`
             }
-            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("12.0") ?? false)
+            else if (JellyfinVersionAttribute.GetVersion()?.StartsWith("12.") ?? false)
             {
                 replacementText = replacementText.Replace("{{cardbuilder_hook}}", "p.Ay");
                 replacementText = replacementText.Replace("{{appRouterParent_hook}}", "T");
