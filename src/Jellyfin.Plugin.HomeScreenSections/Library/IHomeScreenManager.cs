@@ -45,6 +45,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
 
         public TranslationMetadata? TranslationMetadata => null;
 
+        public string? AdminDescription => null;
+
         public IEnumerable<PluginConfigurationOption> GetPluginConfigurationOptions() => Array.Empty<PluginConfigurationOption>();
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection);
@@ -74,7 +76,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
     public class HomeScreenSectionInfo
     {
         public string? AdminTranslationKey { get; set; } = null;
-        
+
+        public string? AdminDescription { get; set; } = null;
+
         public string? Section { get; set; }
 
         public string? DisplayText { get; set; }

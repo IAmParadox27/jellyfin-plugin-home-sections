@@ -110,7 +110,27 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             {
                 return NotFound();
             }
-            
+
+            SetCacheHeaders();
+
+            return File(stream, "text/css");
+        }
+
+        // Served unauthenticated, same as GetPluginStylesheet - it's loaded via a
+        // plain <link> tag, which doesn't carry the ApiClient auth token.
+        [HttpGet("config.css")]
+        [Produces("text/css")]
+        public ActionResult GetConfigStylesheet()
+        {
+            Stream? stream = Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream(typeof(HomeScreenSectionsPlugin).Namespace +
+                                           ".Configuration.config.css");
+
+            if (stream == null)
+            {
+                return NotFound();
+            }
+
             SetCacheHeaders();
 
             return File(stream, "text/css");
