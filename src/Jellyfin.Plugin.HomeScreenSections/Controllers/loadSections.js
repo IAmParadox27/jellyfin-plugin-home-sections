@@ -3,6 +3,19 @@
         var href = (location.href || "");
         var hash = (location.hash || "");
 
+        var hrefL = href.toLowerCase();
+        var hashL = hash.toLowerCase();
+
+        // Route-based (more stable across clients)
+        var isHomeRoute =
+            /(^#?!?\/?)(home)(\.html)?([/?&]|$)/.test(hashL) ||
+            hashL.indexOf("home.html") !== -1 ||
+            hrefL.indexOf("/web/index.html#!/home") !== -1;
+
+        if (isHomeRoute) {
+            return true;
+        }
+
         var markers = {
             href: href,
             hash: hash,
@@ -14,15 +27,6 @@
             pageIdHome: document.querySelector('[data-pageid="home"]') !== null,
             routeHome: document.querySelector('[data-route="home"]') !== null
         };
-
-        var hrefL = href.toLowerCase();
-        var hashL = hash.toLowerCase();
-
-        // Route-based (more stable across clients)
-        var isHomeRoute =
-            /(^#?!?\/?)(home)(\.html)?([/?&]|$)/.test(hashL) ||
-            hashL.indexOf("home.html") !== -1 ||
-            hrefL.indexOf("/web/index.html#!/home") !== -1;
 
         // DOM fallback (looser than requiring ALL markers)
         var isHomeDom =
@@ -42,6 +46,7 @@
         if (!pageMeta || pageMeta.Disposed) {
             return;
         }
+        pageMeta.CanResume = pageMeta.Rendered === true && !pageMeta.IsLoading;
         pageMeta.Disposed = true;
         window.removeEventListener('scroll', pageMeta.ScrollHandler);
         window.removeEventListener('hashchange', pageMeta.RouteHandler);
@@ -390,7 +395,24 @@
     }
     
     function getHomeScreenSectionsMeta(_apiClient) {
-        return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
+        if (page !== null) {
+            return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
+        }
+        bootstrapContext = {
+            UserId: _apiClient.getCurrentUserId(),
+            ServerId: _apiClient.serverId(),
+            Language: localStorage.getItem(_apiClient.getCurrentUserId() + '-language')
+        };
+        var query = {
+            UserId: bootstrapContext.UserId,
+            Language: bootstrapContext.Language,
+            PageHash: pageMeta.PageHash
+        };
+        var data = userSettings.getData && userSettings.getData();
+        if (data && data.CustomPrefs && data.CustomPrefs.useModularHome !== undefined) {
+            query.UserOverride = data.CustomPrefs.useModularHome === "true";
+        }
+        return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Bootstrap", query));
     }
     
     function isUserUsingHomeScreenSections(pluginMeta, _userSettings) {
@@ -413,6 +435,24 @@
         );
     }
     
+    function getPageSettingsKey() {
+        return apiClient.serverId() + ':' + apiClient.getCurrentUserId() + ':' +
+            localStorage.getItem(apiClient.getCurrentUserId() + '-language') + ':' +
+            JSON.stringify(userSettings.getData ? userSettings.getData() : null);
+    }
+
+    function resumePage(pageMeta) {
+        pageMeta.Disposed = false;
+        window.HssPageCache = { elem: elem, apiClient: apiClient, user: user, userSettings: userSettings };
+        window.addEventListener('hashchange', pageMeta.RouteHandler);
+        window.addEventListener('popstate', pageMeta.RouteHandler);
+        window.addEventListener('pagehide', pageMeta.DisposeHandler);
+        document.addEventListener('viewbeforehide', pageMeta.ViewHideHandler);
+        if (pageMeta.UsePagination) {
+            window.addEventListener('scroll', pageMeta.ScrollHandler);
+        }
+    }
+
     var _this = this;
     var pageMeta = window.HssPageMeta;
     if (page === null) {
@@ -429,6 +469,9 @@
             ScrollHandler: null,
             Element: elem,
             Location: location.href,
+            CreatedAt: Date.now(),
+            SettingsKey: getPageSettingsKey(),
+            Rendered: false,
             Disposed: false,
             IsLoading: true
         };
@@ -461,6 +504,12 @@
             // Legacy views are cached and can return without calling loadSections again.
             pageMeta.ViewShowHandler = function () {
                 if (pageMeta.Disposed && window.HssPageMeta === pageMeta) {
+                    // Recheck a cached view after one minute, or immediately when its local settings change.
+                    if (pageMeta.CanResume && Date.now() - pageMeta.CreatedAt < 60000 &&
+                        pageMeta.SettingsKey === getPageSettingsKey()) {
+                        resumePage(pageMeta);
+                        return;
+                    }
                     _this.loadSections(elem, apiClient, user, userSettings).catch(function (error) {
                         console.error("Error reloading the cached HSS view:", error);
                     });
@@ -486,11 +535,22 @@
     if (!isCurrentPage()) {
         return Promise.resolve();
     }
+    pageMeta.IsLoading = true;
     var requestedPage = page === null ? 1 : page;
+    var bootstrapContext = null;
 
     return getHomeScreenSectionsMeta(apiClient).then(function (hssMeta) {
         if (!isCurrentPage()) {
             return;
+        }
+        if (bootstrapContext) {
+            if (bootstrapContext.UserId !== apiClient.getCurrentUserId() || bootstrapContext.ServerId !== apiClient.serverId()) {
+                disposePage(pageMeta);
+                return;
+            }
+            if (bootstrapContext.Language !== localStorage.getItem(apiClient.getCurrentUserId() + '-language')) {
+                hssMeta.Sections = null;
+            }
         }
         var useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
 
@@ -514,10 +574,14 @@
             }
 
             function hssScrollHandler() {
+                if (!isCurrentPage() || pageMeta.Finished === true || pageMeta.IsLoading === true ||
+                    !(pageMeta.LastScrollHeight < window.scrollY)) {
+                    return;
+                }
                 var scrollPosition = window.scrollY + window.innerHeight;
                 var windowHeight = getDocHeight();
 
-                if (isCurrentPage() && pageMeta.Finished !== true && pageMeta.IsLoading !== true && scrollPosition > windowHeight - pageMeta.ScrollThreshold && pageMeta.LastScrollHeight < window.scrollY) {
+                if (scrollPosition > windowHeight - pageMeta.ScrollThreshold) {
                     pageMeta.IsLoading = true;
                     var indicator = elem.querySelector('#hssLoadingIndicator');
                     if (indicator) {
@@ -561,20 +625,23 @@
 
         var getSectionsData = {
             UserId: apiClient.getCurrentUserId(),
-            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language'),
+            PageHash: pageMeta.PageHash
         };
         
         if (pageMeta.UsePagination) {
             getSectionsData.Page = requestedPage;
             getSectionsData.NumResultsPerPage = pageMeta.ResultsPerPage;
-            getSectionsData.PageHash = pageMeta.PageHash;
         } else {
             pageMeta.Finished = true;
         }
 
         var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
 
-        return apiClient.getJSON(getSectionsUrl).then(function (response) {
+        var sectionsRequest = page === null && hssMeta.Sections
+            ? Promise.resolve(hssMeta.Sections)
+            : apiClient.getJSON(getSectionsUrl);
+        return sectionsRequest.then(function (response) {
             if (!isCurrentPage()) {
                 return;
             }
@@ -701,6 +768,20 @@
                                     return var134_2 = {
                                         refresh: !0
                                     }, var134_3 = elem.querySelectorAll('[data-page="' + requestedPage + '"] .itemsContainer'), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
+                                        var refreshItems = param139_.refreshItems;
+                                        if (refreshItems) {
+                                            param139_.refreshItems = function () {
+                                                var container = this;
+                                                return refreshItems.apply(container, arguments).catch(function (error) {
+                                                    // Jellyfin clears this callback on detach while a refresh can still be awaiting its response.
+                                                    if (error instanceof TypeError && container.getItemsHtml === null &&
+                                                        !document.documentElement.contains(container)) {
+                                                        return;
+                                                    }
+                                                    throw error;
+                                                });
+                                            };
+                                        }
                                         param139_.resume && var134_4.push(param139_.resume(var134_2))
                                     })), Promise.all(var134_4)
                                 }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function () {
@@ -736,6 +817,7 @@
             }(elem, apiClient, user, userSettings).then(function () {
                 if (isCurrentPage()) {
                     pageMeta.Page = requestedPage;
+                    pageMeta.Rendered = true;
                 }
             }, function (error) {
                 if (isCurrentPage() && requestedPage > 1) {

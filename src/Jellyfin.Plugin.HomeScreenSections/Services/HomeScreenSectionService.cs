@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
@@ -42,27 +42,49 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             userSectionsData.LastAccessed = DateTime.UtcNow;
             m_dataCache.Touch(pageHash);
             
-            // Check if the userSectionsData has the data we're after
-            int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
+            (IHomeScreenSection Section, int ConfiguredOrder)[]? completedSections = userSectionsData.CompletedSections;
+            if (completedSections != null)
+            {
+                long offset = Math.Max(0, ((long)page - 1) * pageSize);
+                int count = (int)Math.Max(0, Math.Min(pageSize, completedSections.Length - offset));
+                List<HomeScreenSectionInfo> results = new List<HomeScreenSectionInfo>(count);
+                for (int i = 0; i < count; i++)
+                {
+                    (IHomeScreenSection Section, int ConfiguredOrder) row = completedSections[(int)offset + i];
+                    results.Add(SectionToInfo(row.Section, row.ConfiguredOrder, language));
+                }
+                return results;
+            }
 
+            // Capture pending work before the rows, so a finishing group cannot make an earlier row snapshot look complete.
+            int? firstInProgress = null;
+            foreach (KeyValuePair<int, bool> sectionInProgress in userSectionsData.SectionsInProgress)
+            {
+                if (!firstInProgress.HasValue || sectionInProgress.Key < firstInProgress.Value)
+                {
+                    firstInProgress = sectionInProgress.Key;
+                }
+            }
+
+            int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
             List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionsToReturn = new List<(IHomeScreenSection, int)>();
             bool isComplete = true;
             for (int i = 0; i < orderedKeys.Length; i++)
             {
                 int key = orderedKeys[i];
-                if (userSectionsData.SectionsInProgress.Keys.Any(x => x < key))
+                if (firstInProgress.HasValue && firstInProgress.Value <= key)
                 {
                     isComplete = false;
                     break;
                 }
 
-                int prevKey = i > 0 ? orderedKeys[i - 1] : orderedKeys[i] - 1;
+                long prevKey = i > 0 ? orderedKeys[i - 1] : (long)orderedKeys[i] - 1;
 
                 bool cohesive = (key - prevKey) == 1;
-                if (prevKey > 0 && key - prevKey > 1)
+                if (key - prevKey > 1)
                 {
                     // If any of the ranges contain both the "key before" and "key after" then we can safely know this is cohesive.
-                    if (userSectionsData.OrderIndicesWithoutSections.Any(x => x.Contains(key - 1) && x.Contains(prevKey + 1)))
+                    if (userSectionsData.OrderIndicesWithoutSections.Any(x => x.Contains(key - 1) && x.Contains((int)(prevKey + 1))))
                     {
                         cohesive = true;
                     }
@@ -79,8 +101,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 }
             }
             
-            sectionsToReturn = sectionsToReturn.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            if ((isComplete && !userSectionsData.SectionsInProgress.Any()) || sectionsToReturn.Count == pageSize)
+            long requestedOffset = Math.Max(0, ((long)page - 1) * pageSize);
+            sectionsToReturn = sectionsToReturn.Skip((int)Math.Min(int.MaxValue, requestedOffset)).Take(pageSize).ToList();
+            if ((isComplete && !firstInProgress.HasValue) || sectionsToReturn.Count == pageSize)
             {
                 return sectionsToReturn
                     .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
@@ -120,7 +143,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             spinWait.Reset();
 
             // If there's no data at all then we wait until its started.
-            while (!m_dataCache.Cache[pageHash].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash].OrderedSections.Any())
+            while (!m_dataCache.Cache[pageHash].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash].OrderedSections.Any() &&
+                m_dataCache.Cache[pageHash].CompletedSections == null)
             {
                 spinWait.SpinOnce();
             }
@@ -136,21 +160,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
             // If its still in progress then we'll wait for it to finish.
             UserSectionsData cache = m_dataCache.Cache[pageHash];
-            int lowestSectionIndex = Math.Min(
-                m_dataCache.Cache[pageHash].OrderedSections.Any()
-                    ? m_dataCache.Cache[pageHash].OrderedSections.Min(x => x.Key)
-                    : int.MaxValue,
-                m_dataCache.Cache[pageHash].SectionsInProgress.Any()
-                    ? m_dataCache.Cache[pageHash].SectionsInProgress.Min(x => x.Key)
-                    : int.MaxValue);
-
-            for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
+            (IHomeScreenSection Section, int ConfiguredOrder)[]? completedSections = cache.CompletedSections;
+            if (completedSections != null)
             {
-                if (cache.OrderIndicesWithoutSections.Any(x => x.Contains(i)))
-                {
-                    continue;
-                }
-                
+                return GetCachedSectionsForUser(userId, language, page, pageSize ?? completedSections.Length, pageHash);
+            }
+
+            int[] sectionIndices = cache.ConfiguredOrderIndices ?? cache.SectionsInProgress.Keys.Concat(cache.OrderedSections.Keys)
+                .Distinct().OrderBy(x => x).ToArray();
+            foreach (int i in sectionIndices)
+            {
                 while (cache.SectionsInProgress.ContainsKey(i))
                 {
                     spinWait.SpinOnce();
@@ -197,12 +216,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 }
 
                 int[] sectionIndices = userSectionsData.SectionsInProgress.Keys.OrderBy(x => x).ToArray();
+                userSectionsData.ConfiguredOrderIndices = sectionIndices;
                 for (int i = 1; i < sectionIndices.Length; i++)
                 {
                     int prevIndex = sectionIndices[i - 1];
                     int currentIndex = sectionIndices[i];
 
-                    if (currentIndex - prevIndex > 1)
+                    if ((long)currentIndex - prevIndex > 1)
                     {
                         userSectionsData.OrderIndicesWithoutSections.Add(new IntRange()
                         {
@@ -263,6 +283,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     userSectionsData.SectionsInProgress.Remove(orderedSections.Key, out _);
                 }
             });
+
+            if (userSectionsData != null)
+            {
+                userSectionsData.CompletedSections = userSectionsData.OrderedSections.OrderBy(x => x.Key)
+                    .SelectMany(x => x.Value.Select(section => (section, x.Key)))
+                    .ToArray();
+            }
         }
 
         private HomeScreenSectionInfo SectionToInfo(IHomeScreenSection section, int configuredOrder, string? language)
@@ -270,7 +297,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             HomeScreenSectionInfo info = section.AsInfo();
 
             info.OrderIndex = configuredOrder;
-            info.ViewMode = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.FirstOrDefault(y => y.SectionId == info.Section)?.ViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
+            SectionViewMode? configuredViewMode = null;
+            foreach (SectionSettings settings in HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings)
+            {
+                if (settings.SectionId == info.Section)
+                {
+                    configuredViewMode = settings.ViewMode;
+                    break;
+                }
+            }
+            info.ViewMode = configuredViewMode ?? info.ViewMode ?? SectionViewMode.Landscape;
             
             if (info.DisplayText != null)
             {

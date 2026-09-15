@@ -114,12 +114,24 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
 
     public class UserSectionsData
     {
+        private volatile (IHomeScreenSection Section, int ConfiguredOrder)[]? m_completedSections;
+
         public DateTime? LastAccessed { get; set; } = null;
         
+        // Set before the snapshot is added to Cache.
+        public int[]? ConfiguredOrderIndices { get; set; }
+
         public required Guid UserId { get; set; }
         
         public required int MaxOrderIndex { get; set; }
         
+        // Published after generation; row instances and their order remain stable for this snapshot.
+        public (IHomeScreenSection Section, int ConfiguredOrder)[]? CompletedSections
+        {
+            get => m_completedSections;
+            set => m_completedSections = value;
+        }
+
         // The int here represents the order index group
         public ConcurrentDictionary<int, IEnumerable<IHomeScreenSection>> OrderedSections { get; set; } = new ConcurrentDictionary<int, IEnumerable<IHomeScreenSection>>();
         
