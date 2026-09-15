@@ -208,6 +208,47 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             });
         }
 
+        [HttpGet("Bootstrap")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [Authorize]
+        public ActionResult<object> GetHomeScreenBootstrap(
+            [FromQuery] Guid? userId,
+            [FromQuery] string? language,
+            [FromQuery] Guid? pageHash = null,
+            [FromQuery] bool? userOverride = null)
+        {
+            PluginConfiguration? configuration = HomeScreenSectionsPlugin.Instance?.Configuration;
+            if (configuration == null)
+            {
+                return Ok(new { Enabled = false, AllowUserOverride = false });
+            }
+
+            bool enabled = configuration.AllowUserOverride && userOverride.HasValue
+                ? userOverride.Value
+                : configuration.Enabled;
+            QueryResult<HomeScreenSectionInfo>? sections = null;
+            if (enabled)
+            {
+                ActionResult<QueryResult<HomeScreenSectionInfo>> result = GetHomeScreenSections(
+                    userId, language, 1, configuration.LazyLoadEnabled ? configuration.NumSectionsPerPage : null,
+                    pageHash);
+                if (result.Result != null)
+                {
+                    return result.Result;
+                }
+                sections = result.Value;
+            }
+
+            return Ok(new HomeScreenBootstrap
+            {
+                Enabled = configuration.Enabled,
+                AllowUserOverride = configuration.AllowUserOverride,
+                PaginationEnabled = configuration.LazyLoadEnabled,
+                NumResultsPerPage = configuration.NumSectionsPerPage,
+                Sections = sections
+            });
+        }
+
         [HttpGet("Ready")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
@@ -247,13 +288,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             [FromQuery] int? numResultsPerPage = null,
             [FromQuery] Guid? pageHash = null)
         {
-            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
-                page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
+            try
+            {
+                List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language,
+                    page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
 
-            return new QueryResult<HomeScreenSectionInfo>(
-                0,
-                sections.Count,
-                sections);
+                return new QueryResult<HomeScreenSectionInfo>(
+                    0,
+                    sections.Count,
+                    sections);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpGet("Section/{sectionType}")]
