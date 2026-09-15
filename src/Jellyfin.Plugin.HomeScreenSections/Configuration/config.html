@@ -332,42 +332,52 @@
                 </fieldset>
 
                 <br>
-                <button id="btnSaveConfigGlobal" is="emby-button" type="submit" class="raised button-submit block emby-button">
+                <button id="btnSaveConfigGlobal" is="emby-button" type="submit" class="raised button-submit block emby-button hssFloatingSaveButton">
                     <span data-i18n="AdminSave">Save</span>
                 </button>
             </div>
 
-            <div id="sections" class="jellyfin-tab-content" style="display: none; width: fit-content;">
+            <div id="sections" class="jellyfin-tab-content hssSectionsTab" style="display: none;">
                 <fieldset class="verticalSection-extrabottompadding">
                      <legend data-i18n="AdminFieldDescriptions" style="padding-bottom:10px; font-weight: bolder; font-size: 1.2em;">Field Descriptions</legend>
                     <ul id="fieldDescriptionsList" style="margin: 0; padding-left: 1.5em;">
-                        <li><strong data-i18n="AdminOrder">Order</strong>: <span data-i18n="AdminOrderDesc">Sets the display order for this section in Jellyfin. Lower numbers appear first.</span> <i data-i18n="AdminOrderNote">Note: Sections with the same number are shown in random order among themselves</i></li>
-                        <li><strong data-i18n="AdminEnabled">Enabled</strong>: <span data-i18n="AdminEnabledDesc">Enable this section by default</span></li>
+                        <li><strong data-i18n="AdminOrder">Order</strong>: <span data-i18n="AdminOrderDesc">Sets the display order for this section in Jellyfin. Lower numbers appear first.</span> <i data-i18n="AdminOrderNote">Note: Sections with the same number are shown in random order among themselves, and are bunched together in this table with a bar you can drag to move the whole group at once</i></li>
+                        <li><span data-i18n="AdminAddRemoveDesc">Only sections listed in the table below are enabled and shown on the home screen. Use "Add Section" to bring back a removed one; use the</span> <span class="material-icons" style="font-size: 1em; vertical-align: middle;" aria-hidden="true">close</span> <span data-i18n="AdminAddRemoveDesc2">button on a row to remove it.</span></li>
                         <li><strong data-i18n="AdminUserOverride">User Override</strong>: <span data-i18n="AdminUserOverrideDesc">Let the user override this section</span></li>
                         <li><strong data-i18n="AdminMin">Min</strong>: <span data-i18n="AdminLowerLimitDesc">The minimum number of times this section should appear</span></li>
                         <li><strong data-i18n="AdminMax">Max</strong>: <span data-i18n="AdminUpperLimitDesc">The maximum number of times this section can appear</span></li>
                         <li><strong data-i18n="AdminViewMode">View Mode</strong>: <span data-i18n="AdminViewModeDesc">Defines the card layout used when displaying results.</span> <i data-i18n="AdminViewModeNote">If disabled, the section only supports the displayed layout.</i></li>
                     </ul>
                 </fieldset>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 1em;">
+                    <select is="emby-select" id="addSectionSelect" class="emby-select-withcolor emby-select" style="flex: 1;"></select>
+                    <button type="button" id="btnAddSection" is="emby-button" class="raised raised-mini emby-button">
+                        <span data-i18n="AdminAddSection">Add Section</span>
+                    </button>
+                </div>
+                <div class="hssTableScroll">
                 <table id="sectionsTable" class="tblConnections" style="width: 100%;">
                     <thead>
                         <tr>
-                            <th data-i18n="AdminSection" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Section</th>
+                            <th style="width: 32px;"></th>
+                            <th data-i18n="AdminSection" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold; width: 220px;">Section</th>
                             <th data-i18n="AdminOrder" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Order</th>
-                            <th data-i18n="AdminEnabled" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Enabled</th>
                             <th data-i18n="AdminUserOverride" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">User Override</th>
                             <th data-i18n="AdminHideWatched" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Hide Watched</th>
                             <th data-i18n="AdminMin" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Min</th>
                             <th data-i18n="AdminMax" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Max</th>
                             <th data-i18n="AdminViewMode" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">View Mode</th>
+                            <th data-i18n="AdminPreview" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Preview</th>
+                            <th data-i18n="AdminRemove" style="text-align: center; vertical-align: middle; padding: 8px 12px; font-weight: bold;">Remove</th>
                         </tr>
                     </thead>
                     <tbody id="sectionWrapper">
                     </tbody>
                 </table>
+                </div>
 
                 <br>
-                <button id="btnSaveConfigSections" is="emby-button" type="submit" class="raised button-submit block emby-button">
+                <button id="btnSaveConfigSections" is="emby-button" type="submit" class="raised button-submit block emby-button hssFloatingSaveButton">
                     <span data-i18n="AdminSave">Save</span>
                 </button>
             </div>
@@ -375,23 +385,17 @@
     </div>
 
     <template id="sectionConfigTemplate">
-        <tr data-id="section-config">
+        <tr data-id="section-config" draggable="true">
+            <td class="hssDragHandleCell">
+                <span class="hssDragHandle material-icons" aria-hidden="true">drag_indicator</span>
+            </td>
             <td style="text-align: left; vertical-align: middle; padding: 8px 12px;">
                 <input type="hidden" data-id="hiddenSectionId" />
                 <strong data-id="lblSectionName"></strong>
+                <span class="material-icons hssSectionInfoIcon" data-id="sectionInfoIcon" style="display: none;" role="button" tabindex="0">info</span>
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
                 <input data-id="txtOrderIndex" type="number" is="emby-input" min="0" class="emby-input" style="width: 60px; display: inline-table; text-align: center;">
-            </td>
-            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
-                <label style="width: 0;" class="emby-checkbox-label">
-                    <input data-id="chkSectionEnabled" type="checkbox" is="emby-checkbox" data-embycheckbox="true" class="emby-checkbox">
-                    <span class="checkboxLabel"></span>
-                    <span class="checkboxOutline">
-                        <span class="material-icons checkboxIcon checkboxIcon-checked check" aria-hidden="true"></span>
-                        <span class="material-icons checkboxIcon checkboxIcon-unchecked " aria-hidden="true"></span>
-                    </span>
-                </label>
             </td>
             <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
                 <label style="width: 0;" class="emby-checkbox-label">
@@ -427,16 +431,20 @@
                     <option value="Small" data-i18n="AdminSmall">Small</option>
                 </select>
             </td>
+            <td class="hssPreviewCell">
+                <button type="button" is="emby-button" class="raised raised-mini emby-button hssPreviewButton" data-id="btnPreviewSection">
+                    <span data-i18n="AdminPreview">Preview</span>
+                </button>
+            </td>
+            <td style="text-align: center; vertical-align: middle; padding: 8px 12px;">
+                <button type="button" is="emby-button" class="raised raised-mini emby-button" data-id="btnRemoveSection" title="Remove">
+                    <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+            </td>
         </tr>
-        <tr data-id="pluginConfigurationOptionsWrapper" style="display: none;">
-            <td colspan="8">
-                <table style="width: 100%; padding-left: 100px;">
-                    <thead style="font-weight: bold;">
-                        <tr>
-                            <td style="width: 50%" data-i18n="AdminPerSectionSetting_Configuration">Configuration</td>
-                            <td style="width: 50%" data-i18n="AdminPerSectionSetting_Value">Value</td>
-                        </tr>
-                    </thead>
+        <tr data-id="pluginConfigurationOptionsWrapper" style="display: none;" class="hssPluginOptionsWrapperRow">
+            <td colspan="10" class="hssPluginOptionsCell">
+                <table class="hssPluginOptionsTable">
                     <tbody data-id="pluginConfigurationOptionsContainer"></tbody>
                 </table>
             </td>
@@ -464,21 +472,21 @@
     <template id="pluginConfigurationOptionTemplate_Dropdown">
         <tr>
             <td data-id="label"></td>
-            <td><select is="emby-select" class="emby-select-withcolor emby-select" style="width: 100%; text-align: center;" data-id="value"></select></td>
+            <td><select is="emby-select" class="emby-select-withcolor emby-select hssPluginOptionControl" data-id="value"></select></td>
         </tr>
     </template>
 
     <template id="pluginConfigurationOptionTemplate_TextBox">
         <tr>
             <td data-id="label"></td>
-            <td><input type="text" style="width: 100%; " data-id="value" /></td>
+            <td><input type="text" class="hssPluginOptionControl" data-id="value" /></td>
         </tr>
     </template>
 
     <template id="pluginConfigurationOptionTemplate_NumberBox">
         <tr>
             <td data-id="label"></td>
-            <td><input type="number" style="width: 100%; " data-id="value" /></td>
+            <td><input type="number" class="hssPluginOptionControl" data-id="value" /></td>
         </tr>
     </template>
     
@@ -502,6 +510,9 @@
 
             // Stored after translatePage() fetches them, used by saveConfig() and applyTranslations()
             var pageTranslations = {};
+
+            // Removed/never-enabled sections, keyed by SectionId, so their settings survive a save.
+            var disabledSections = {};
 
             // Applies stored translations to data-i18n and data-i18n-label attributes
             // within the given root element. Safe to call before translations are loaded
@@ -630,11 +641,26 @@
 
                 template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
                 template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
-                template.querySelector('[data-id=chkSectionEnabled]').checked = sectionConfig.Enabled;
+
+                if (sectionInfo.AdminDescription) {
+                    const infoIcon = template.querySelector('[data-id=sectionInfoIcon]');
+                    infoIcon.style.display = 'inline';
+                    infoIcon.addEventListener('click', function () {
+                        toggleInfoPopover(infoIcon, sectionInfo.AdminDescription);
+                    });
+                    infoIcon.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleInfoPopover(infoIcon, sectionInfo.AdminDescription);
+                        }
+                    });
+                }
                 template.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked = sectionConfig.AllowUserOverride;
                 template.querySelector('[data-id=txtSectionMinLimit]').value = sectionConfig.LowerLimit;
                 template.querySelector('[data-id=txtSectionMaxLimit]').value = sectionConfig.UpperLimit;
-                template.querySelector('[data-id=txtOrderIndex]').value = sectionConfig.OrderIndex;
+                const orderInput = template.querySelector('[data-id=txtOrderIndex]');
+                orderInput.value = sectionConfig.OrderIndex;
+                orderInput.addEventListener('change', resortSectionRows);
 
                 const viewModeSelect = template.querySelector('[data-id=viewModeSelect]');
                 viewModeSelect.value = sectionConfig.ViewMode;
@@ -675,6 +701,16 @@
                         }
                         
                         configOptionDropdown.value = configEntry?.Value ?? option.DefaultValue;
+
+                        // Episode stills are landscape-shaped, so switch View Mode to match.
+                        if (sectionInfo.Section === 'RecentlyAddedShows' && option.Key === 'itemType') {
+                            configOptionDropdown.addEventListener('change', function () {
+                                if (viewModeSelect.disabled) {
+                                    return;
+                                }
+                                viewModeSelect.value = configOptionDropdown.value === 'episodes' ? 'Landscape' : 'Portrait';
+                            });
+                        }
                     } else {
                         const configOptionInput = configOptionTemplate.querySelector('[data-id=value]');
                         configOptionInput.value = configEntry?.Value ?? option.DefaultValue;
@@ -687,7 +723,705 @@
                     template.querySelector('[data-id=pluginConfigurationOptionsWrapper]').style.display = 'table-row';
                 }
 
+                const previewButton = template.querySelector('[data-id=btnPreviewSection]');
+                previewButton.addEventListener('click', function () {
+                    togglePreview(previewButton, sectionConfig, sectionInfo);
+                });
+
+                const mainRow = template.querySelector('[data-id=section-config]');
+                const removeButton = template.querySelector('[data-id=btnRemoveSection]');
+                removeButton.addEventListener('click', function () {
+                    removeSectionRow(mainRow, sectionInfo);
+                });
+
                 sectionWrapper.appendChild(template);
+            }
+
+            function removeSectionRow(mainRow, sectionInfo) {
+                const sectionId = mainRow.querySelector('[data-id=hiddenSectionId]').value;
+
+                // Preserve whatever the admin had configured before hiding it, so
+                // it isn't silently lost if they save without re-adding it.
+                disabledSections[sectionId] = {
+                    sectionConfig: readSectionConfigFromRow(mainRow, false),
+                    sectionInfo
+                };
+
+                getSectionRowGroup(mainRow).forEach(r => r.remove());
+                refreshAddSectionDropdown();
+                refreshTieGroups();
+            }
+
+            function readSectionConfigFromRow(row, enabled) {
+                const rowOptions = getSectionRowGroup(row)[1];
+                let configEntries = [];
+
+                if (rowOptions) {
+                    rowOptions.querySelectorAll('[data-id=pluginConfigurationOptionsContainer] tr').forEach(option => {
+                        const key = option.querySelector('[data-id=label]').attributes['data-key'].value;
+                        const valueInput = option.querySelector('[data-id=value]');
+
+                        let value;
+                        let type = 'string';
+                        if (valueInput.type === 'checkbox') {
+                            type = 'boolean';
+                            value = valueInput.checked;
+                        } else {
+                            value = valueInput.value;
+
+                            if (valueInput.type === 'number') {
+                                type = 'decimal';
+                            }
+                        }
+
+                        configEntries.push({ Key: key, Value: value, Type: type });
+                    });
+                }
+
+                return {
+                    SectionId: row.querySelector('[data-id=hiddenSectionId]').value,
+                    Enabled: enabled,
+                    AllowUserOverride: row.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
+                    LowerLimit: row.querySelector('[data-id=txtSectionMinLimit]').value,
+                    UpperLimit: row.querySelector('[data-id=txtSectionMaxLimit]').value,
+                    OrderIndex: row.querySelector('[data-id=txtOrderIndex]').value,
+                    ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
+                    HideWatchedItems: row.querySelector('[data-id=chkHideWatchedItems]').checked,
+                    PluginConfigurations: configEntries
+                };
+            }
+
+            function refreshAddSectionDropdown() {
+                const select = document.querySelector('#addSectionSelect');
+                select.innerHTML = '';
+
+                Object.keys(disabledSections).forEach(sectionId => {
+                    const option = document.createElement('option');
+                    option.value = sectionId;
+                    option.textContent = disabledSections[sectionId].sectionInfo.DisplayText;
+                    if (disabledSections[sectionId].sectionInfo.AdminDescription) {
+                        option.title = disabledSections[sectionId].sectionInfo.AdminDescription;
+                    }
+                    select.appendChild(option);
+                });
+            }
+
+            function addSectionFromDropdown() {
+                const select = document.querySelector('#addSectionSelect');
+                const sectionId = select.value;
+                const entry = disabledSections[sectionId];
+
+                if (!entry) {
+                    return;
+                }
+
+                delete disabledSections[sectionId];
+
+                entry.sectionConfig.Enabled = true;
+
+                const existingOrders = Array.from(document.querySelectorAll('#sectionWrapper [data-id=txtOrderIndex]'))
+                    .map(el => Number(el.value) || 0);
+                entry.sectionConfig.OrderIndex = existingOrders.length > 0 ? Math.max(...existingOrders) + 10 : 0;
+
+                addSectionSetting(entry.sectionConfig, entry.sectionInfo);
+                applyTranslations(document.querySelector('#sectionWrapper tr[data-id=section-config]:last-of-type'));
+
+                refreshAddSectionDropdown();
+                refreshTieGroups();
+            }
+
+            function injectConfigStylesheet() {
+                if (document.querySelector('link[data-id=hssConfigStylesheet]')) {
+                    return;
+                }
+
+                const link = document.createElement('link');
+                link.setAttribute('rel', 'stylesheet');
+                link.setAttribute('data-id', 'hssConfigStylesheet');
+                link.setAttribute('href', window.ApiClient.getUrl('HomeScreen/config.css'));
+                document.head.appendChild(link);
+            }
+
+            function resolveItemImage(item, imageType) {
+                if (item.ImageTags && item.ImageTags[imageType]) {
+                    return { itemId: item.Id, tag: item.ImageTags[imageType], type: imageType };
+                }
+
+                // Fall back to the series/season image, same as the real home screen.
+                if (imageType === 'Thumb' && item.ParentThumbItemId && item.ParentThumbImageTag) {
+                    return { itemId: item.ParentThumbItemId, tag: item.ParentThumbImageTag, type: 'Thumb' };
+                }
+                if (imageType === 'Primary' && item.ParentPrimaryImageItemId && item.ParentPrimaryImageTag) {
+                    return { itemId: item.ParentPrimaryImageItemId, tag: item.ParentPrimaryImageTag, type: 'Primary' };
+                }
+                if (imageType === 'Primary' && item.SeriesPrimaryImageTag && item.SeriesId) {
+                    return { itemId: item.SeriesId, tag: item.SeriesPrimaryImageTag, type: 'Primary' };
+                }
+                if (imageType === 'Backdrop' && item.ParentBackdropItemId && item.ParentBackdropImageTags && item.ParentBackdropImageTags.length) {
+                    return { itemId: item.ParentBackdropItemId, tag: item.ParentBackdropImageTags[0], type: 'Backdrop' };
+                }
+
+                return null;
+            }
+
+            function resolveCardImage(item, preferredTypes) {
+                for (const imageType of preferredTypes) {
+                    const resolved = resolveItemImage(item, imageType);
+                    if (resolved) {
+                        return resolved;
+                    }
+                }
+                return null;
+            }
+
+            function resolveProviderPosterUrl(item) {
+                // Upcoming/Discover items
+                const providerIds = item.ProviderIds;
+                if (!providerIds) {
+                    return null;
+                }
+
+                const posterUrl = providerIds.JellyseerrPoster || providerIds.SonarrPoster ||
+                    providerIds.RadarrPoster || providerIds.LidarrPoster || providerIds.ReadarrPoster;
+
+                if (!posterUrl) {
+                    return null;
+                }
+
+                return posterUrl.startsWith('http') ? posterUrl : window.ApiClient.getUrl(posterUrl);
+            }
+
+            function renderPreviewCard(item, viewMode) {
+                const card = document.createElement('div');
+                card.className = 'hssPreviewCard hssPreviewCard-' + (viewMode || 'Landscape').toLowerCase();
+
+                const img = document.createElement('img');
+
+                const providerPosterUrl = resolveProviderPosterUrl(item);
+                if (providerPosterUrl) {
+                    img.src = providerPosterUrl;
+                } else {
+                    // Match the real home screen's image choice: Portrait/Square
+                    // sections prefer the item's own poster (Primary), Landscape
+                    // sections prefer a Thumb/Backdrop.
+                    const preferredOrder = viewMode === 'Landscape'
+                        ? ['Thumb', 'Backdrop', 'Primary']
+                        : ['Primary', 'Thumb', 'Backdrop'];
+                    const resolved = resolveCardImage(item, preferredOrder);
+
+                    if (resolved) {
+                        img.src = window.ApiClient.getUrl('Items/' + resolved.itemId + '/Images/' + resolved.type, { tag: resolved.tag, maxWidth: 260 });
+                    }
+                }
+                img.alt = item.Name || '';
+                card.appendChild(img);
+
+                const title = document.createElement('div');
+                title.className = 'hssPreviewCardTitle';
+                title.textContent = item.Name || '';
+                title.title = item.Name || '';
+                card.appendChild(title);
+
+                return card;
+            }
+
+            // Click to open/close, rather than hover - works on touch devices too.
+            function ensureInfoPopover() {
+                let popover = document.querySelector('#hssInfoPopover');
+                if (popover) {
+                    return popover;
+                }
+
+                popover = document.createElement('div');
+                popover.id = 'hssInfoPopover';
+                popover.className = 'hssPreviewPopover hssInfoPopover';
+                popover.style.display = 'none';
+                document.body.appendChild(popover);
+
+                document.addEventListener('click', function (e) {
+                    if (popover.style.display === 'none' || !popover._openIcon) {
+                        return;
+                    }
+                    if (popover.contains(e.target) || popover._openIcon.contains(e.target)) {
+                        return;
+                    }
+                    closeInfoPopover();
+                });
+
+                window.addEventListener('resize', function () {
+                    if (popover._openIcon) {
+                        positionPopoverNear(popover, popover._openIcon);
+                    }
+                });
+
+                return popover;
+            }
+
+            function closeInfoPopover() {
+                const popover = document.querySelector('#hssInfoPopover');
+                if (!popover) {
+                    return;
+                }
+                popover.style.display = 'none';
+                popover._openIcon = null;
+            }
+
+            function toggleInfoPopover(icon, description) {
+                const popover = ensureInfoPopover();
+
+                if (popover._openIcon === icon) {
+                    closeInfoPopover();
+                    return;
+                }
+
+                popover._openIcon = icon;
+                popover.textContent = description;
+                popover.style.display = 'block';
+                positionPopoverNear(popover, icon);
+            }
+
+            // Floats near the row's Preview button instead of expanding the row.
+            function ensurePreviewPopover() {
+                let popover = document.querySelector('#hssPreviewPopover');
+                if (popover) {
+                    return popover;
+                }
+
+                popover = document.createElement('div');
+                popover.id = 'hssPreviewPopover';
+                popover.className = 'hssPreviewPopover';
+                popover.style.display = 'none';
+                document.body.appendChild(popover);
+
+                document.addEventListener('click', function (e) {
+                    if (popover.style.display === 'none' || !popover._openButton) {
+                        return;
+                    }
+                    if (popover.contains(e.target) || popover._openButton.contains(e.target)) {
+                        return;
+                    }
+                    closePreviewPopover();
+                });
+
+                window.addEventListener('resize', function () {
+                    if (popover._openButton) {
+                        positionPopoverNear(popover, popover._openButton);
+                    }
+                });
+
+                return popover;
+            }
+
+            function closePreviewPopover() {
+                const popover = document.querySelector('#hssPreviewPopover');
+                if (!popover || !popover._openButton) {
+                    return;
+                }
+
+                const label = popover._openButton.querySelector('span');
+                if (label) {
+                    label.textContent = pageTranslations['AdminPreview'] || 'Preview';
+                }
+
+                popover.style.display = 'none';
+                popover._openButton = null;
+            }
+
+            function positionPopoverNear(popover, button) {
+                const rect = button.getBoundingClientRect();
+                popover.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+                popover.style.left = (rect.left + window.scrollX) + 'px';
+
+                // Nudge back on-screen if it would overflow the right edge.
+                requestAnimationFrame(() => {
+                    const popRect = popover.getBoundingClientRect();
+                    const overflow = popRect.right - window.innerWidth + 16;
+                    if (overflow > 0) {
+                        popover.style.left = (parseFloat(popover.style.left) - overflow) + 'px';
+                    }
+                });
+            }
+
+            function togglePreview(previewButton, sectionConfig, sectionInfo) {
+                const popover = ensurePreviewPopover();
+                const buttonLabel = previewButton.querySelector('span');
+
+                if (popover._openButton === previewButton) {
+                    closePreviewPopover();
+                    return;
+                }
+
+                if (popover._openButton) {
+                    closePreviewPopover();
+                }
+
+                popover._openButton = previewButton;
+                popover.style.display = 'block';
+                buttonLabel.textContent = pageTranslations['AdminClose'] || 'Close';
+                positionPopoverNear(popover, previewButton);
+
+                const cacheKey = sectionInfo.Section + '|' + (sectionInfo.AdditionalData || '');
+                if (popover._cache && popover._cache[cacheKey]) {
+                    popover.innerHTML = popover._cache[cacheKey];
+                    positionPopoverNear(popover, previewButton);
+                    return;
+                }
+
+                popover.innerHTML = '<div class="hssPreviewLoading">' + (pageTranslations['AdminPreviewLoading'] || 'Loading preview...') + '</div>';
+
+                // Dynamic sections need a concrete genre/studio/person/decade to preview.
+                if (!sectionInfo.AdditionalData) {
+                    const knownDynamicSections = ['Genre', 'Studio', 'Decade', 'Starring', 'DirectedBy', 'BecauseYouWatched'];
+                    if (knownDynamicSections.indexOf(sectionInfo.Section) !== -1) {
+                        popover.innerHTML = '<div class="hssPreviewMessage">' +
+                            (pageTranslations['AdminPreviewNeedsInstance'] || "This section needs a specific value (e.g. a genre, studio, or person) to preview - it's populated automatically for each user on the real home screen.") +
+                            '</div>';
+                        return;
+                    }
+                }
+
+                // These pick a random subset each call, so the preview may not match what a user sees.
+                const knownRandomizedSections = ['HiddenGems', 'WatchAgain'];
+                const isRandomized = knownRandomizedSections.indexOf(sectionInfo.Section) !== -1;
+
+                window.ApiClient.ajax({
+                    url: window.ApiClient.getUrl('HomeScreen/Section/' + sectionInfo.Section, {
+                        UserId: window.ApiClient.getCurrentUserId(),
+                        AdditionalData: sectionInfo.AdditionalData
+                    }),
+                    type: 'GET',
+                    dataType: 'json'
+                }).then(function (result) {
+                    // The admin may have closed this row (or opened a
+                    // different one) before the request came back.
+                    if (popover._openButton !== previewButton) {
+                        return;
+                    }
+
+                    const items = (result && result.Items) || [];
+
+                    if (items.length === 0) {
+                        popover.innerHTML = '<div class="hssPreviewMessage">' +
+                            (pageTranslations['AdminPreviewEmpty'] || 'No items to preview for this section right now.') +
+                            '</div>';
+                        return;
+                    }
+
+                    const strip = document.createElement('div');
+                    strip.className = 'hssPreviewStrip';
+                    // Read the ViewMode select live rather than trusting the
+                    // sectionConfig captured at render time, in case the admin
+                    // changed the dropdown before clicking Preview.
+                    const mainRow = previewButton.closest('tr');
+                    const viewMode = (mainRow && mainRow.querySelector('[data-id=viewModeSelect]').value) || sectionInfo.ViewMode;
+                    items.slice(0, 12).forEach(item => strip.appendChild(renderPreviewCard(item, viewMode)));
+
+                    popover.innerHTML = '';
+                    popover.appendChild(strip);
+
+                    if (isRandomized) {
+                        const note = document.createElement('div');
+                        note.className = 'hssPreviewNote';
+                        note.textContent = pageTranslations['AdminPreviewRandomized'] ||
+                            'This section refreshes with a different random selection each time it loads, so real users may see different items than shown here.';
+                        popover.appendChild(note);
+                    }
+
+                    positionPopoverNear(popover, previewButton);
+
+                    popover._cache = popover._cache || {};
+                    popover._cache[cacheKey] = popover.innerHTML;
+                }).catch(function (error) {
+                    if (popover._openButton !== previewButton) {
+                        return;
+                    }
+                    console.error('Failed to load section preview:', error);
+                    popover.innerHTML = '<div class="hssPreviewMessage">' +
+                        (pageTranslations['AdminPreviewFailed'] || 'Failed to load preview.') +
+                        '</div>';
+                });
+            }
+
+            function getSectionRowGroup(mainRow) {
+                // Every rendered section occupies 2 consecutive <tr>s: the
+                // main row and its (possibly hidden) plugin-options row. They
+                // must always move together.
+                const group = [mainRow];
+                let next = mainRow.nextElementSibling;
+                while (next && next.getAttribute('data-id') !== 'section-config' && group.length < 2) {
+                    group.push(next);
+                    next = next.nextElementSibling;
+                }
+                return group;
+            }
+
+            // Re-sorts the table by each row's current Order value. Needed
+            // because typing a new number directly (rather than dragging)
+            // otherwise had no visible effect until the page was saved and
+            // reloaded.
+            function resortSectionRows() {
+                const sectionWrapper = document.querySelector('#sectionWrapper');
+                const rows = Array.from(sectionWrapper.querySelectorAll('tr[data-id=section-config]'));
+
+                const groups = rows.map(row => ({
+                    group: getSectionRowGroup(row),
+                    order: Number(row.querySelector('[data-id=txtOrderIndex]').value) || 0
+                }));
+
+                groups.sort((a, b) => a.order - b.order);
+
+                groups.forEach(({ group }) => {
+                    group.forEach(r => sectionWrapper.appendChild(r));
+                });
+
+                refreshTieGroups();
+            }
+
+            let tieGroupCounter = 0;
+
+            // Rows sharing the same Order number are "tied" - bunch them visually and give the bunch a single handle bar (along with each row's own handle) that drags all of them together
+            function refreshTieGroups() {
+                const sectionWrapper = document.querySelector('#sectionWrapper');
+
+                sectionWrapper.querySelectorAll('.hssGroupHandleRow').forEach(r => r.remove());
+
+                const rows = Array.from(sectionWrapper.querySelectorAll('tr[data-id=section-config]'));
+                rows.forEach(row => {
+                    delete row.dataset.tieGroup;
+                    getSectionRowGroup(row).forEach(r => r.classList.remove('hssTieGroupRow', 'hssTieGroupFirst', 'hssTieGroupLast'));
+                });
+
+                let i = 0;
+                while (i < rows.length) {
+                    const order = Number(rows[i].querySelector('[data-id=txtOrderIndex]').value) || 0;
+                    let j = i + 1;
+                    while (j < rows.length && (Number(rows[j].querySelector('[data-id=txtOrderIndex]').value) || 0) === order) {
+                        j++;
+                    }
+
+                    const memberCount = j - i;
+                    if (memberCount >= 2) {
+                        const groupId = 'g' + (++tieGroupCounter);
+                        const members = rows.slice(i, j);
+
+                        members.forEach((row, memberIndex) => {
+                            row.dataset.tieGroup = groupId;
+                            const groupRows = getSectionRowGroup(row);
+                            groupRows.forEach(r => r.classList.add('hssTieGroupRow'));
+                            if (memberIndex === 0) {
+                                groupRows.forEach(r => r.classList.add('hssTieGroupFirst'));
+                            }
+                            if (memberIndex === members.length - 1) {
+                                groupRows.forEach(r => r.classList.add('hssTieGroupLast'));
+                            }
+                        });
+
+                        const handleRow = document.createElement('tr');
+                        handleRow.className = 'hssGroupHandleRow';
+                        handleRow.draggable = true;
+                        handleRow.dataset.tieGroup = groupId;
+
+                        const cell = document.createElement('td');
+                        cell.colSpan = 10;
+
+                        const icon = document.createElement('span');
+                        icon.className = 'material-icons hssGroupHandleIcon';
+                        icon.setAttribute('aria-hidden', 'true');
+                        icon.textContent = 'drag_indicator';
+                        cell.appendChild(icon);
+
+                        handleRow.appendChild(cell);
+                        sectionWrapper.insertBefore(handleRow, members[0]);
+                    }
+
+                    i = j;
+                }
+            }
+
+            function assignOrderForRange(rows, startIdx, count, value) {
+                for (let k = 0; k < count; k++) {
+                    rows[startIdx + k].querySelector('[data-id=txtOrderIndex]').value = value;
+                }
+            }
+
+            function reorderAfterDrop(draggedRow) {
+                const rows = Array.from(document.querySelectorAll('#sectionWrapper tr[data-id=section-config]'));
+                const idx = rows.indexOf(draggedRow);
+                const getOrder = r => Number(r.querySelector('[data-id=txtOrderIndex]').value) || 0;
+
+                const prevVal = idx > 0 ? getOrder(rows[idx - 1]) : null;
+                const nextVal = idx < rows.length - 1 ? getOrder(rows[idx + 1]) : null;
+
+                if (prevVal === null && nextVal === null) {
+                    return;
+                }
+
+                let candidate;
+                if (prevVal === null) {
+                    candidate = nextVal - 1;
+                } else if (nextVal === null) {
+                    candidate = prevVal + 1;
+                } else {
+                    candidate = Math.floor((prevVal + nextVal) / 2);
+                }
+
+                const hasRoom = candidate >= 0 &&
+                    (prevVal === null || candidate > prevVal) &&
+                    (nextVal === null || candidate < nextVal);
+
+                if (hasRoom) {
+                    draggedRow.querySelector('[data-id=txtOrderIndex]').value = candidate;
+                    return;
+                }
+
+                // No integer gap - renumber sequentially from here on, leaving earlier rows untouched.
+                let next = (prevVal !== null ? prevVal : -1) + 1;
+                for (let i = idx; i < rows.length; i++) {
+                    rows[i].querySelector('[data-id=txtOrderIndex]').value = next;
+                    next++;
+                }
+            }
+
+            // Same idea as reorderAfterDrop, but every member keeps the same shared value.
+            function reorderGroupAfterDrop(movedRows) {
+                const rows = Array.from(document.querySelectorAll('#sectionWrapper tr[data-id=section-config]'));
+                const idx = rows.indexOf(movedRows[0]);
+                const getOrder = r => Number(r.querySelector('[data-id=txtOrderIndex]').value) || 0;
+
+                const prevVal = idx > 0 ? getOrder(rows[idx - 1]) : null;
+                const nextVal = idx + movedRows.length < rows.length ? getOrder(rows[idx + movedRows.length]) : null;
+
+                let value;
+                if (prevVal !== null) {
+                    value = prevVal + 1;
+                } else if (nextVal !== null) {
+                    value = Math.max(nextVal - 1, 0);
+                } else {
+                    value = 0;
+                }
+
+                assignOrderForRange(rows, idx, movedRows.length, value);
+            }
+
+            function enableSectionDragReordering() {
+                const sectionWrapper = document.querySelector('#sectionWrapper');
+
+                // Delegated at the wrapper level (rather than per-row) so rows
+                // added later via "Add Section" are draggable without needing
+                // to re-wire listeners each time.
+                if (sectionWrapper.dataset.dragEnabled === 'true') {
+                    return;
+                }
+                sectionWrapper.dataset.dragEnabled = 'true';
+
+                let draggedGroup = null;
+                let draggedIsWholeTieGroup = false;
+
+                function findDropTarget(e) {
+                    return e.target.closest('tr[data-id=section-config], .hssGroupHandleRow');
+                }
+
+                sectionWrapper.addEventListener('dragstart', function (e) {
+                    const handleBar = e.target.closest('.hssGroupHandleRow');
+                    if (handleBar) {
+                        const memberRows = Array.from(sectionWrapper.querySelectorAll(
+                            'tr[data-id=section-config][data-tie-group="' + handleBar.dataset.tieGroup + '"]'));
+                        draggedGroup = [handleBar, ...memberRows.flatMap(r => getSectionRowGroup(r))];
+                        draggedIsWholeTieGroup = true;
+                    } else {
+                        const row = e.target.closest('tr[data-id=section-config]');
+                        if (!row) {
+                            return;
+                        }
+                        draggedGroup = getSectionRowGroup(row);
+                        draggedIsWholeTieGroup = false;
+                    }
+
+                    draggedGroup.forEach(r => r.classList.add('hssDragging'));
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', '');
+                });
+
+                sectionWrapper.addEventListener('dragend', function () {
+                    if (draggedGroup) {
+                        draggedGroup.forEach(r => r.classList.remove('hssDragging'));
+                    }
+                    sectionWrapper.querySelectorAll('.hssDragOver').forEach(r => r.classList.remove('hssDragOver'));
+                    draggedGroup = null;
+                });
+
+                sectionWrapper.addEventListener('dragover', function (e) {
+                    const target = findDropTarget(e);
+                    if (!target || !draggedGroup || draggedGroup.indexOf(target) !== -1) {
+                        return;
+                    }
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    sectionWrapper.querySelectorAll('.hssDragOver').forEach(r => r.classList.remove('hssDragOver'));
+                    target.classList.add('hssDragOver');
+                });
+
+                sectionWrapper.addEventListener('drop', function (e) {
+                    const target = findDropTarget(e);
+                    if (!target || !draggedGroup || draggedGroup.indexOf(target) !== -1) {
+                        return;
+                    }
+                    e.preventDefault();
+                    target.classList.remove('hssDragOver');
+
+                    const isTargetGroup = !!target.dataset.tieGroup;
+                    const isHandleBar = target.classList.contains('hssGroupHandleRow');
+                    const rect = target.getBoundingClientRect();
+                    const dropBefore = (e.clientY - rect.top) < (rect.height / 2);
+
+                    // Only join the target's tie-group if dropped strictly between two of its member rows
+                    let joinTieGroup = false;
+                    let firstMember = null;
+                    let lastMember = null;
+                    if (isTargetGroup) {
+                        const memberRows = Array.from(sectionWrapper.querySelectorAll(
+                            'tr[data-id=section-config][data-tie-group="' + target.dataset.tieGroup + '"]'));
+                        firstMember = memberRows[0];
+                        lastMember = memberRows[memberRows.length - 1];
+
+                        const atTopEdge = (isHandleBar || target === firstMember) && dropBefore;
+                        const atBottomEdge = target === lastMember && !dropBefore;
+                        joinTieGroup = !(atTopEdge || atBottomEdge);
+                    }
+
+                    let anchor;
+                    if (isHandleBar) {
+                        // The handle bar always sits directly above its groups first member, so the drop target is always one of the members.
+                        anchor = dropBefore ? target : getSectionRowGroup(lastMember)[getSectionRowGroup(lastMember).length - 1].nextElementSibling;
+                    } else {
+                        const targetRowGroup = getSectionRowGroup(target);
+                        anchor = dropBefore ? target : targetRowGroup[targetRowGroup.length - 1].nextElementSibling;
+                    }
+
+                    draggedGroup.forEach(r => sectionWrapper.insertBefore(r, anchor));
+
+                    if (draggedIsWholeTieGroup) {
+                        // draggedGroup[0] is the handle bar itself - the actual
+                        // section rows start right after it.
+                        const movedMainRows = Array.from(sectionWrapper.querySelectorAll('tr[data-id=section-config]'))
+                            .filter(r => draggedGroup.indexOf(r) !== -1);
+                        reorderGroupAfterDrop(movedMainRows);
+                    } else {
+                        const movedRow = draggedGroup[0];
+                        if (joinTieGroup) {
+                            // Dropped inside an existing tie-group, share the same order number
+                            const groupValue = isHandleBar
+                                ? Number(sectionWrapper.querySelector(
+                                    'tr[data-id=section-config][data-tie-group="' + target.dataset.tieGroup + '"] [data-id=txtOrderIndex]').value) || 0
+                                : Number(target.querySelector('[data-id=txtOrderIndex]').value) || 0;
+                            movedRow.querySelector('[data-id=txtOrderIndex]').value = groupValue;
+                        } else {
+                            reorderAfterDrop(movedRow);
+                        }
+                    }
+
+                    refreshTieGroups();
+                });
             }
 
             function loadLibraries() {
@@ -775,46 +1509,11 @@
                 };
 
                 document.querySelectorAll('#sectionWrapper tr[data-id=section-config]').forEach(row => {
-                    const rowOptions = $(row).next()[0];
-                    let configEntries = [];
-                    
-                    if (rowOptions) {
-                        rowOptions.querySelectorAll('[data-id=pluginConfigurationOptionsContainer] tr').forEach(option => {
-                            const key = option.querySelector('[data-id=label]').attributes['data-key'].value;
-                            const valueInput = option.querySelector('[data-id=value]');
-                            
-                            let value = undefined;
-                            let type = 'string';
-                            if (valueInput.type === 'checkbox') {
-                                type = 'boolean';
-                                value = valueInput.checked;
-                            } else {
-                                value = valueInput.value;
-                                
-                                if (valueInput.type === 'number') {
-                                    type = 'decimal';
-                                }
-                            }
-                            
-                            configEntries.push({ 
-                                Key: key, 
-                                Value: value,
-                                Type: type
-                            });
-                        })
-                    }
-                    
-                    const sectionConfig = {
-                        SectionId: row.querySelector('[data-id=hiddenSectionId]').value,
-                        Enabled: row.querySelector('[data-id=chkSectionEnabled]').checked,
-                        AllowUserOverride: row.querySelector('[data-id=chkSectionUserOverrideAllowed]').checked,
-                        LowerLimit: row.querySelector('[data-id=txtSectionMinLimit]').value,
-                        UpperLimit: row.querySelector('[data-id=txtSectionMaxLimit]').value,
-                        OrderIndex: row.querySelector('[data-id=txtOrderIndex]').value,
-                        ViewMode: row.querySelector('[data-id=viewModeSelect]').value,
-                        HideWatchedItems: row.querySelector('[data-id=chkHideWatchedItems]').checked,
-                        PluginConfigurations: configEntries
-                    };
+                    config.SectionSettings.push(readSectionConfigFromRow(row, true));
+                });
+
+                // Sections removed from the list (or never enabled) will still be saved - just with Enabled: false
+                Object.values(disabledSections).forEach(({ sectionConfig }) => {
                     config.SectionSettings.push(sectionConfig);
                 });
 
@@ -875,6 +1574,10 @@
                             url: ApiClient.getUrl('ModularHomeViews/Sections') + '?language=' + encodeURIComponent(uiLanguage),
                             type: 'GET'
                         }).then(response => response.json()).then(function (json) {
+                            disabledSections = {};
+
+                            const enabledItems = [];
+
                             json.Items.forEach(sectionType => {
                                 let sectionConfig = config.SectionSettings.find(s => s.SectionId === sectionType.Section);
                                 if (!sectionConfig) {
@@ -890,22 +1593,39 @@
                                         PluginConfigurations: []
                                     };
                                 }
-                                addSectionSetting(sectionConfig, sectionType);
+
+                                if (sectionConfig.Enabled) {
+                                    enabledItems.push({ sectionType, sectionConfig });
+                                } else {
+                                    disabledSections[sectionConfig.SectionId] = { sectionConfig, sectionInfo: sectionType };
+                                }
                             });
+
+                            // Only enabled sections are shown in the reorderable table
+                            enabledItems.sort((a, b) => (Number(a.sectionConfig.OrderIndex) || 0) - (Number(b.sectionConfig.OrderIndex) || 0));
+
+                            enabledItems.forEach(({ sectionType, sectionConfig }) => addSectionSetting(sectionConfig, sectionType));
+
                             // Translate dynamically added section rows in case
                             // translatePage() finished before sections were rendered
                             applyTranslations(document.querySelector('#sectionWrapper'));
+
+                            refreshAddSectionDropdown();
+                            refreshTieGroups();
+                            enableSectionDragReordering();
                         }).finally(() => Dashboard.hideLoadingMsg());
                     });
             }
 
             document.querySelector('#homeScreenSectionsConfigurationPage').addEventListener("pageshow", function () {
+                injectConfigStylesheet();
                 setupTabs();
                 loadLibraries();
                 loadConfig();
                 translatePage();
                 document.querySelector('#btnSaveConfigGlobal').addEventListener("click", saveConfig);
                 document.querySelector('#btnSaveConfigSections').addEventListener("click", saveConfig);
+                document.querySelector('#btnAddSection').addEventListener("click", addSectionFromDropdown);
 
                 // Cache bust functionality
                 const btnBustHomeSectionsCache = document.querySelector('#btnBustHomeSectionsCache');

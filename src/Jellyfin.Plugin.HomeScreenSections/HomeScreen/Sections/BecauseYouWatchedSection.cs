@@ -24,6 +24,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public string? DisplayText { get; set; } = "Because You Watched";
 
+		public string? AdminDescription => "Similar items to something the user recently watched (e.g. \"Because You Watched Inception\"). Each user sees a different source item, picked freshly each load.";
+
 		public int? Limit => 5;
 
 		public string? Route => "originalpayload";

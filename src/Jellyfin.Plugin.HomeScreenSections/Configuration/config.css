@@ -1,0 +1,279 @@
+/* Styles for the Home Screen Sections admin config page. */
+
+.hssSectionsTab {
+    width: min(1700px, 95vw) !important;
+    max-width: fit-content;
+    box-sizing: border-box;
+}
+
+.hssTableScroll {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+@media (max-width: 700px) {
+    .hssSectionsTab {
+        width: 100%;
+    }
+}
+
+.hssDragHandleCell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 4px;
+    width: 32px;
+}
+
+.hssDragHandle {
+    cursor: grab;
+    color: #999;
+    font-size: 1.3em;
+    user-select: none;
+    touch-action: none;
+}
+
+.hssDragHandle:active {
+    cursor: grabbing;
+}
+
+tr[data-id="section-config"].hssDragging {
+    opacity: 0.4;
+}
+
+tr[data-id="section-config"].hssDragOver,
+.hssGroupHandleRow.hssDragOver {
+    box-shadow: inset 0 2px 0 0 var(--primary-accent-color, #00a4dc);
+}
+
+/* Each individual section gets its own boxed border */
+tr[data-id="section-config"] > td,
+.hssPluginOptionsWrapperRow > td {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+tr[data-id="section-config"] > td:first-child,
+.hssPluginOptionsWrapperRow > td:first-child {
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+tr[data-id="section-config"] > td:last-child,
+.hssPluginOptionsWrapperRow > td:last-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Rows sharing the same Order number are bunched into one visual group */
+.hssGroupHandleRow {
+    cursor: grab;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.hssGroupHandleRow:active {
+    cursor: grabbing;
+}
+
+.hssGroupHandleRow > td {
+    padding: 3px 12px 3px 44px;
+    border-top: 2px dashed var(--primary-accent-color, #00a4dc) !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+.hssGroupHandleRow > td:first-child {
+    border-left: 2px dashed var(--primary-accent-color, #00a4dc) !important;
+}
+
+.hssGroupHandleRow > td:last-child {
+    border-right: 2px dashed var(--primary-accent-color, #00a4dc) !important;
+}
+
+.hssGroupHandleIcon {
+    font-size: 1em;
+    vertical-align: middle;
+    color: #999;
+}
+
+tr.hssTieGroupRow > td {
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+tr.hssTieGroupRow > td:first-child {
+    border-left: 2px dashed var(--primary-accent-color, #00a4dc) !important;
+}
+
+tr.hssTieGroupRow > td:last-child {
+    border-right: 2px dashed var(--primary-accent-color, #00a4dc) !important;
+}
+
+tr.hssTieGroupRow.hssTieGroupLast > td {
+    border-bottom: 2px dashed var(--primary-accent-color, #00a4dc) !important;
+}
+
+/* Per-section extra options */
+.hssPluginOptionsWrapperRow > td.hssPluginOptionsCell {
+    padding: 6px 12px 14px 44px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.hssPluginOptionsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.hssPluginOptionsTable td {
+    padding: 4px 8px;
+    vertical-align: middle;
+}
+
+.hssPluginOptionsTable td[data-id="label"] {
+    width: 200px;
+    color: #ccc;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.hssPluginOptionControl {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.hssPreviewCell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 12px;
+}
+
+.hssPreviewButton {
+    white-space: nowrap;
+}
+
+/* floating preview popover */
+.hssPreviewPopover {
+    position: absolute;
+    z-index: 1000;
+    background: #241a26;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px;
+    max-width: min(90vw, 900px);
+    max-height: 260px;
+    overflow: auto;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+}
+
+.hssPreviewStrip {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.hssPreviewCard {
+    flex: 0 0 auto;
+}
+
+.hssPreviewCard img {
+    object-fit: cover !important;
+    border-radius: 4px;
+    display: block;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.hssPreviewCard-landscape {
+    width: 150px !important;
+}
+
+.hssPreviewCard-landscape img {
+    width: 150px !important;
+    height: 84px !important;
+}
+
+.hssPreviewCard-portrait {
+    width: 100px !important;
+}
+
+.hssPreviewCard-portrait img {
+    width: 100px !important;
+    height: 150px !important;
+}
+
+.hssPreviewCard-square {
+    width: 120px !important;
+}
+
+.hssPreviewCard-square img {
+    width: 120px !important;
+    height: 120px !important;
+}
+
+.hssPreviewCard-small {
+    width: 120px !important;
+}
+
+.hssPreviewCard-small img {
+    width: 120px !important;
+    height: 68px !important;
+}
+
+.hssPreviewCard .hssPreviewCardTitle {
+    margin-top: 4px;
+    font-size: 0.8em;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hssPreviewMessage {
+    color: #ccc;
+    font-style: italic;
+}
+
+.hssPreviewNote {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    color: #aaa;
+    font-size: 0.8em;
+    font-style: italic;
+    max-width: 500px;
+}
+
+.hssSectionInfoIcon {
+    font-size: 1em;
+    vertical-align: middle;
+    margin-left: 4px;
+    color: #999;
+    cursor: pointer;
+}
+
+.hssSectionInfoIcon:hover,
+.hssSectionInfoIcon:focus {
+    color: var(--primary-accent-color, #00a4dc);
+    outline: none;
+}
+
+.hssInfoPopover {
+    max-width: 320px;
+    max-height: none;
+    color: #ddd;
+    line-height: 1.4;
+}
+
+.hssPreviewLoading {
+    color: #ccc;
+}
+
+.hssFloatingSaveButton {
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    z-index: 900;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    width: auto !important;
+}
