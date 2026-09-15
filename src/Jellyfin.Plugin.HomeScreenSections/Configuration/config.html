@@ -505,6 +505,12 @@
                 { name: 'Readarr', timeframePrefix: 'upcomingBooks', defaultValue: 1, defaultUnit: 'Years' }
             ];
 
+            // Dynamic sections need a concrete genre/studio/person/decade to preview.
+            const knownDynamicSections = ['Genre', 'Studio', 'Decade', 'Starring', 'DirectedBy', 'BecauseYouWatched'];
+
+            // These pick a random subset each call, so the preview may not match what a user sees.
+            const knownRandomizedSections = ['HiddenGems', 'WatchAgain'];
+
             // UI language detected once, used by translatePage() and loadConfig()
             const uiLanguage = document.documentElement.lang || navigator.language || 'en';
 
@@ -1069,19 +1075,13 @@
 
                 popover.innerHTML = '<div class="hssPreviewLoading">' + (pageTranslations['AdminPreviewLoading'] || 'Loading preview...') + '</div>';
 
-                // Dynamic sections need a concrete genre/studio/person/decade to preview.
-                if (!sectionInfo.AdditionalData) {
-                    const knownDynamicSections = ['Genre', 'Studio', 'Decade', 'Starring', 'DirectedBy', 'BecauseYouWatched'];
-                    if (knownDynamicSections.indexOf(sectionInfo.Section) !== -1) {
-                        popover.innerHTML = '<div class="hssPreviewMessage">' +
-                            (pageTranslations['AdminPreviewNeedsInstance'] || "This section needs a specific value (e.g. a genre, studio, or person) to preview - it's populated automatically for each user on the real home screen.") +
-                            '</div>';
-                        return;
-                    }
+                if (!sectionInfo.AdditionalData && knownDynamicSections.indexOf(sectionInfo.Section) !== -1) {
+                    popover.innerHTML = '<div class="hssPreviewMessage">' +
+                        (pageTranslations['AdminPreviewNeedsInstance'] || "This section needs a specific value (e.g. a genre, studio, or person) to preview - it's populated automatically for each user on the real home screen.") +
+                        '</div>';
+                    return;
                 }
 
-                // These pick a random subset each call, so the preview may not match what a user sees.
-                const knownRandomizedSections = ['HiddenGems', 'WatchAgain'];
                 const isRandomized = knownRandomizedSections.indexOf(sectionInfo.Section) !== -1;
 
                 window.ApiClient.ajax({
