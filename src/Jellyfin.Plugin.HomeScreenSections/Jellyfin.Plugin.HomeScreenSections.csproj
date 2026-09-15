@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <JellyfinVersion>12.0.0</JellyfinVersion>
+        <JellyfinVersion>12.1.0</JellyfinVersion>
         <JellyfinNugetVersion Condition="!$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
         <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('12.0.0'))">12.0.0</JellyfinNugetVersion>
@@ -48,9 +48,9 @@
     </ItemGroup>
 
     <!-- 12.0 Specific Code from non 12.0 builds -->
-    <ItemGroup Condition="!$(JellyfinVersion.StartsWith('12.0'))">
-        <None Include="JellyfinVersionSpecific/12.0/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/12.0/*.cs" />
+    <ItemGroup Condition="!$(JellyfinVersion.StartsWith('12.'))">
+        <None Include="JellyfinVersionSpecific/12.x/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/12.x/*.cs" />
     </ItemGroup>
     <!-- Add new section here for any major plugin update -->
     
