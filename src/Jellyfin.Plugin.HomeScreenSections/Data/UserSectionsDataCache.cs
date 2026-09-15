@@ -3,8 +3,107 @@ using Jellyfin.Plugin.HomeScreenSections.Library;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Data
 {
-    public class UserSectionsDataCache
+    public class UserSectionsDataCache : IDisposable
     {
+        private readonly object m_syncLock = new object();
+        private readonly Dictionary<Guid, int> m_activeRequests = new Dictionary<Guid, int>();
+        private readonly Timer m_cleanupTimer;
+
+        public UserSectionsDataCache()
+        {
+            m_cleanupTimer = new Timer(_ => ClearExpired(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
+
+        public Guid BeginUse(Guid userId, Guid? requestedHash)
+        {
+            lock (m_syncLock)
+            {
+                Guid pageHash = requestedHash ?? PageHashExpiry
+                    .Where(x => x.Value > DateTime.UtcNow && PageHashOwnerIds.TryGetValue(x.Key, out Guid ownerId) && ownerId == userId)
+                    .OrderByDescending(x => x.Value)
+                    .Select(x => x.Key)
+                    .FirstOrDefault();
+                if (pageHash == Guid.Empty)
+                {
+                    pageHash = Guid.NewGuid();
+                }
+
+                if (PageHashOwnerIds.TryGetValue(pageHash, out Guid existingOwnerId) && existingOwnerId != userId)
+                {
+                    throw new UnauthorizedAccessException("The page cache belongs to another user.");
+                }
+
+                if (PageHashExpiry.TryGetValue(pageHash, out DateTime expiry) && expiry <= DateTime.UtcNow &&
+                    !m_activeRequests.ContainsKey(pageHash) &&
+                    (!Cache.TryGetValue(pageHash, out UserSectionsData? data) || (data.Completion.IsCompleted && !data.SectionsInProgress.Any())))
+                {
+                    RemovePage(pageHash);
+                }
+
+                PageHashOwnerIds[pageHash] = userId;
+                PageHashExpiry[pageHash] = DateTime.UtcNow.AddHours(1);
+                m_activeRequests.TryGetValue(pageHash, out int activeRequests);
+                m_activeRequests[pageHash] = activeRequests + 1;
+                return pageHash;
+            }
+        }
+
+        public void EndUse(Guid pageHash)
+        {
+            lock (m_syncLock)
+            {
+                if (m_activeRequests.TryGetValue(pageHash, out int activeRequests) && activeRequests > 1)
+                {
+                    m_activeRequests[pageHash] = activeRequests - 1;
+                }
+                else
+                {
+                    m_activeRequests.Remove(pageHash);
+                }
+            }
+        }
+
+        public void Touch(Guid pageHash)
+        {
+            lock (m_syncLock)
+            {
+                if (PageHashOwnerIds.ContainsKey(pageHash))
+                {
+                    PageHashExpiry[pageHash] = DateTime.UtcNow.AddHours(1);
+                }
+            }
+        }
+
+        public void ClearExpired()
+        {
+            lock (m_syncLock)
+            {
+                Guid[] expiredHashes = PageHashExpiry.Where(x => x.Value <= DateTime.UtcNow).Select(x => x.Key).ToArray();
+                foreach (Guid pageHash in expiredHashes)
+                {
+                    if (m_activeRequests.ContainsKey(pageHash) ||
+                        (Cache.TryGetValue(pageHash, out UserSectionsData? data) && (!data.Completion.IsCompleted || data.SectionsInProgress.Any())))
+                    {
+                        continue;
+                    }
+
+                    RemovePage(pageHash);
+                }
+            }
+        }
+
+        private void RemovePage(Guid pageHash)
+        {
+            Cache.TryRemove(pageHash, out _);
+            PageHashOwnerIds.TryRemove(pageHash, out _);
+            PageHashExpiry.TryRemove(pageHash, out _);
+        }
+
+        public void Dispose()
+        {
+            m_cleanupTimer.Dispose();
+        }
+
         // The GUID here represents the page hash
         public ConcurrentDictionary<Guid, UserSectionsData> Cache { get; set; } = new ConcurrentDictionary<Guid, UserSectionsData>();
         
@@ -15,12 +114,29 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
 
     public class UserSectionsData
     {
+        private volatile (IHomeScreenSection Section, int ConfiguredOrder)[]? m_completedSections;
+
+        internal TaskCompletionSource<bool> Initialized { get; } = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Dictionary<int, Task> SectionTasks { get; } = new Dictionary<int, Task>();
+        internal Task Completion { get; set; } = Task.CompletedTask;
+        internal Exception? InitializationError { get; set; }
+
         public DateTime? LastAccessed { get; set; } = null;
         
+        // Set before the snapshot is added to Cache.
+        public int[]? ConfiguredOrderIndices { get; set; }
+
         public required Guid UserId { get; set; }
         
         public required int MaxOrderIndex { get; set; }
         
+        // Published after generation; row instances and their order remain stable for this snapshot.
+        public (IHomeScreenSection Section, int ConfiguredOrder)[]? CompletedSections
+        {
+            get => m_completedSections;
+            set => m_completedSections = value;
+        }
+
         // The int here represents the order index group
         public ConcurrentDictionary<int, IEnumerable<IHomeScreenSection>> OrderedSections { get; set; } = new ConcurrentDictionary<int, IEnumerable<IHomeScreenSection>>();
         

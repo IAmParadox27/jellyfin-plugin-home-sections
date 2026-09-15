@@ -46,7 +46,8 @@ public static class MiscExtensions
             },
             Limit = 1,
             ParentId = collectionFolder?.Id ?? Guid.Empty,
-            Recursive = true
+            Recursive = true,
+            EnableTotalRecordCount = false
         }).Items.Any();
         bool hasMovies = libraryManager.GetItemsResult(new InternalItemsQuery()
         {
@@ -56,7 +57,8 @@ public static class MiscExtensions
             },
             Limit = 1,
             ParentId = collectionFolder?.Id ?? Guid.Empty,
-            Recursive = true
+            Recursive = true,
+            EnableTotalRecordCount = false
         }).Items.Any();
         
         return hasEpisodes && hasMovies;
@@ -99,12 +101,33 @@ public static class MiscExtensions
         return filtered
             .Where(x =>
             {
-                IEnumerable<BaseItem> items = libraryManager.GetItemList(new InternalItemsQuery(user)
+                InternalItemsQuery query = new InternalItemsQuery(user)
                 {
-                    ItemIds = new[] { Guid.Parse(x.ItemId) }
-                });
+                    ItemIds = new[] { Guid.Parse(x.ItemId) },
+                    GroupByPresentationUniqueKey = false
+                };
+                string[] allowedTags = query.IncludeInheritedTags;
+                if (allowedTags.Length > 0)
+                {
+                    query.IncludeInheritedTags = Array.Empty<string>();
+                    query.IncludeItemTypes = new[] { BaseItemKind.CollectionFolder };
+                }
 
+                IEnumerable<BaseItem> items = libraryManager.GetItemList(query);
+                if (allowedTags.Length > 0 && !items.Any(item => item.GetType() == typeof(CollectionFolder)
+                    && item.GetParents().FirstOrDefault() is UserRootFolder or AggregateFolder or UserView))
+                {
+                    // Only native root collections are exempt from the allowed-tag check.
+                    query.IncludeInheritedTags = allowedTags;
+                    query.IncludeItemTypes = Array.Empty<BaseItemKind>();
+                    items = libraryManager.GetItemList(query);
+                }
+
+#if NET10_0_OR_GREATER
+                return items.Any(item => user == null || item.IsVisible(user));
+#else
                 return items.Any();
+#endif
             })
             .ToArray();
     }

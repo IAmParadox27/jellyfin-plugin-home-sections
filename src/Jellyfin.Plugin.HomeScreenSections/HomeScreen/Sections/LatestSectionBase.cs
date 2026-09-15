@@ -1,5 +1,6 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Helpers;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using MediaBrowser.Controller.Dto;
@@ -31,6 +32,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         
         protected abstract CollectionTypeOptions CollectionTypeOptions { get; }
         
+        private static readonly System.Reflection.PropertyInfo? m_presentationUniqueKeys = typeof(InternalItemsQuery).GetProperty("PresentationUniqueKeys");
+
+        private readonly Func<string[], int, IReadOnlyList<(Guid Id, string? Key, DateTime? PremiereDate)>>? m_moviePresentationVersions;
+
         protected readonly IUserViewManager m_userViewManager;
         protected readonly IUserManager m_userManager;
         protected readonly ILibraryManager m_libraryManager;
@@ -49,6 +54,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             m_dtoService = dtoService;
             
             m_serviceProvider = serviceProvider;
+
+            System.Reflection.MethodInfo? movieVersionsMethod = libraryManager.GetType().GetMethod(
+                "GetMoviePresentationVersions", new[] { typeof(string[]), typeof(int) });
+            if (movieVersionsMethod?.ReturnType == typeof(IReadOnlyList<(Guid, string?, DateTime?)>))
+            {
+                m_moviePresentationVersions = movieVersionsMethod.CreateDelegate<Func<string[], int,
+                    IReadOnlyList<(Guid Id, string? Key, DateTime? PremiereDate)>>>(libraryManager);
+            }
         }
 
         public virtual QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -82,70 +95,238 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 .Where(x => x.CollectionType == CollectionTypeOptions || x.IsMixedFolder(m_libraryManager))
                 .FilterToUserPermitted(m_libraryManager, user);
 
-            List<(BaseItem Item, DateTime? PremiereDate)> selectedItems = new List<(BaseItem, DateTime?)>();
-            int dayIncrement = 30;
             DateTime currentDate = DateTime.Now;
-            DateTime stopDate = DateTime.Parse("01/01/1887"); // The first movie ever was 1888 so this should be safe, we never expect to get as far back as this but we need an escape.
-            bool continueSearching = true;
-
-            do
+            BaseItem[] selectedItems = folders.SelectMany(x =>
             {
-                var latestMovies = folders.Select(x =>
-                {
-                    var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                BaseItem item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
-                    if (item is not Folder folder)
+                if (item is not Folder folder)
+                {
+                    folder = m_libraryManager.GetUserRootFolder();
+                }
+
+                InternalItemsQuery query = new InternalItemsQuery(user)
+                {
+                    IncludeItemTypes = new[] { SectionItemKind },
+                    Limit = 16,
+                    OrderBy = new[] { (ItemSortBy.PremiereDate, SortOrder.Descending) },
+                    IsPlayed = isPlayed,
+                    ParentId = Guid.Parse(x.ItemId),
+                    Recursive = true,
+                    MaxPremiereDate = currentDate,
+                    MinPremiereDate = new DateTime(1887, 1, 1),
+                    EnableTotalRecordCount = false
+                };
+
+                if (SectionItemKind == BaseItemKind.Movie && (isPlayed.HasValue
+                    || (user != null && HomeScreenSectionsPlugin.Instance?.ServerConfigurationManager.Configuration.EnableGroupingMoviesIntoCollections != true)))
+                {
+                    query.MinPremiereDate = currentDate.AddMonths(-1);
+#if NET10_0_OR_GREATER
+                    query.GroupByPresentationUniqueKey = true;
+#else
+                    query.GroupByPresentationUniqueKey = false;
+#endif
+                    query.Limit = 17;
+                    IReadOnlyList<BaseItem> recentItems = folder.GetItems(query).Items;
+                    query.MinPremiereDate = new DateTime(1887, 1, 1);
+
+                    // A date window is authoritative only when each selected presentation
+                    // has exactly one physical item of this type, including other folders.
+                    bool verified = query.CollapseBoxSetItems != true && recentItems.Count >= 16
+                        && (recentItems.Count == 16 || recentItems[15].PremiereDate > recentItems[16].PremiereDate);
+                    string[] keys = new string[16];
+                    (Guid Id, string Key, DateTime? PremiereDate)[] selectedVersions = new (Guid, string, DateTime?)[16];
+                    for (int index = 0; verified && index < 16; index++)
                     {
-                        folder = m_libraryManager.GetUserRootFolder();
+                        BaseItem recentItem = recentItems[index];
+#if !NET10_0_OR_GREATER
+                        if (user != null && !recentItem.IsVisible(user))
+                        {
+                            verified = false;
+                            break;
+                        }
+#endif
+                        selectedVersions[index] = (recentItem.Id, recentItem.PresentationUniqueKey, recentItem.PremiereDate);
+                        keys[index] = selectedVersions[index].Key;
+                        if (string.IsNullOrWhiteSpace(keys[index]))
+                        {
+                            verified = false;
+                            break;
+                        }
+
+                        for (int previous = 0; previous < index; previous++)
+                        {
+                            if (keys[previous] == keys[index] || selectedVersions[previous].PremiereDate == selectedVersions[index].PremiereDate)
+                            {
+                                verified = false;
+                                break;
+                            }
+                        }
                     }
 
-                    var items = folder.GetItems(new InternalItemsQuery(user)
+                    Func<string[], int, IReadOnlyList<(Guid Id, string? Key, DateTime? PremiereDate)>>? movieVersions = m_moviePresentationVersions;
+                    if (verified && movieVersions == null)
                     {
-                        IncludeItemTypes = new[]
+                        movieVersions = HomeScreenMovieVersionProjection.Create(m_libraryManager, m_serviceProvider);
+                    }
+
+                    if (verified && movieVersions != null)
+                    {
+                        verified = VerifyMoviePresentationVersions(keys, selectedVersions, movieVersions);
+                    }
+                    else if (verified && m_presentationUniqueKeys?.PropertyType == typeof(string[]) && m_presentationUniqueKeys.CanWrite)
+                    {
+                        InternalItemsQuery versionQuery = new InternalItemsQuery
                         {
-                            SectionItemKind
-                        },
-                        Limit = 16,
-                        OrderBy = new[]
+                            IncludeItemTypes = new[] { SectionItemKind },
+                            GroupByPresentationUniqueKey = false,
+                            Limit = 17,
+                            EnableTotalRecordCount = false,
+                            SkipDeserialization = true,
+                            DtoOptions = new DtoOptions(false) { EnableImages = false, EnableUserData = false },
+#if NET10_0_OR_GREATER
+                            IncludeOwnedItems = true
+#endif
+                        };
+                        m_presentationUniqueKeys.SetValue(versionQuery, keys);
+                        IReadOnlyList<BaseItem> versions = m_libraryManager.GetItemList(versionQuery);
+                        verified = versions.Count == 16;
+                        bool[] matched = new bool[16];
+                        foreach (BaseItem version in versions)
                         {
-                            (ItemSortBy.PremiereDate, SortOrder.Descending)
-                        },
-                        IsPlayed = isPlayed,
-                        ParentId = Guid.Parse(x.ItemId),
-                        Recursive = true,
-                        MaxPremiereDate = currentDate,
-                        MinPremiereDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement)),
-                        EnableTotalRecordCount = true // This might have to go
-                    });
+                            if (!verified)
+                            {
+                                break;
+                            }
 
-                    return (Items: items.Items, items.Items.Count, items.TotalRecordCount);
-                }).ToArray();
-                
-                var itemsToAdd = latestMovies
-                    .SelectMany(x => x.Items)
-                    .Where(x => selectedItems.All(y => y.Item.Id != x.Id))
-                    .Select(x => (Item: x, PremiereDate: x.PremiereDate))
-                    .ToList();
-                
-                selectedItems.AddRange(itemsToAdd);
+                            bool found = false;
+                            for (int index = 0; index < 16; index++)
+                            {
+                                if (!matched[index] && selectedVersions[index].Id == version.Id
+                                    && selectedVersions[index].Key == version.PresentationUniqueKey
+                                    && selectedVersions[index].PremiereDate == version.PremiereDate)
+                                {
+                                    matched[index] = true;
+                                    found = true;
+                                    break;
+                                }
+                            }
 
-                if (selectedItems.Count >= 16)
-                {
-                    continueSearching = false;
+                            verified = found;
+                        }
+                    }
+                    else if (verified)
+                    {
+                        foreach (BaseItem recentItem in recentItems.Take(16))
+                        {
+                            IReadOnlyList<Guid> versionIds = m_libraryManager.GetItemIds(new InternalItemsQuery
+                            {
+                                PresentationUniqueKey = recentItem.PresentationUniqueKey,
+                                GroupByPresentationUniqueKey = false,
+                                Limit = 2,
+#if NET10_0_OR_GREATER
+                                IncludeOwnedItems = true
+#endif
+                            });
+                            if (versionIds.Count != 1 || versionIds[0] != recentItem.Id)
+                            {
+                                verified = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    query.GroupByPresentationUniqueKey = true;
+                    query.Limit = 16;
+                    if (verified && (isPlayed.HasValue
+                        || (user != null && HomeScreenSectionsPlugin.Instance?.ServerConfigurationManager.Configuration.EnableGroupingMoviesIntoCollections != true)))
+                    {
+                        return recentItems.Take(16).ToArray();
+                    }
                 }
-                
-                currentDate = currentDate.Subtract(TimeSpan.FromDays(dayIncrement));
-                
-                if (currentDate < stopDate)
-                {
-                    break;
-                }
-            } while (continueSearching);
 
-            return new QueryResult<BaseItemDto>(Array.ConvertAll(selectedItems.OrderByDescending(x => x.PremiereDate).Select(x => x.Item).ToArray(),
+#if NET10_0_OR_GREATER
+                return folder.GetItems(query).Items;
+#else
+                if (user == null)
+                {
+                    return folder.GetItems(query).Items;
+                }
+
+                List<BaseItem> visibleItems = new List<BaseItem>();
+                HashSet<Guid> seenItems = new HashSet<Guid>();
+                int startIndex = 0;
+                while (visibleItems.Count < 16)
+                {
+                    query.StartIndex = startIndex;
+                    IReadOnlyList<BaseItem> page = folder.GetItems(query).Items;
+                    foreach (BaseItem candidate in page)
+                    {
+                        if (seenItems.Add(candidate.Id) && candidate.IsVisible(user))
+                        {
+                            visibleItems.Add(candidate);
+                            if (visibleItems.Count == 16)
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (page.Count < 16)
+                    {
+                        break;
+                    }
+
+                    startIndex += page.Count;
+                }
+
+                return visibleItems;
+#endif
+            })
+            .DistinctBy(x => x.Id)
+            .OrderByDescending(x => x.PremiereDate)
+            .Take(16)
+            .ToArray();
+
+            return new QueryResult<BaseItemDto>(Array.ConvertAll(selectedItems,
                 i => m_dtoService.GetBaseItemDto(i, dtoOptions, user)));
         }
         
+        private bool VerifyMoviePresentationVersions(string[] keys, (Guid Id, string Key, DateTime? PremiereDate)[] selectedVersions,
+            Func<string[], int, IReadOnlyList<(Guid Id, string? Key, DateTime? PremiereDate)>> movieVersions)
+        {
+            IReadOnlyList<(Guid Id, string? Key, DateTime? PremiereDate)> versions = movieVersions(keys, 17);
+            if (versions.Count != 16)
+            {
+                return false;
+            }
+
+            bool[] matched = new bool[16];
+            foreach ((Guid Id, string? Key, DateTime? PremiereDate) version in versions)
+            {
+                bool found = false;
+                for (int index = 0; index < 16; index++)
+                {
+                    if (!matched[index] && selectedVersions[index].Id == version.Id
+                        && selectedVersions[index].Key == version.Key
+                        && selectedVersions[index].PremiereDate == version.PremiereDate)
+                    {
+                        matched[index] = true;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
         {
             User? user = m_userManager.GetUserById(userId ?? Guid.Empty);
