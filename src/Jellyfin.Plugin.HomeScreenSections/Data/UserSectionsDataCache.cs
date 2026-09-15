@@ -35,7 +35,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
 
                 if (PageHashExpiry.TryGetValue(pageHash, out DateTime expiry) && expiry <= DateTime.UtcNow &&
                     !m_activeRequests.ContainsKey(pageHash) &&
-                    (!Cache.TryGetValue(pageHash, out UserSectionsData? data) || !data.SectionsInProgress.Any()))
+                    (!Cache.TryGetValue(pageHash, out UserSectionsData? data) || (data.Completion.IsCompleted && !data.SectionsInProgress.Any())))
                 {
                     RemovePage(pageHash);
                 }
@@ -82,7 +82,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
                 foreach (Guid pageHash in expiredHashes)
                 {
                     if (m_activeRequests.ContainsKey(pageHash) ||
-                        (Cache.TryGetValue(pageHash, out UserSectionsData? data) && data.SectionsInProgress.Any()))
+                        (Cache.TryGetValue(pageHash, out UserSectionsData? data) && (!data.Completion.IsCompleted || data.SectionsInProgress.Any())))
                     {
                         continue;
                     }
@@ -115,6 +115,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
     public class UserSectionsData
     {
         private volatile (IHomeScreenSection Section, int ConfiguredOrder)[]? m_completedSections;
+
+        internal TaskCompletionSource<bool> Initialized { get; } = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Dictionary<int, Task> SectionTasks { get; } = new Dictionary<int, Task>();
+        internal Task Completion { get; set; } = Task.CompletedTask;
+        internal Exception? InitializationError { get; set; }
 
         public DateTime? LastAccessed { get; set; } = null;
         
