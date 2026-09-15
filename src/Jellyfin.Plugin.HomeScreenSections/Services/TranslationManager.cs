@@ -99,7 +99,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 m_logger.LogWarning($"No translation found for key '{key}' in language '{languageKey}', falling back to previous routes");
                 // If Libre is disabled this will be null
-                string? libreTranslateVersion = LibreTranslateHelper.TranslateAsync(fallbackText, "en", desiredLanguage).GetAwaiter().GetResult();
+                string? libreTranslateVersion = string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.LibreTranslateUrl)
+                    ? null : LibreTranslateHelper.TranslateAsync(fallbackText, "en", desiredLanguage).GetAwaiter().GetResult();
                 
                 translatedText = libreTranslateVersion ?? m_translationPacks["en"].Value<string>(key) ?? fallbackText;
             }

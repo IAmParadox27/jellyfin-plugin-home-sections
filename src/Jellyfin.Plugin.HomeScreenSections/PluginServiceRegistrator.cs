@@ -8,6 +8,8 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
 
 namespace Jellyfin.Plugin.HomeScreenSections
 {
@@ -15,6 +17,16 @@ namespace Jellyfin.Plugin.HomeScreenSections
     {
         public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
         {
+            serviceCollection.PostConfigure<MvcOptions>(options =>
+            {
+                for (int index = options.OutputFormatters.Count - 1; index >= 0; index--)
+                {
+                    if (options.OutputFormatters[index] is SystemTextJsonOutputFormatter formatter)
+                    {
+                        options.OutputFormatters.Insert(index, new HomeScreenJsonOutputFormatter(formatter));
+                    }
+                }
+            });
             serviceCollection.AddSingleton<CollectionManagerProxy>();
             serviceCollection.AddSingleton<HomeScreenSectionService>();
             serviceCollection.AddHttpClient();

@@ -38,17 +38,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public async Task<string?> GetOrCacheImage(string sourceUrl, int cacheTimeoutSeconds, CancellationToken cancellationToken)
         {
+            return await GetOrCacheImageCore(sourceUrl, cacheTimeoutSeconds, cancellationToken);
+        }
+
+        internal ValueTask<string?> GetOrCacheImageCore(string sourceUrl, int cacheTimeoutSeconds, CancellationToken cancellationToken)
+        {
             cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(sourceUrl))
             {
-                return null;
+                return new ValueTask<string?>((string?)null);
             }
             string cacheKey = GenerateCacheKey(sourceUrl);
 
             if (IsValidCacheKey(cacheKey))
             {
                 m_logger.LogDebug("Using cached image for {CacheKey}", cacheKey);
-                return cacheKey;
+                return new ValueTask<string?>(cacheKey);
             }
 
             if (m_imageCache.ContainsKey(cacheKey))
@@ -59,7 +64,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             {
                 EvictOldEntries();
             }
-            return await DownloadAndCacheImage(sourceUrl, cacheKey, cacheTimeoutSeconds, cancellationToken);
+            return new ValueTask<string?>(DownloadAndCacheImage(sourceUrl, cacheKey, cacheTimeoutSeconds, cancellationToken));
         }
 
         private bool IsValidCacheKey(string cacheKey)

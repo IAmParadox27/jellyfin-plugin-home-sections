@@ -62,7 +62,63 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             deadline.CancelAfter(SeerrApiService.RequestTimeout);
             try
             {
-                return await GetDiscoverResultsAsync(user.Username, deadline.Token);
+                CancellationToken requestToken = deadline.Token;
+                string username = user.Username;
+                int? jellyseerrUserId = SeerrApiService.GetUserId(await m_seerrApiService.GetUserAsync(username, requestToken), username);
+                if (jellyseerrUserId == null)
+                {
+                    return new QueryResult<BaseItemDto>();
+                }
+
+                string? jellyseerrExternalUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl;
+                string jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl)
+                    ? jellyseerrExternalUrl : HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl!;
+                string[] preferredLanguages = (HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages ?? string.Empty)
+                    .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                List<BaseItemDto> returnItems = new List<BaseItemDto>();
+                HashSet<string> seenItems = new HashSet<string>();
+
+                for (int page = 1; page <= c_maxPages && returnItems.Count < c_resultLimit; page++)
+                {
+                    requestToken.ThrowIfCancellationRequested();
+                    JObject response = (await m_seerrApiService.GetAsync($"{JellyseerEndpoint}?page={page}", jellyseerrUserId, requestToken)).Response;
+                    JArray results = SeerrApiService.GetResults(response);
+                    if (results.Count == 0)
+                    {
+                        break;
+                    }
+
+                    bool madeProgress = false;
+                    for (int itemIndex = 0; itemIndex < results.Count; itemIndex++)
+                    {
+                        JObject item = (JObject)results[itemIndex];
+                        requestToken.ThrowIfCancellationRequested();
+                        if (!TryGetEligibleItem(item, preferredLanguages, seenItems, ref madeProgress, out int itemId, out string mediaType))
+                        {
+                            continue;
+                        }
+
+                        string posterPath = GetString(item, "posterPath") ?? "404";
+                        string cachedImageUrl = await ImageCacheHelper.GetCachedImageUrlAsync(m_imageCacheService, $"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}", requestToken);
+                        returnItems.Add(CreateItem(item, mediaType, itemId, jellyseerrDisplayUrl, cachedImageUrl));
+                        if (returnItems.Count == c_resultLimit)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (!madeProgress || (int.TryParse(response["totalPages"]?.ToString(), out int totalPages) && page >= totalPages))
+                    {
+                        break;
+                    }
+                }
+
+                return new QueryResult<BaseItemDto>()
+                {
+                    Items = returnItems,
+                    StartIndex = 0,
+                    TotalRecordCount = returnItems.Count
+                };
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -70,100 +126,59 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             }
         }
 
-        private async Task<QueryResult<BaseItemDto>> GetDiscoverResultsAsync(string username, CancellationToken cancellationToken)
+        private bool TryGetEligibleItem(JObject item, string[] preferredLanguages, HashSet<string> seenItems, ref bool madeProgress, out int itemId, out string mediaType)
         {
-            int? jellyseerrUserId = await m_seerrApiService.GetUserIdAsync(username, cancellationToken);
-            if (jellyseerrUserId == null)
+            itemId = 0;
+            mediaType = string.Empty;
+            if (item["id"]?.Type != JTokenType.Integer || !int.TryParse(item["id"]?.ToString(), out itemId) || itemId <= 0)
             {
-                return new QueryResult<BaseItemDto>();
+                return false;
             }
 
-            string? jellyseerrExternalUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl;
-            string jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl)
-                ? jellyseerrExternalUrl : HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl!;
-            string[] preferredLanguages = (HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages ?? string.Empty)
-                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            List<BaseItemDto> returnItems = new List<BaseItemDto>();
-            HashSet<string> seenItems = new HashSet<string>();
-
-            for (int page = 1; page <= c_maxPages && returnItems.Count < c_resultLimit; page++)
+            mediaType = GetString(item, "mediaType") ?? DefaultMediaType ?? string.Empty;
+            if (mediaType != "movie" && mediaType != "tv")
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                JObject response = await m_seerrApiService.GetAsync($"{JellyseerEndpoint}?page={page}", jellyseerrUserId, cancellationToken);
-                JArray results = SeerrApiService.GetResults(response);
-                if (results.Count == 0)
-                {
-                    break;
-                }
-
-                bool madeProgress = false;
-                foreach (JObject item in results.OfType<JObject>())
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (item["id"]?.Type != JTokenType.Integer || !int.TryParse(item["id"]?.ToString(), out int itemId) || itemId <= 0)
-                    {
-                        continue;
-                    }
-
-                    string? mediaType = GetString(item, "mediaType") ?? DefaultMediaType;
-                    if (mediaType != "movie" && mediaType != "tv")
-                    {
-                        continue;
-                    }
-
-                    if (!seenItems.Add($"{mediaType}:{itemId}"))
-                    {
-                        continue;
-                    }
-
-                    // Progress means new remote IDs, not eligible cards: a filtered page can precede an eligible one.
-                    madeProgress = true;
-                    if ((item["adult"] != null && item["adult"]!.Type != JTokenType.Null &&
-                        (item["adult"]!.Type != JTokenType.Boolean || item.Value<bool>("adult"))) ||
-                        (item["mediaInfo"] != null && item["mediaInfo"]!.Type != JTokenType.Null) ||
-                        (preferredLanguages.Length > 0 && !preferredLanguages.Contains(GetString(item, "originalLanguage"))))
-                    {
-                        continue;
-                    }
-
-                    string? dateText = GetString(item, "firstAirDate") ?? GetString(item, "releaseDate");
-                    DateTime premiereDate = DateTime.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsedDate)
-                        ? parsedDate : new DateTime(1970, 1, 1);
-                    string posterPath = GetString(item, "posterPath") ?? "404";
-                    string cachedImageUrl = await ImageCacheHelper.GetCachedImageUrlAsync(m_imageCacheService, $"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}", cancellationToken);
-                    float rating = float.TryParse((item["vote_average"] ?? item["voteAverage"])?.ToString(), NumberStyles.Float,
-                        CultureInfo.InvariantCulture, out float parsedRating) && float.IsFinite(parsedRating) ? parsedRating : 0f;
-                    returnItems.Add(new BaseItemDto()
-                    {
-                        Name = GetString(item, "title") ?? GetString(item, "name"),
-                        OriginalTitle = GetString(item, "originalTitle") ?? GetString(item, "originalName"),
-                        SourceType = mediaType,
-                        CommunityRating = rating > 0 ? rating : null,
-                        ProviderIds = new Dictionary<string, string>()
-                        {
-                            { "JellyseerrRoot", jellyseerrDisplayUrl },
-                            { "Jellyseerr", itemId.ToString(CultureInfo.InvariantCulture) },
-                            { "JellyseerrPoster", cachedImageUrl }
-                        },
-                        PremiereDate = premiereDate
-                    });
-                    if (returnItems.Count == c_resultLimit)
-                    {
-                        break;
-                    }
-                }
-
-                if (!madeProgress || (int.TryParse(response["totalPages"]?.ToString(), out int totalPages) && page >= totalPages))
-                {
-                    break;
-                }
+                return false;
             }
 
-            return new QueryResult<BaseItemDto>()
+            if (!seenItems.Add($"{mediaType}:{itemId}"))
             {
-                Items = returnItems,
-                StartIndex = 0,
-                TotalRecordCount = returnItems.Count
+                return false;
+            }
+
+            // Progress means new remote IDs, not eligible cards: a filtered page can precede an eligible one.
+            madeProgress = true;
+            if ((item["adult"] != null && item["adult"]!.Type != JTokenType.Null &&
+                (item["adult"]!.Type != JTokenType.Boolean || item.Value<bool>("adult"))) ||
+                (item["mediaInfo"] != null && item["mediaInfo"]!.Type != JTokenType.Null) ||
+                (preferredLanguages.Length > 0 && !preferredLanguages.Contains(GetString(item, "originalLanguage"))))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static BaseItemDto CreateItem(JObject item, string mediaType, int itemId, string jellyseerrDisplayUrl, string cachedImageUrl)
+        {
+            string? dateText = GetString(item, "firstAirDate") ?? GetString(item, "releaseDate");
+            DateTime premiereDate = DateTime.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsedDate)
+                ? parsedDate : new DateTime(1970, 1, 1);
+            float rating = float.TryParse((item["vote_average"] ?? item["voteAverage"])?.ToString(), NumberStyles.Float,
+                CultureInfo.InvariantCulture, out float parsedRating) && float.IsFinite(parsedRating) ? parsedRating : 0f;
+            return new BaseItemDto()
+            {
+                Name = GetString(item, "title") ?? GetString(item, "name"),
+                OriginalTitle = GetString(item, "originalTitle") ?? GetString(item, "originalName"),
+                SourceType = mediaType,
+                CommunityRating = rating > 0 ? rating : null,
+                ProviderIds = new Dictionary<string, string>()
+                {
+                    { "JellyseerrRoot", jellyseerrDisplayUrl },
+                    { "Jellyseerr", itemId.ToString(CultureInfo.InvariantCulture) },
+                    { "JellyseerrPoster", cachedImageUrl }
+                },
+                PremiereDate = premiereDate
             };
         }
 

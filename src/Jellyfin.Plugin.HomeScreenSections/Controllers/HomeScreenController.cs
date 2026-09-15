@@ -350,18 +350,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             deadline.CancelAfter(SeerrApiService.RequestTimeout);
             try
             {
-                int? jellyseerrUserId = await m_seerrApiService.GetUserIdAsync(user.Username, deadline.Token);
+                string username = user.Username;
+                int? jellyseerrUserId = SeerrApiService.GetUserId(await m_seerrApiService.GetUserAsync(username, deadline.Token), username);
                 if (jellyseerrUserId == null)
                 {
                     return BadRequest(new { message = "The Jellyfin user was not found in Seerr." });
                 }
 
-                (System.Net.HttpStatusCode statusCode, JObject response) = await m_seerrApiService.RequestAsync(payload, jellyseerrUserId.Value, deadline.Token);
+                SeerrResponse response = await m_seerrApiService.RequestAsync(payload, jellyseerrUserId.Value, deadline.Token);
                 return new ContentResult()
                 {
-                    StatusCode = (int)statusCode,
+                    StatusCode = (int)response.StatusCode,
                     ContentType = "application/json",
-                    Content = response.ToString(Formatting.None)
+                    Content = response.Response.ToString(Formatting.None)
                 };
             }
             catch (SeerrRequestException exception)

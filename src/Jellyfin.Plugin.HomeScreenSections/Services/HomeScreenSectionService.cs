@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Data;
@@ -48,6 +49,17 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             userSectionsData.LastAccessed = DateTime.UtcNow;
             m_dataCache.PageHashExpiry.TryUpdate(pageHash, DateTime.UtcNow.AddHours(1), m_dataCache.PageHashExpiry[pageHash]); // TODO: In a future update we should make this configurable.
             
+            // Read progress before the rows: a group publishes its rows before removing its progress marker.
+            // A stale marker can delay a response, but a completed group cannot make an older partial snapshot look complete.
+            int? firstOrderInProgress = null;
+            foreach (KeyValuePair<int, bool> entry in userSectionsData.SectionsInProgress)
+            {
+                if (!firstOrderInProgress.HasValue || entry.Key < firstOrderInProgress.Value)
+                {
+                    firstOrderInProgress = entry.Key;
+                }
+            }
+
             // Check if the userSectionsData has the data we're after
             int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
 
@@ -56,6 +68,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             for (int i = 0; i < orderedKeys.Length; i++)
             {
                 int key = orderedKeys[i];
+                if (firstOrderInProgress.HasValue && firstOrderInProgress.Value <= key)
+                {
+                    isComplete = false;
+                    break;
+                }
+
                 long prevKey = i > 0 ? orderedKeys[i - 1] : (long)orderedKeys[i] - 1;
 
                 bool cohesive = (key - prevKey) == 1;
@@ -83,7 +101,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             sectionsToReturn = offset > int.MaxValue
                 ? new List<(IHomeScreenSection, int)>()
                 : sectionsToReturn.Skip((int)offset).Take(pageSize).ToList();
-            if ((isComplete && !userSectionsData.SectionsInProgress.Any()) || sectionsToReturn.Count == pageSize)
+            if ((isComplete && !firstOrderInProgress.HasValue) || sectionsToReturn.Count == pageSize)
             {
                 return sectionsToReturn
                     .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
@@ -116,7 +134,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            await ClearExpiredUserCaches(userId);
+            ClearExpiredUserCaches(userId);
             if (pageHash.HasValue && !DoesPageBelongToUser(pageHash.Value, userId))
             {
                 pageHash = GeneratePageHash(userId);
@@ -128,17 +146,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             deadline.CancelAfter(c_generationTimeout);
             try
             {
-                await cache.Initialized.Task.WaitAsync(deadline.Token);
-                ThrowIfInitializationFailed(cache);
-
-                foreach (Task sectionTask in cache.SectionTasks.OrderBy(x => x.Key).Select(x => x.Value))
+                if (!pageSize.HasValue)
                 {
-                    await sectionTask.WaitAsync(deadline.Token);
-                    List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page,
-                        pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value);
-                    if (sections != null && pageSize.HasValue)
+                    await cache.Completion.WaitAsync(deadline.Token);
+                    ThrowIfInitializationFailed(cache);
+                }
+                else
+                {
+                    await cache.Initialized.Task.WaitAsync(deadline.Token);
+                    ThrowIfInitializationFailed(cache);
+
+                    foreach (Task sectionTask in cache.SectionTasks.OrderBy(x => x.Key).Select(x => x.Value))
                     {
-                        return sections;
+                        await sectionTask.WaitAsync(deadline.Token);
+                        List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page,
+                            pageSize.Value, pageHash.Value);
+                        if (sections != null)
+                        {
+                            return sections;
+                        }
                     }
                 }
 
@@ -183,41 +209,25 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
                 UserSectionsData cache = new UserSectionsData() { UserId = userId, MaxOrderIndex = 0 };
                 m_dataCache.Cache[pageHash] = cache;
-                cache.Completion = Task.Run(() => BuildSectionsForUserAsync(userId, cache));
+                cache.Completion = BuildSectionsForUserAsync(userId, cache);
                 return cache;
             }
         }
 
         private async Task BuildSectionsForUserAsync(Guid userId, UserSectionsData cache)
         {
+            long startedTimestamp = Stopwatch.GetTimestamp();
             using CancellationTokenSource deadline = new CancellationTokenSource(c_generationTimeout);
+            CancellationToken cancellationToken = deadline.Token;
             try
             {
-                // Third-party factories keep their synchronous contract. Waiting is bounded even if one ignores cancellation.
-                (List<IHomeScreenSection> sectionTypes, IGrouping<int, SectionSettings>[] groupedSections) =
-                    await Task.Run(() => GetSectionConfiguration(userId)).WaitAsync(deadline.Token);
-                cache.MaxOrderIndex = groupedSections.Select(x => x.Key).DefaultIfEmpty(0).Max();
-                foreach (IGrouping<int, SectionSettings> group in groupedSections)
-                {
-                    cache.SectionsInProgress.TryAdd(group.Key, true);
-                }
-
-                int[] sectionIndices = cache.SectionsInProgress.Keys.OrderBy(x => x).ToArray();
-                for (int i = 1; i < sectionIndices.Length; i++)
-                {
-                    if ((long)sectionIndices[i] - sectionIndices[i - 1] > 1)
-                    {
-                        cache.OrderIndicesWithoutSections.Add(new IntRange() { Start = sectionIndices[i - 1] + 1, End = sectionIndices[i] - 1 });
-                    }
-                }
-
-                foreach (IGrouping<int, SectionSettings> group in groupedSections)
-                {
-                    cache.SectionTasks.Add(group.Key, BuildSectionGroupAsync(userId, cache, sectionTypes, group, deadline.Token));
-                }
-
-                cache.Initialized.TrySetResult(true);
-                await Task.WhenAll(cache.SectionTasks.Values);
+                // Configuration and third-party factories keep their synchronous contract off the request thread.
+                await Task.Run(() => BuildSectionsForUser(userId, cache, cancellationToken, startedTimestamp)).WaitAsync(cancellationToken);
+            }
+            catch (AggregateException exception) when (exception.Flatten().InnerExceptions.Any(x => x is TimeoutException))
+            {
+                cache.InitializationError = new TimeoutException("Section generation timed out.", exception);
+                m_logger.LogError(exception, "Section generation timed out for user {UserId}.", userId);
             }
             catch (Exception exception)
             {
@@ -231,39 +241,79 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        private (List<IHomeScreenSection> SectionTypes, IGrouping<int, SectionSettings>[] Groups) GetSectionConfiguration(Guid userId)
+        private void BuildSectionsForUser(Guid userId, UserSectionsData cache, CancellationToken cancellationToken, long startedTimestamp)
         {
+            ThrowIfGenerationTimedOut(startedTimestamp);
             ModularHomeUserSettings? settings = m_homeScreenManager.GetUserSettings(userId);
             List<IHomeScreenSection> sectionTypes = m_homeScreenManager.GetSectionTypes()
                 .Where(x => settings?.EnabledSections.Contains(x.Section ?? string.Empty) ?? false).ToList();
             IGrouping<int, SectionSettings>[] groupedSections = HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings
                 .OrderBy(x => x.OrderIndex).GroupBy(x => x.OrderIndex).ToArray();
-            return (sectionTypes, groupedSections);
+            cancellationToken.ThrowIfCancellationRequested();
+            cache.MaxOrderIndex = groupedSections.Select(x => x.Key).DefaultIfEmpty(0).Max();
+            Dictionary<int, TaskCompletionSource<bool>> completions = new Dictionary<int, TaskCompletionSource<bool>>();
+            foreach (IGrouping<int, SectionSettings> group in groupedSections)
+            {
+                TaskCompletionSource<bool> completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                completions.Add(group.Key, completion);
+                cache.SectionTasks.Add(group.Key, completion.Task);
+                cache.SectionsInProgress.TryAdd(group.Key, true);
+            }
+
+            for (int i = 1; i < groupedSections.Length; i++)
+            {
+                int previous = groupedSections[i - 1].Key;
+                int current = groupedSections[i].Key;
+                if ((long)current - previous > 1)
+                {
+                    cache.OrderIndicesWithoutSections.Add(new IntRange() { Start = previous + 1, End = current - 1 });
+                }
+            }
+
+            ThrowIfGenerationTimedOut(startedTimestamp);
+            cache.Initialized.TrySetResult(true);
+            Parallel.ForEach(groupedSections, new ParallelOptions() { CancellationToken = cancellationToken }, group =>
+            {
+                try
+                {
+                    ThrowIfGenerationTimedOut(startedTimestamp);
+                    List<IHomeScreenSection> sections = CreateSectionGroup(userId, sectionTypes, group, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    ThrowIfGenerationTimedOut(startedTimestamp);
+                    cache.OrderedSections.TryAdd(group.Key, sections);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    completions[group.Key].TrySetCanceled(cancellationToken);
+                    throw;
+                }
+                catch (TimeoutException exception)
+                {
+                    completions[group.Key].TrySetException(exception);
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    m_logger.LogError(exception, "Section group {OrderIndex} failed for user {UserId}.", group.Key, userId);
+                    ThrowIfGenerationTimedOut(startedTimestamp, completions[group.Key]);
+                    cache.OrderedSections.TryAdd(group.Key, Array.Empty<IHomeScreenSection>());
+                }
+                finally
+                {
+                    cache.SectionsInProgress.TryRemove(group.Key, out _);
+                    completions[group.Key].TrySetResult(true);
+                }
+            });
         }
 
-        private async Task BuildSectionGroupAsync(Guid userId, UserSectionsData cache, List<IHomeScreenSection> sectionTypes,
-            IGrouping<int, SectionSettings> group, CancellationToken cancellationToken)
+        private static void ThrowIfGenerationTimedOut(long startedTimestamp, TaskCompletionSource<bool>? completion = null)
         {
-            try
+            // A queued timer callback can be late when the thread pool is busy.
+            if (Stopwatch.GetElapsedTime(startedTimestamp) >= c_generationTimeout)
             {
-                List<IHomeScreenSection> sections = await Task.Run(() => CreateSectionGroup(userId, sectionTypes, group, cancellationToken))
-                    .WaitAsync(cancellationToken);
-                cache.OrderedSections.TryAdd(group.Key, sections);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                m_logger.LogWarning("Section group {OrderIndex} timed out for user {UserId}.", group.Key, userId);
-                cache.OrderedSections.TryAdd(group.Key, Array.Empty<IHomeScreenSection>());
-                throw new TimeoutException("Section generation timed out.");
-            }
-            catch (Exception exception)
-            {
-                m_logger.LogError(exception, "Section group {OrderIndex} failed for user {UserId}.", group.Key, userId);
-                cache.OrderedSections.TryAdd(group.Key, Array.Empty<IHomeScreenSection>());
-            }
-            finally
-            {
-                cache.SectionsInProgress.TryRemove(group.Key, out _);
+                TimeoutException exception = new TimeoutException("Section generation timed out.");
+                completion?.TrySetException(exception);
+                throw exception;
             }
         }
 
@@ -331,10 +381,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             return info;
         }
 
-        private async Task ClearExpiredUserCaches(Guid userId)
+        private void ClearExpiredUserCaches(Guid userId)
         {
-            await Task.Yield();
-            
             Guid[] userPageHashes = m_dataCache.PageHashOwnerIds
                 .Where(x => x.Value == userId)
                 .Select(x => x.Key)
