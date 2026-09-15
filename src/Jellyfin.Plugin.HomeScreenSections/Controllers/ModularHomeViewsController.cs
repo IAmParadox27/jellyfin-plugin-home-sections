@@ -72,11 +72,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 item.ViewMode ??= SectionViewMode.Landscape;
                 item.AdminDescription ??= section.AdminDescription;
 
-                if (!string.IsNullOrWhiteSpace(language) && item.DisplayText != null)
+                if (item.DisplayText != null)
                 {
                     // Fall back to this section's own display text, not a shared literal.
                     item.DisplayText = m_translationManager.Translate(
-                        item.AdminTranslationKey ?? item.Section!, language.Trim(), item.DisplayText, section.TranslationMetadata, preferKey: item.AdminTranslationKey != null);
+                        item.AdminTranslationKey ?? item.Section!, (language ?? "en").Trim(), item.DisplayText, section.TranslationMetadata, preferKey: item.AdminTranslationKey != null);
                 }
 
                 items.Add(item);

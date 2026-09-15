@@ -82,7 +82,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             string translatedText = "";
             string fullTextKey = fallbackText.Replace(" ", "").Replace("-", "");
-            if (!preferKey && key != fullTextKey && translationPack.ContainsKey(fullTextKey))
+            if (preferKey && translationPack.ContainsKey(key))
+            {
+                m_logger.LogTrace($"Found translation for key '{key}' in language '{languageKey}'");
+                translatedText = translationPack.Value<string>(key)!;
+            }
+            else if (key != fullTextKey && translationPack.ContainsKey(fullTextKey))
             {
                 m_logger.LogTrace($"Found translation for key '{fullTextKey}' in language '{languageKey}'");
                 translatedText = translationPack.Value<string>(fullTextKey)!;
