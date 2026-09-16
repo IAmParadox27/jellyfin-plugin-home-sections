@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Model.Plugins;
+﻿using System.Xml.Serialization;
+using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Configuration
 {
@@ -6,6 +7,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
     {
         public bool Enabled { get; set; } = false;
 
+        public bool LazyLoadEnabled { get; set; } = false;
+
+        public int NumSectionsPerPage { get; set; } = 10;
+        
         public bool AllowUserOverride { get; set; } = true;
 
         public string? LibreTranslateUrl { get; set; } = "";
@@ -13,6 +18,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? LibreTranslateApiKey { get; set; } = "";
         
         public string? JellyseerrUrl { get; set; } = "";
+
+        public string? JellyseerrExternalUrl { get; set; } = "";
 
         public string? JellyseerrApiKey { get; set; } = "";
         
@@ -25,6 +32,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? DefaultMusicLibraryId { get; set; } = "";
         
         public string? DefaultBooksLibraryId { get; set; } = "";
+        
+        public string? DefaultMusicVideosLibraryId { get; set; } = "";
 
         public ArrConfig Sonarr { get; set; } = new ArrConfig { UpcomingTimeframeValue = 1, UpcomingTimeframeUnit = TimeframeUnit.Weeks };
 
@@ -37,11 +46,22 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string DateFormat { get; set; } = "YYYY/MM/DD";
 
         public string DateDelimiter { get; set; } = "/";
+
+        public bool FilterUpcomingByLibraryAccess { get; set; } = true;
+
         public bool DeveloperMode { get; set; } = false;
 
         public int CacheBustCounter { get; set; } = 0;
 
         public int CacheTimeoutSeconds { get; set; } = 86400;
+
+        public bool OverrideStreamyfinHome { get; set; } = false;
+
+        public int MaxImageCacheEntries { get; set; } = 10000;
+
+        public int MaxImageWidth { get; set; } = 600;
+
+        public int ImageJpegQuality { get; set; } = 85;
 
         public SectionSettings[] SectionSettings { get; set; } = Array.Empty<SectionSettings>();
     }
@@ -50,7 +70,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
     {
         Portrait,
         Landscape,
-        Square
+        Square,
+        Small
     }
 
     public enum TimeframeUnit
@@ -76,6 +97,52 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public int OrderIndex { get; set; }
         
         public SectionViewMode ViewMode { get; set; } = SectionViewMode.Landscape;
+
+        public bool HideWatchedItems { get; set; } = false;
+        
+        [XmlArray("PluginConfigurations")]
+        [XmlArrayItem("Entry")]
+        public PluginConfigurationEntry[] PluginConfigurations { get; set; } = Array.Empty<PluginConfigurationEntry>();
+        
+        public T? GetAdminConfig<T>(string key, T? defaultValue = default)
+        {
+            PluginConfigurationEntry? entry = PluginConfigurations.FirstOrDefault(x => x.Key == key);
+            if (entry?.Value == null) 
+            {
+                return defaultValue;
+            }
+            
+            try
+            {
+                T? result = entry.Type.ToLower() switch
+                {
+                    "boolean" or "bool" or "checkbox" => (T)(object)bool.Parse(entry.Value),
+                    "integer" or "int32" or "int" => (T)(object)int.Parse(entry.Value),
+                    "double" or "number" or "numberbox" => (T)(object)double.Parse(entry.Value),
+                    "decimal" => (T)(object)decimal.Parse(entry.Value),
+                    "string" => (T)(object)entry.Value,
+                    _ => ConvertValue<T>(entry.Value, defaultValue)
+                };
+                
+                return result;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        private static T? ConvertValue<T>(string value, T? defaultValue)
+        {
+            try
+            {
+                return (T?)Convert.ChangeType(value, typeof(T));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
     }
     
     public class ArrConfig
@@ -84,5 +151,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public string? Url { get; set; } = "";
         public int UpcomingTimeframeValue { get; set; }
         public TimeframeUnit UpcomingTimeframeUnit { get; set; }
+        public bool ConsiderCinemaRelease { get; set; } = false;
+        public bool ConsiderPhysicalRelease { get; set; } = false;
+        public bool ConsiderDigitalRelease { get; set; } = true;
     }   
 }

@@ -39,9 +39,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			LiveTvManager = liveTvManager;
 		}
 
-		public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
 		{
-			return this;
+			yield return this;
 		}
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -82,7 +82,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Route = Route,
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape
+				ViewMode = SectionViewMode.Landscape,
+				PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
 			};
 		}
 	}

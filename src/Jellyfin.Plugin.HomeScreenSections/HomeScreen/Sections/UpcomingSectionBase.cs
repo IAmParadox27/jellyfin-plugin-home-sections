@@ -1,10 +1,12 @@
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -21,15 +23,19 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public object? OriginalPayload { get; set; } = null;
         
         protected IUserManager UserManager { get; }
+        protected ILibraryManager LibraryManager { get; }
         protected IDtoService DtoService { get; }
         protected ArrApiService ArrApiService { get; }
+        protected ImageCacheService ImageCacheService { get; }
         protected ILogger Logger { get; }
 
-        protected UpcomingSectionBase(IUserManager userManager, IDtoService dtoService, ArrApiService arrApiService, ILogger logger)
+        protected UpcomingSectionBase(IUserManager userManager, ILibraryManager libraryManager, IDtoService dtoService, ArrApiService arrApiService, ImageCacheService imageCacheService, ILogger logger)
         {
             UserManager = userManager;
+            LibraryManager = libraryManager;
             DtoService = dtoService;
             ArrApiService = arrApiService;
+            ImageCacheService = imageCacheService;
             Logger = logger;
         }
 
@@ -68,6 +74,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 T[] upcomingItems = [.. FilterAndSortItems(calendarItems).Take(16)];
 
+                if (config.FilterUpcomingByLibraryAccess)
+                {
+                    upcomingItems = FilterByLibraryAccess(upcomingItems, payload.UserId);
+                }
+
                 Logger.LogDebug("Found {Count} upcoming items after filtering", upcomingItems.Length);
 
                 BaseItemDto[] dtoItems = [.. upcomingItems.Select(item => CreateDto(item, config))];
@@ -79,6 +90,53 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 Logger.LogError(ex, "Error fetching {SectionName} from {ServiceName}", GetSectionName(), GetServiceName());
                 return new QueryResult<BaseItemDto>();
             }
+        }
+
+        private T[] FilterByLibraryAccess(T[] items, Guid userId)
+        {
+            User? user = UserManager.GetUserById(userId);
+            if (user == null)
+            {
+                return items;
+            }
+
+            VirtualFolderInfo[] allFolders = [.. LibraryManager.GetVirtualFolders()];
+            if (allFolders.Length == 0)
+            {
+                return items;
+            }
+
+            VirtualFolderInfo[] permittedFolders = allFolders.FilterToUserPermitted(LibraryManager, user);
+
+            string[] allLocations = [.. allFolders.SelectMany(folder => folder.Locations)];
+            string[] permittedLocations = [.. permittedFolders.SelectMany(folder => folder.Locations)];
+
+            return [.. items.Where(item => IsItemAccessible(GetItemPath(item), allLocations, permittedLocations))];
+        }
+
+        private static bool IsItemAccessible(string? itemPath, string[] allLocations, string[] permittedLocations)
+        {
+            if (string.IsNullOrEmpty(itemPath))
+            {
+                return true;
+            }
+
+            string normalizedItemPath = NormalizePath(itemPath);
+
+            // The *arr instance may be using a different mount point/path mapping than Jellyfin,
+            // in which case we can't tell which library the item would belong to, so default to showing it.
+            bool matchesKnownLibrary = allLocations.Any(location => normalizedItemPath.StartsWith(NormalizePath(location), StringComparison.OrdinalIgnoreCase));
+            if (!matchesKnownLibrary)
+            {
+                return true;
+            }
+
+            return permittedLocations.Any(location => normalizedItemPath.StartsWith(NormalizePath(location), StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return path.Replace('\\', '/').TrimEnd('/');
         }
 
         protected string CalculateCountdown(DateTime releaseDate, PluginConfiguration config)
@@ -121,17 +179,23 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         {
             return $"https://placehold.co/250x400/{GetRandomBgColor()}/FFF?text={Uri.EscapeDataString("Unknown Item\nImage Not Found")}";
         }
+        
+        protected string GetCachedImageUrl(string? sourceUrl)
+        {
+            return ImageCacheHelper.GetCachedImageUrl(ImageCacheService, sourceUrl, Logger);
+        }
 
         // Abstract methods that subclasses must implement
         protected abstract (string? url, string? apiKey) GetServiceConfiguration(PluginConfiguration config);
         protected abstract (int value, TimeframeUnit unit) GetTimeframeConfiguration(PluginConfiguration config);
         protected abstract T[] GetCalendarItems(DateTime startDate, DateTime endDate);
         protected abstract IOrderedEnumerable<T> FilterAndSortItems(T[] items);
+        protected abstract string? GetItemPath(T item);
         protected abstract BaseItemDto CreateDto(T item, PluginConfiguration config);
         protected abstract string GetServiceName();
         protected abstract string GetSectionName();
 
-        public abstract IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null);
+        public abstract IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount);
         public abstract HomeScreenSectionInfo GetInfo();
     }
 }

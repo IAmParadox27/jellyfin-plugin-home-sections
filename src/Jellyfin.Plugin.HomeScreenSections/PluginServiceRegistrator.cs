@@ -1,4 +1,5 @@
 using System.Reflection;
+using Jellyfin.Plugin.HomeScreenSections.Data;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
@@ -15,12 +16,20 @@ namespace Jellyfin.Plugin.HomeScreenSections
         public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
         {
             serviceCollection.AddSingleton<CollectionManagerProxy>();
+            serviceCollection.AddSingleton<HomeScreenSectionService>();
             serviceCollection.AddHttpClient();
             serviceCollection.AddSingleton<ArrApiService>(services =>
             {
                 IHttpClientFactory httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
                 return ActivatorUtilities.CreateInstance<ArrApiService>(services, httpClientFactory.CreateClient());
             });
+            serviceCollection.AddSingleton<ImageCacheService>(services =>
+            {
+                IHttpClientFactory httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
+                return ActivatorUtilities.CreateInstance<ImageCacheService>(services, httpClientFactory.CreateClient());
+            });
+            serviceCollection.AddSingleton<UserSectionsDataCache>();
+            serviceCollection.AddSingleton<ITranslationManager, TranslationManager>();
             serviceCollection.AddSingleton<IHomeScreenManager, HomeScreenManager>(services =>
             {
                 IApplicationPaths appPaths = services.GetRequiredService<IApplicationPaths>();
@@ -29,6 +38,9 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 
                 string pluginLocation = Path.Combine(appPaths.PluginConfigurationsPath, typeof(HomeScreenSectionsPlugin).Namespace!);
 
+                DirectoryInfo pluginDir = new DirectoryInfo(pluginLocation);
+                pluginDir.Create();
+                
                 string[] extraDlls = Directory.GetFiles(pluginLocation, "*.dll", SearchOption.AllDirectories).ToArray();
 
                 foreach (string extraDll in extraDlls)

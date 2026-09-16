@@ -1,4 +1,7 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using System.Diagnostics;
+using Jellyfin.Extensions;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
@@ -11,6 +14,7 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
@@ -20,23 +24,28 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 		public string? DisplayText { get; set; } = "Because You Watched";
 
+		public string? AdminDescription => "Similar items to something the user recently watched (e.g. \"Because You Watched Inception\"). Each user sees a different source item, picked freshly each load.";
+
 		public int? Limit => 5;
 
-		public string? Route => null;
+		public string? Route => "originalpayload";
 
 		public string? AdditionalData { get; set; }
 
-		public object? OriginalPayload => null;
+		public object? OriginalPayload { get; set; }
+
+		public TranslationMetadata? TranslationMetadata { get; private set; }
 		
 		private IUserDataManager UserDataManager { get; set; }
 		private IUserManager UserManager { get; set; }
-		private ILibraryManager LibraryManager { get; set; }
+		internal ILibraryManager LibraryManager { get; set; }
 		private IDtoService DtoService { get; set; }
 		private ICollectionManager CollectionManager { get; set; }
 		private CollectionManagerProxy CollectionManagerProxy { get; set; }
+		internal IServiceProvider ServiceProvider { get; set; }
 
 		public BecauseYouWatchedSection(IUserDataManager userDataManager, IUserManager userManager, ILibraryManager libraryManager, 
-			IDtoService dtoService, ICollectionManager collectionManager, CollectionManagerProxy collectionProxy)
+			IDtoService dtoService, ICollectionManager collectionManager, CollectionManagerProxy collectionProxy, IServiceProvider serviceProvider)
 		{
 			UserDataManager = userDataManager;
 			UserManager = userManager;
@@ -44,15 +53,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			DtoService = dtoService;
 			CollectionManager = collectionManager;
 			CollectionManagerProxy = collectionProxy;
+			ServiceProvider = serviceProvider;
 		}
 
-		public IHomeScreenSection CreateInstance(Guid? userId, IEnumerable<IHomeScreenSection>? otherInstances = null)
+		public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
 		{
 			User? user = userId is null || userId.Value.Equals(default)
 				? null
 				: UserManager.GetUserById(userId.Value);
-
-			BecauseYouWatchedSection section = new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy);
 
 			DtoOptions? dtoOptions = new DtoOptions 
 			{ 
@@ -63,58 +71,84 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				}
 			};
 
-			InternalItemsQuery? query = new InternalItemsQuery(user)
+			VirtualFolderInfo[] folders = LibraryManager.GetVirtualFolders()
+				.Where(x => x.CollectionType == CollectionTypeOptions.movies)
+				.FilterToUserPermitted(LibraryManager, user);
+
+			List<BaseItem>? recentlyPlayedMovies = folders.SelectMany(x =>
 			{
-				IncludeItemTypes = new[]
+				var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+
+				if (item is not Folder folder)
 				{
-					BaseItemKind.Movie
-                },
-				OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending), (ItemSortBy.Random, SortOrder.Descending) },
-				Limit = 7,
-				ParentId = Guid.Empty,
-				Recursive = true,
-				IsPlayed = true,
-				DtoOptions = dtoOptions
-			};
+					folder = LibraryManager.GetUserRootFolder();
+				}
 
-			IEnumerable<BaseItem>? recentlyPlayedMovies = LibraryManager.GetItemList(query);
+				return folder.GetItems(new InternalItemsQuery(user)
+				{
+					IncludeItemTypes = new[]
+					{
+						BaseItemKind.Movie
+					},
+					OrderBy = new[] { (ItemSortBy.DatePlayed, SortOrder.Descending), (ItemSortBy.Random, SortOrder.Descending) },
+					Limit = 15,
+					ParentId = Guid.Parse(x.ItemId ?? Guid.Empty.ToString()),
+					Recursive = true,
+					IsPlayed = true,
+					DtoOptions = dtoOptions
+				}).Items;
+			}).ToList();
+			
+			recentlyPlayedMovies.Shuffle();
+			
+			List<BaseItem> pickedMovies = new List<BaseItem>();
 
-			recentlyPlayedMovies = recentlyPlayedMovies.Where(x => !otherInstances?.Select(y => y.AdditionalData).Contains(x.Id.ToString()) ?? true).Where(x =>
+			Queue<BaseItem> queue = new Queue<BaseItem>(recentlyPlayedMovies);
+			while (pickedMovies.Count < instanceCount && queue.Count > 0)
 			{
+				BaseItem elementToConsider = queue.Dequeue();
+				
 				if (user != null)
 				{
-					IEnumerable<BoxSet>? collections = CollectionManagerProxy.GetCollections(user)
-						.Where(y => y.GetChildren(user, true, null).OfType<Movie>().Contains(x as Movie));
+					var collections = CollectionManagerProxy.GetCollections(user)
+						.Select(y => (y, y.GetChildren(user, true, null)))
+						.Where(y => y.Item2
+							.OfType<Movie>().Contains(elementToConsider as Movie));
 
-					foreach (BoxSet? collection in collections)
+					bool isPicked = false;
+					foreach ((BoxSet Item, IEnumerable<BaseItem> Children) collection in collections)
 					{
-						if (collection.GetChildren(user, true, null).OfType<Movie>().Any(y => otherInstances?.Select(z => z.AdditionalData).Contains(y.Id.ToString()) ?? true))
+						if (collection.Children.OfType<Movie>().Any(y => pickedMovies?.Select(z => z.Id).Contains(y.Id) ?? true))
 						{
-							return false;
+							isPicked = true;
+							break;
 						}
+					}
+
+					if (isPicked)
+					{
+						continue;
 					}
 				}
 
-				return true;
-			}).ToList();
-
-			Random rnd = new Random();
-
-			if (recentlyPlayedMovies.Count() == 0)
-			{
-				return null!;
+				pickedMovies.Add(elementToConsider);
+				yield return new BecauseYouWatchedSection(UserDataManager, UserManager, LibraryManager, DtoService, CollectionManager, CollectionManagerProxy, ServiceProvider)
+				{
+					OriginalPayload = DtoService.GetBaseItemDto(elementToConsider, dtoOptions, user),
+					AdditionalData = elementToConsider.Id.ToString(),
+					DisplayText = "Because You Watched " + elementToConsider.Name,
+					TranslationMetadata = new TranslationMetadata()
+					{
+						Type = TranslationType.Pattern,
+						AdditionalContent = elementToConsider.Name
+					}
+				};
 			}
-
-			BaseItem item = recentlyPlayedMovies.ElementAt(rnd.Next(0, recentlyPlayedMovies.Count()));
-
-			section.AdditionalData = item.Id.ToString();
-			section.DisplayText = "Because You Watched " + item.Name;
-
-			return section;
 		}
 
 		public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
 		{
+			Stopwatch sw = Stopwatch.StartNew();
 			User user = UserManager.GetUserById(payload.UserId)!;
 			
 			DtoOptions? dtoOptions = new DtoOptions
@@ -135,21 +169,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
 			BaseItem? item = LibraryManager.GetItemById(Guid.Parse(payload.AdditionalData ?? Guid.Empty.ToString()));
 
-			IReadOnlyList<BaseItem>? similar = LibraryManager.GetItemList(new InternalItemsQuery(UserManager.GetUserById(payload.UserId))
-			{
-				Limit = 8,
-				IncludeItemTypes = new[]
-				{
-					BaseItemKind.Movie
-				},
-				IsMovie = true,
-				User = user,
-				IsPlayed = false, // Maybe make this configuable but this is the preferred default behaviour.
-				EnableGroupByMetadataKey = true,
-				DtoOptions = dtoOptions
-			}.ApplySimilarSettings(item));
-
-			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similar, dtoOptions, user));
+            IReadOnlyList<BaseItem> similarItems = this.GetSimilarItems(item, dtoOptions, user).GetAwaiter().GetResult();
+            
+			return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(similarItems.Take(16).ToArray(), dtoOptions, user));
 		}
 		
 		public HomeScreenSectionInfo GetInfo()
@@ -162,7 +184,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 				Route = Route,
 				Limit = Limit ?? 1,
 				OriginalPayload = OriginalPayload,
-				ViewMode = SectionViewMode.Landscape
+				ViewMode = SectionViewMode.Landscape,
+                AllowHideWatched = true,
+                PluginConfigurationOptions = (this as IHomeScreenSection).GetPluginConfigurationOptions().ToArray()
 			};
 		}
 	}

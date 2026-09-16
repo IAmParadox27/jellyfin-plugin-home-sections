@@ -1,41 +1,57 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <JellyfinVersion>10.11.0-rc8</JellyfinVersion>
-        <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11.0'))">net9.0</TargetFramework>
-        <TargetFramework Condition="'$(JellyfinVersion)' == '10.10.7'">net8.0</TargetFramework>
+        <JellyfinVersion>12.1.0</JellyfinVersion>
+        <JellyfinNugetVersion Condition="!$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
+        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('10.11'))">$(JellyfinVersion)</JellyfinNugetVersion>
+        <JellyfinNugetVersion Condition="$(JellyfinVersion.StartsWith('12.0.0'))">12.0.0</JellyfinNugetVersion>
+        <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.11'))">net9.0</TargetFramework>
+        <TargetFramework Condition="$(JellyfinVersion.StartsWith('12.'))">net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-        <Version>2.3.0.0</Version>
+        <Version>3.0.0.0</Version>
         <RepositoryUrl>https://github.com/IAmParadox27/jellyfin-plugin-home-sections</RepositoryUrl>
         <RepositoryType>GitHub</RepositoryType>
     </PropertyGroup>
-
+    
+    <PropertyGroup>
+        <GitBranch Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git\HEAD'))">$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([System.IO.File]::Exists('$(MsBuildThisFileDirectory)..\..\.git'))">
+        <GitHeadLocation>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\.git').Replace('gitdir: ', '').Trim())</GitHeadLocation>
+        <GitBranch>$([System.IO.File]::ReadAllText('$(MsBuildThisFileDirectory)..\..\$(GitHeadLocation)\HEAD').Replace('ref: refs/heads/', '').Trim())</GitBranch>
+    </PropertyGroup>
+    
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-      <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
-      <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
+      <PackageReference Include="Jellyfin.Model" Version="$(JellyfinNugetVersion)" />
+      <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinNugetVersion)" />
+      <PackageReference Include="Jellyfin.Extensions" Version="$(JellyfinNugetVersion)" />
+<!--      <PackageReference Include="Lib.Harmony" Version="2.4.2" GeneratePathProperty="true" />-->
     </ItemGroup>
     
-    <!-- 10.10.7 Specific Code from non 10.10.7 builds -->
-    <ItemGroup Condition="'$(JellyfinVersion)' != '10.10.7'">
-        <None Include="JellyfinVersionSpecific/10.10.7/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/10.10.7/*.cs" />
-    </ItemGroup>
-    
-    <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
-    <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0-rc8'">
-        <None Include="JellyfinVersionSpecific/10.11.0-rc8/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/10.11.0-rc8/*.cs" />
+    <!-- 10.11.x References -->
+    <ItemGroup Condition="$(JellyfinVersion.StartsWith('10.11'))">
+        <PackageReference Include="SkiaSharp" Version="3.116.1" />
     </ItemGroup>
 
-    <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
-    <ItemGroup Condition="'$(JellyfinVersion)' != '10.11.0'">
-        <None Include="JellyfinVersionSpecific/10.11.0/*.cs" />
-        <Compile Remove="JellyfinVersionSpecific/10.11.0/*.cs" />
+    <!-- 12.x References -->
+    <ItemGroup Condition="$(JellyfinVersion.StartsWith('12.'))">
+        <PackageReference Include="SkiaSharp" Version="3.119.4" />
     </ItemGroup>
     
+    <!-- Remove 10.11.0 Specific Code from non 10.11.0 builds -->
+    <ItemGroup Condition="!$(JellyfinVersion.StartsWith('10.11'))">
+        <None Include="JellyfinVersionSpecific/10.11/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/10.11/*.cs" />
+    </ItemGroup>
+
+    <!-- 12.0 Specific Code from non 12.0 builds -->
+    <ItemGroup Condition="!$(JellyfinVersion.StartsWith('12.'))">
+        <None Include="JellyfinVersionSpecific/12.x/*.cs" />
+        <Compile Remove="JellyfinVersionSpecific/12.x/*.cs" />
+    </ItemGroup>
     <!-- Add new section here for any major plugin update -->
     
     <PropertyGroup>
@@ -47,19 +63,62 @@
       <EmbeddedResource Include="Controllers\loadSections.js" />
       <None Remove="Configuration\config.html" />
       <EmbeddedResource Include="Configuration\config.html" />
+      <None Remove="Configuration\config.css" />
+      <EmbeddedResource Include="Configuration\config.css" />
       <None Remove="Inject\HomeScreenSections.js" />
       <EmbeddedResource Include="Inject\HomeScreenSections.js" />
       <None Remove="Inject\HomeScreenSections.css" />
       <EmbeddedResource Include="Inject\HomeScreenSections.css" />
     </ItemGroup>
-    
+
+    <!-- Translation Files -->
+    <ItemGroup>
+      <None Remove="_Localization\**" />
+      <EmbeddedResource Include="_Localization\**" />
+    </ItemGroup>
+
+<!--    <ItemGroup>-->
+<!--        <EmbeddedResource Condition="$(TargetFramework) == 'net8.0'" Include="$(PkgLib_Harmony)\lib\net8.0\0Harmony.dll" />-->
+<!--        <EmbeddedResource Condition="$(TargetFramework) == 'net9.0'" Include="$(PkgLib_Harmony)\lib\net9.0\0Harmony.dll" />-->
+<!--        <EmbeddedResource Condition="$(TargetFramework) == 'net10.0'" Include="$(PkgLib_Harmony)\lib\net10.0\0Harmony.dll" />-->
+<!--    </ItemGroup>-->
     <ItemGroup>
         <None Include="..\..\README.md" />
         <None Include="..\logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
+
+    <Target Name="GenerateAssemblyMetadata_GitBranch" BeforeTargets="BeforeCompile">
+        <ItemGroup>
+            <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+                <_Parameter1>GitBranch</_Parameter1>
+                <_Parameter2>$(GitBranch)</_Parameter2>
+            </AssemblyAttribute>
+        </ItemGroup>
+        <WriteCodeFragment
+                Language="C#"
+                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.g.cs"
+                AssemblyAttributes="@(AssemblyAttribute)" />
+        <ItemGroup>
+            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.g.cs" />
+        </ItemGroup>
+    </Target>
+    <Target Name="GenerateAssemblyMetadata_JellyfinVersion" BeforeTargets="BeforeCompile">
+        <ItemGroup>
+            <AssemblyAttribute Include="Jellyfin.Plugin.HomeScreenSections.Attributes.JellyfinVersionAttribute">
+                <_Parameter1>$(JellyfinVersion)</_Parameter1>
+            </AssemblyAttribute>
+        </ItemGroup>
+        <WriteCodeFragment
+                Language="C#"
+                OutputFile="$(IntermediateOutputPath)AssemblyMetadata.g.cs"
+                AssemblyAttributes="@(AssemblyAttribute)" />
+        <ItemGroup>
+            <Compile Include="$(IntermediateOutputPath)AssemblyMetadata.g.cs" />
+        </ItemGroup>
+    </Target>
     
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections')">
-        <Exec Condition="'$(JellyfinVersion)' == '10.11.0-rc8'" Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server\plugins\HomeScreenSections&quot; /y" />
-        <Exec Condition="'$(JellyfinVersion)' == '10.10.7'"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_10_7\plugins\HomeScreenSections&quot; /y" />
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections')">
+        <Exec Condition="$(JellyfinVersion.StartsWith('12.0'))"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_12\plugins\HomeScreenSections&quot; /y" />
+        <Exec Condition="$(JellyfinVersion.StartsWith('10.11'))"     Command="xcopy $(OutDir) &quot;C:\ProgramData\Jellyfin\Server_10_11\plugins\HomeScreenSections&quot; /y" />
     </Target>
 </Project>

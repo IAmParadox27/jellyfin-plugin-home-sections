@@ -1,15 +1,48 @@
-﻿async function test(elem, apiClient, user, userSettings) {
-    if (!isHomePage()) {
-        return;
+﻿function test(elem, apiClient, user, userSettings, page = null) {
+    function isHomePage() {
+        var href = (location.href || "");
+        var hash = (location.hash || "");
+
+        var markers = {
+            href: href,
+            hash: hash,
+            indexPageId: document.getElementById("indexPage") !== null,
+            homePageClass: document.querySelector(".homePage") !== null,
+            pageHomePageClass: document.querySelector(".page.homePage") !== null,
+            sectionsDiv: document.querySelector(".sections") !== null,
+            pageRole: document.querySelector('[data-role="page"]') !== null,
+            pageIdHome: document.querySelector('[data-pageid="home"]') !== null,
+            routeHome: document.querySelector('[data-route="home"]') !== null
+        };
+
+        var hrefL = href.toLowerCase();
+        var hashL = hash.toLowerCase();
+
+        // Route-based (more stable across clients)
+        var isHomeRoute =
+            /(^#?!?\/?)(home)(\.html)?([/?&]|$)/.test(hashL) ||
+            hashL.indexOf("home.html") !== -1 ||
+            hrefL.indexOf("/web/index.html#!/home") !== -1;
+
+        // DOM fallback (looser than requiring ALL markers)
+        var isHomeDom =
+            markers.sectionsDiv && (
+                markers.homePageClass ||
+                markers.pageHomePageClass ||
+                markers.indexPageId ||
+                markers.pageIdHome ||
+                markers.routeHome
+            );
+
+        var result = !!(isHomeRoute || isHomeDom);
+        return result;
     }
 
-    function isHomePage() {
-        const hasIndexPageId = document.getElementById('indexPage') !== null;
-        const hasHomePageClass = document.querySelector('.page.homePage') !== null;
-        const hasSectionsDiv = document.querySelector('.sections') !== null;
-        const hasPageRole = document.querySelector('[data-role="page"]') !== null;
-
-        return hasIndexPageId && hasHomePageClass && hasSectionsDiv && hasPageRole;
+    if (!isHomePage()) {
+        if (this && typeof this.originalLoadSections === "function") {
+            return this.originalLoadSections(elem, apiClient, user, userSettings);
+        }
+        return;
     }
 
     function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
@@ -36,13 +69,31 @@
         }
     }
     
-    function getHomeScreenSectionItemsHtmlFn(useEpisodeImages, enableOverflow, sectionKey, cardBuilder, getShapeFn, additionalSettings) {
+    function getHomeScreenSectionItemsHtmlFn(useEpisodeImages, enableOverflow, sectionKey, cardBuilder, getShapeFn, imageHelper, appRouter, additionalSettings) {
         if (sectionKey === "DiscoverMovies" || sectionKey === "DiscoverTV" || sectionKey === "Discover") {
             return createDiscoverCards;
         }
         
         if (sectionKey.startsWith("Upcoming")) {
             return createUpcomingCards;
+        }
+        
+        if (additionalSettings.ViewMode === 'Small' && sectionKey === 'MyMedia') {
+            // Currently Small is only supported by MyMedia so lets handle these items here
+            return function (items) {
+                var html = '';
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var icon = imageHelper.getLibraryIcon(item.CollectionType);
+                    html += '<a is="emby-linkbutton" href="' + appRouter.getRouteUrl(item) + '" class="raised homeLibraryButton"><span class="material-icons homeLibraryIcon ' + icon + '" aria-hidden="true"></span><span class="homeLibraryText">' + item.Name + '</span></a>';
+                }
+                return html;
+            }
+        }
+
+        if (additionalSettings.ViewMode === 'Small') {
+            // Currently Small is only supported by MyMedia so we're going to change this to Landscape to avoid any issues
+            additionalSettings.ViewMode = 'Landscape';
         }
         
         return function(items) {
@@ -72,12 +123,19 @@
         
         var index = 0;
         items.forEach(function (item) {
-            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" aria-haspopup="true">';
+            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '" aria-haspopup="true"' + '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
             html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
             html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
-            html += '           <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(' + "'https://image.tmdb.org/t/p/w600_and_h900_bestv2" + item.ProviderIds.JellyseerrPoster + "'" +');color: inherit; text-decoration: none;"></a>';
+            
+            var posterUrl = item.ProviderIds.JellyseerrPoster;
+
+            if (!posterUrl.startsWith('http')) {
+                posterUrl = window.ApiClient.getUrl(posterUrl);
+            }
+            
+            html += '           <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(\'' + posterUrl + '\');color: inherit; text-decoration: none;"></a>';
             html += '           <div class="cardOverlayContainer itemAction" data-action="link">';
             html += '               <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer"  style="color: inherit; text-decoration: none;"></a>';
             html += '               <div class="cardOverlayButton-br flex">';
@@ -104,8 +162,15 @@
             html += '           <bdi>';
 
             var date = new Date(item.PremiereDate);
-            
-            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + date.getFullYear() + '</a>';
+            var yearText = '';
+            if (item.CommunityRating) {
+                var rating = item.CommunityRating.toFixed(1);
+                yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> ' + rating + ' • ';
+            } else {
+                yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> - • ';
+            }
+            yearText += date.getFullYear();
+            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + yearText + '</a>';
             html += '           </bdi>';
             html += '       </div>';
             html += '   </div>';
@@ -164,6 +229,9 @@
             html += '           <div class="cardPadder ' + cardPadderClass + ' lazy-hidden-children"></div>';
             
             if (posterUrl) {
+                if (!posterUrl.startsWith('http')) {
+                    posterUrl = window.ApiClient.getUrl(posterUrl);
+                }
                 html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + posterUrl + '\')"></div>';
             } else {
                 html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
@@ -200,24 +268,33 @@
         return html;
     }
     
-    function loadHomeSection(page, apiClient, user, userSettings, sectionInfo, options) {
-        var sectionClass = sectionInfo.Section;
+    function getSectionClass(sectionInfo) {
         if (sectionInfo.Limit > 1) {
-            sectionClass += "-" + sectionInfo.AdditionalData;
+            return sectionInfo.Section + "-" + sectionInfo.AdditionalData.replace(' ', '-').replace('.', '-').replace("'", '');
+        } else {
+            return sectionInfo.Section;
         }
-        var var5_, var6_, var7_, var8_, elem = page.querySelector("." + sectionClass);
+    }
+    
+    function loadHomeSection(page, apiClient, user, userSettings, sectionInfo, options) {
+        var sectionClass = getSectionClass(sectionInfo);
+        var appRouterParent = {{appRouterParent_hook}};
+        console.log("Loading section: ." + sectionClass + ", could also be .section" + options.sectionIndex);
+        
+        var var5_, var6_, var7_, var8_, elem = page.querySelector('.' + sectionClass + '[data-page="' + window.HssPageMeta.Page + '"]');
         if (null !== elem) {
             var html = "";
             var layoutManager = {{layoutmanager_hook}}.A;
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
+            
             if (!layoutManager.tv && sectionInfo.Route !== undefined) {
                 var route = undefined;
                 if (sectionInfo.OriginalPayload !== undefined) {
-                    route = p.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
+                    route = appRouterParent.appRouter.getRouteUrl(sectionInfo.OriginalPayload, {
                         serverId: apiClient.serverId()
                     });
                 } else {
-                    route = p.appRouter.getRouteUrl(sectionInfo.Route, {
+                    route = appRouterParent.appRouter.getRouteUrl(sectionInfo.Route, {
                         serverId: apiClient.serverId()
                     })
                 }
@@ -235,10 +312,19 @@
             }
             
             html += "</div>";
-            html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
-            html += '<div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x" data-monitor="videoplayback,markplayed">';
+            
+            if (sectionInfo.ViewMode !== 'Small') {
+                html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
+                html += '<div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x animatedScrollX" data-monitor="videoplayback,markplayed">';
+            } else {
+                html += '<div is="emby-itemscontainer" class="itemsContainer padded-left padded-right vertical-wrap focuscontainer-x" data-monitor="videoplayback,markplayed">';
+            }
+            
             html += "</div>";
-            html += "</div>";
+            
+            if (sectionInfo.ViewMode !== 'Small') {
+                html += "</div>";
+            }
             elem.classList.add("hide");
             elem.innerHTML = html;
             
@@ -249,7 +335,7 @@
                     itemsContainer.classList.add(sectionInfo.ContainerClass);
                 }
                 
-                var cardBuilder = {{cardbuilder_hook}}.default;
+                var cardBuilder = {{cardbuilder_hook}};
                 
                 var cardSettings = {
                     ViewMode: sectionInfo.ViewMode,
@@ -259,9 +345,11 @@
                 
                 itemsContainer.fetchData = getHomeScreenSectionFetchFn(apiClient.serverId(), sectionInfo, u.A, userSettings);
                 
-                var getBackdropShape = y.UI;
-                var getPortraitShape = y.xK;
-                var getSquareShape = y.zP;
+                var shapeBuilder = {{shapebuilder_hook}};
+                
+                var getBackdropShape = shapeBuilder.UI;
+                var getPortraitShape = shapeBuilder.xK;
+                var getSquareShape = shapeBuilder.zP;
                 
                 var getShapeFn = getBackdropShape;
                 if (cardSettings.ViewMode === 'Portrait')
@@ -272,157 +360,303 @@
                 {
                     getShapeFn = getSquareShape;
                 }
+                else if (cardSettings.ViewMode === 'Backdrop')
+                {
+                    getShapeFn = getBackdropShape;
+                }
                 
-                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, cardSettings);
+                var imageHelper = b.Ay;
+                
+                itemsContainer.getItemsHtml = getHomeScreenSectionItemsHtmlFn(userSettings.useEpisodeImagesInNextUpAndResume(), options.enableOverflow, sectionInfo.Section, cardBuilder, getShapeFn, imageHelper, appRouterParent.appRouter, cardSettings);
                 itemsContainer.parentContainer = elem;
             }
         }
         return Promise.resolve()
     }
     
-    async function isUserUsingHomeScreenSections(_userSettings, _apiClient) {
-        var pluginConfig = await _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
-        
-        if (pluginConfig.AllowUserOverride === true) {
-            if (_userSettings && _userSettings.getData() && _userSettings.getData().CustomPrefs && _userSettings.getData().CustomPrefs.useModularHome !== undefined) {
-                return _userSettings.getData().CustomPrefs.useModularHome === "true";
-            }
-        }
-        
-        return pluginConfig.Enabled;
+    function getHomeScreenSectionsMeta(_apiClient) {
+        return _apiClient.getJSON(_apiClient.getUrl("HomeScreen/Meta"));
     }
     
-    if (await isUserUsingHomeScreenSections(userSettings, apiClient)) {
-        return function(elem, apiClient, user, userSettings) {
-            var var39_, var39_3, var39_4;
-            return var39_ = this, void 0, var39_4 = function() {
-                var var44_, options, var44_3, var44_4, var44_5, var44_6, var44_7, sectionInfo, var44_9, var44_10, var44_11;
-                return function(param45_, param45_2) {
-                    var var46_, var47_, var48_, var49_ = {
+    function isUserUsingHomeScreenSections(pluginMeta, _userSettings) {
+        try {
+            if (pluginMeta && pluginMeta.AllowUserOverride === true) {
+                var data = _userSettings && _userSettings.getData && _userSettings.getData();
+                if (data && data.CustomPrefs && data.CustomPrefs.useModularHome !== undefined) {
+                    return data.CustomPrefs.useModularHome === "true";
+                }
+            }
+            return !!(pluginMeta && pluginMeta.Enabled);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function uuidv4() {
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+            (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+        );
+    }
+    
+    var _this = this;
+
+    return getHomeScreenSectionsMeta(apiClient).then(function (hssMeta) {
+        var useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
+        
+        if (!useHss) {
+            return _this.originalLoadSections(elem, apiClient, user, userSettings);
+        }
+
+        if (page !== null) {
+            window.HssPageMeta.Page = page;
+        } else {
+            window.HssPageMeta = {
+                UsePagination: hssMeta.PaginationEnabled,
+                Page: 1,
+                ResultsPerPage: hssMeta.NumResultsPerPage,
+                LastScrollHeight: 0,
+                ScrollThreshold: 10,
+                PageHash: uuidv4(),
+                ScrollHandler: null
+            };
+            
+            // Setup the scrolly event
+            window.HssPageCache = {
+                elem: elem,
+                apiClient: apiClient,
+                user: user,
+                userSettings: userSettings
+            };
+
+            function hssScrollHandler() {
+                var scrollPosition = window.scrollY + window.innerHeight;
+                var windowHeight = getDocHeight();
+
+                if (window.HssPageMeta.Finished !== true && window.HssPageMeta.IsLoading !== true && scrollPosition > windowHeight - window.HssPageMeta.ScrollThreshold && window.HssPageMeta.LastScrollHeight < window.scrollY) {
+                    window.HssPageMeta.IsLoading = true;
+
+                    document.querySelector('#hssLoadingIndicator').style.display = 'block';
+
+                    // Do the calculation after the scroller is turned on
+                    windowHeight = getDocHeight();
+                    window.scroll(0, windowHeight - (window.innerHeight + window.HssPageMeta.ScrollThreshold));
+
+                    window.HssPageMeta.LastScrollHeight = window.scrollY;
+                    window.HssPageMeta.LastWindowHeight = windowHeight;
+
+                    window.HssPageMeta.ScrollFixerHandle = setInterval(function () {
+                        window.scroll(0, window.HssPageMeta.LastScrollHeight);
+
+                        if (getDocHeight() > window.HssPageMeta.LastWindowHeight) {
+                            clearInterval(window.HssPageMeta.ScrollFixerHandle);
+                            window.HssPageMeta.ScrollFixerHandle = undefined;
+                        }
+                    }, 1);
+
+                    _this.loadSections(window.HssPageCache.elem, window.HssPageCache.apiClient, window.HssPageCache.user, window.HssPageCache.userSettings, window.HssPageMeta.Page + 1).then(function () {
+                        document.querySelector('#hssLoadingIndicator').style.display = 'none';
+
+                        window.HssPageMeta.IsLoading = false;
+
+                        if (window.HssPageMeta.ScrollFixerHandle) {
+                            clearInterval(window.HssPageMeta.ScrollFixerHandle);
+                        }
+                    });
+                }
+
+                function getDocHeight() {
+                    var D = document;
+                    return Math.max(
+                        D.body.scrollHeight, D.documentElement.scrollHeight,
+                        D.body.offsetHeight, D.documentElement.offsetHeight,
+                        D.body.clientHeight, D.documentElement.clientHeight
+                    );
+                }
+            }
+            
+            if (window.HssPageMeta.ScrollHandler !== null) {
+                window.removeEventListener('scroll', window.HssPageMeta.ScrollHandler);
+            }
+            
+            window.HssPageMeta.ScrollHandler = hssScrollHandler;
+            
+            window.addEventListener('scroll', hssScrollHandler);
+        }
+        
+        var getSectionsData = {
+            UserId: apiClient.getCurrentUserId(),
+            Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
+        };
+        
+        if (window.HssPageMeta.UsePagination) {
+            getSectionsData.Page = window.HssPageMeta.Page;
+            getSectionsData.NumResultsPerPage = window.HssPageMeta.ResultsPerPage;
+            getSectionsData.PageHash = window.HssPageMeta.PageHash;
+        } else {
+            window.HssPageMeta.Finished = true;
+        }
+
+        var getSectionsUrl = apiClient.getUrl("HomeScreen/Sections", getSectionsData);
+
+        return apiClient.getJSON(getSectionsUrl).then(function (response) {
+            if (response.TotalRecordCount === 0 && window.HssPageMeta.Page > 1) {
+                window.HssPageMeta.Finished = true;
+                // Just a do nothing function
+                return function (elem, apiClient, user, userSettings) { };
+            }
+            return function (elem, apiClient, user, userSettings) {
+                var var39_, var39_3, var39_4;
+                return var39_ = this, void 0, var39_4 = function () {
+                    var var44_, options, var44_3, var44_4, var44_5, var44_6, var44_7, sectionInfo, var44_9, var44_10, var44_11;
+                    return function (param45_, param45_2) {
+                        var var46_, var47_, var48_, var49_ = {
                             label: 0,
-                            sent: function() {
+                            sent: function () {
                                 if (1 & var48_[0]) throw var48_[1];
                                 return var48_[1]
                             },
                             trys: [],
                             ops: []
                         },
-                        var58_ = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
-                    return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function() {
-                        return this
-                    }), var58_;
+                            var58_ = Object.create(("function" == typeof Iterator ? Iterator : Object).prototype);
+                        return var58_.next = fn69_(0), var58_.throw = fn69_(1), var58_.return = fn69_(2), "function" == typeof Symbol && (var58_[Symbol.iterator] = function () {
+                            return this
+                        }), var58_;
 
-                    function fn69_(param69_) {
-                        return function(param70_) {
-                            return function(param71_) {
-                                if (var46_) throw TypeError("Generator is already executing.");
-                                for (; var58_ && (var58_ = 0, param71_[0] && (var49_ = 0)), var49_;) try {
-                                    if (var46_ = 1, var47_ && (var48_ = 2 & param71_[0] ? var47_.return : param71_[0] ? var47_.throw || ((var48_ = var47_.return) && var48_.call(var47_), 0) : var47_.next) && !(var48_ = var48_.call(var47_, param71_[1])).done) return var48_;
-                                    switch (var47_ = 0, var48_ && (param71_ = [2 & param71_[0], var48_.value]), param71_[0]) {
-                                        case 0:
-                                        case 1:
-                                            var48_ = param71_;
-                                            break;
-                                        case 4:
-                                            return var49_.label++, {
-                                                value: param71_[1],
-                                                done: !1
-                                            };
-                                        case 5:
-                                            var49_.label++, var47_ = param71_[1], param71_ = [0];
-                                            continue;
-                                        case 7:
-                                            param71_ = var49_.ops.pop(), var49_.trys.pop();
-                                            continue;
-                                        default:
-                                            if (!((var48_ = (var48_ = var49_.trys).length > 0 && var48_[var48_.length - 1]) || 6 !== param71_[0] && 2 !== param71_[0])) {
-                                                var49_ = 0;
+                        function fn69_(param69_) {
+                            return function (param70_) {
+                                return function (param71_) {
+                                    if (var46_) throw TypeError("Generator is already executing.");
+                                    for (; var58_ && (var58_ = 0, param71_[0] && (var49_ = 0)), var49_;) try {
+                                        if (var46_ = 1, var47_ && (var48_ = 2 & param71_[0] ? var47_.return : param71_[0] ? var47_.throw || ((var48_ = var47_.return) && var48_.call(var47_), 0) : var47_.next) && !(var48_ = var48_.call(var47_, param71_[1])).done) return var48_;
+                                        switch (var47_ = 0, var48_ && (param71_ = [2 & param71_[0], var48_.value]), param71_[0]) {
+                                            case 0:
+                                            case 1:
+                                                var48_ = param71_;
+                                                break;
+                                            case 4:
+                                                return var49_.label++, {
+                                                    value: param71_[1],
+                                                    done: !1
+                                                };
+                                            case 5:
+                                                var49_.label++, var47_ = param71_[1], param71_ = [0];
+                                                continue;
+                                            case 7:
+                                                param71_ = var49_.ops.pop(), var49_.trys.pop();
+                                                continue;
+                                            default:
+                                                if (!((var48_ = (var48_ = var49_.trys).length > 0 && var48_[var48_.length - 1]) || 6 !== param71_[0] && 2 !== param71_[0])) {
+                                                    var49_ = 0;
+                                                    continue
+                                                }
+                                                if (3 === param71_[0] && (!var48_ || param71_[1] > var48_[0] && param71_[1] < var48_[3])) {
+                                                    var49_.label = param71_[1];
+                                                    break
+                                                }
+                                                if (6 === param71_[0] && var49_.label < var48_[1]) {
+                                                    var49_.label = var48_[1], var48_ = param71_;
+                                                    break
+                                                }
+                                                if (var48_ && var49_.label < var48_[2]) {
+                                                    var49_.label = var48_[2], var49_.ops.push(param71_);
+                                                    break
+                                                }
+                                                var48_[2] && var49_.ops.pop(), var49_.trys.pop();
                                                 continue
-                                            }
-                                            if (3 === param71_[0] && (!var48_ || param71_[1] > var48_[0] && param71_[1] < var48_[3])) {
-                                                var49_.label = param71_[1];
-                                                break
-                                            }
-                                            if (6 === param71_[0] && var49_.label < var48_[1]) {
-                                                var49_.label = var48_[1], var48_ = param71_;
-                                                break
-                                            }
-                                            if (var48_ && var49_.label < var48_[2]) {
-                                                var49_.label = var48_[2], var49_.ops.push(param71_);
-                                                break
-                                            }
-                                            var48_[2] && var49_.ops.pop(), var49_.trys.pop();
-                                            continue
+                                        }
+                                        param71_ = param45_2.call(param45_, var49_)
+                                    } catch (let110_) {
+                                        param71_ = [6, let110_], var47_ = 0
+                                    } finally {
+                                            var46_ = var48_ = 0
+                                        }
+                                    if (5 & param71_[0]) throw param71_[1];
+                                    return {
+                                        value: param71_[0] ? param71_[1] : void 0,
+                                        done: !0
                                     }
-                                    param71_ = param45_2.call(param45_, var49_)
-                                } catch (let110_) {
-                                    param71_ = [6, let110_], var47_ = 0
-                                } finally {
-                                    var46_ = var48_ = 0
+                                }([param69_, param70_])
+                            }
+                        }
+                    }(this, (function (param120_) {
+                        switch (param120_.label) {
+                            case 0:
+                                return [4, (apiClient, getSectionsData, getSectionsUrl, response)];
+                            case 1:
+                                if (var44_ = param120_.sent(), options = {
+                                    enableOverflow: !0
+                                }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
+                                    var existingContainer = document.querySelector('.homeSectionsContainer');
+                                    var existingSections = 0;
+                                    if (existingContainer !== null) {
+                                        existingSections = existingContainer.children.length;
+                                    }
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + (existingSections + var44_5) + '"></div>';
+                                    
+                                    if (window.HssPageMeta.Page !== 1) {
+                                        var tempContainer = document.createElement("div");
+                                        tempContainer.innerHTML = var44_3;
+                                        
+                                        while (tempContainer.firstChild) {
+                                            elem.appendChild(tempContainer.firstChild);
+                                        }
+                                    } else {
+                                        var spinnerHtml = '<div id="hssLoadingIndicator" class="verticalSection" style="order: 2147000000;margin-top:60px;margin-bottom:60px;display:none;"><div dir="ltr" class="docspinner mdl-spinner mdlSpinnerActive" style="position: relative;top: 0;left: calc(50vw - 1.5em);"><div class="mdl-spinner__layer mdl-spinner__layer-1"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-2"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-3"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div><div class="mdl-spinner__layer mdl-spinner__layer-4"><div class="mdl-spinner__circle-clipper mdl-spinner__left"><div class="mdl-spinner__circle mdl-spinner__circleLeft"></div></div><div class="mdl-spinner__circle-clipper mdl-spinner__right"><div class="mdl-spinner__circle mdl-spinner__circleRight"></div></div></div></div></div>';
+                                        
+                                        elem.innerHTML = spinnerHtml + var44_3;
+                                    }
+                                    
+                                    if (!elem.classList.contains("homeSectionsContainer")) {
+                                        elem.classList.add("homeSectionsContainer")
+                                    }
+                                    
+                                    if (var44_.TotalRecordCount > 0)
+                                        for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], options.sectionIndex = var44_7, var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
                                 }
-                                if (5 & param71_[0]) throw param71_[1];
-                                return {
-                                    value: param71_[0] ? param71_[1] : void 0,
-                                    done: !0
-                                }
-                            }([param69_, param70_])
+                                return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function () {
+                                    var var134_2, var134_3, var134_4;
+                                    return var134_2 = {
+                                        refresh: !0
+                                    }, var134_3 = elem.querySelectorAll('[data-page="' + window.HssPageMeta.Page + '"] .itemsContainer'), var134_4 = [], Array.prototype.forEach.call(var134_3, (function (param139_) {
+                                        param139_.resume && var134_4.push(param139_.resume(var134_2))
+                                    })), Promise.all(var134_4)
+                                }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function () {
+                                    l.default.navigate("dashboard/libraries")
+                                })), [2])
+                        }
+                    }))
+                }, new (var39_3 = void 0, var39_3 = Promise)((function (param160_, param160_2) {
+                    function fn161_(param161_) {
+                        try {
+                            fn175_(var39_4.next(param161_))
+                        } catch (let164_) {
+                            param160_2(let164_)
                         }
                     }
-                }(this, (function(param120_) {
-                    switch (param120_.label) {
-                        case 0:
-                            var var123_, var123_2, var123_3;
-                            return [4, (var123_ = apiClient, var123_2 = {
-                                UserId: apiClient.getCurrentUserId(),
-                                Language: localStorage.getItem(apiClient.getCurrentUserId() + '-language')
-                            }, var123_3 = var123_.getUrl("HomeScreen/Sections", var123_2), var123_.getJSON(var123_3))];
-                        case 1:
-                            if (var44_ = param120_.sent(), options = {
-                                enableOverflow: !0
-                            }, var44_3 = "", var44_4 = [], void 0 !== var44_.Items) {
-                                for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = var44_.Items[var44_5].Section, var44_.Items[var44_5].Limit > 1 && (var44_6 += "-" + var44_.Items[var44_5].AdditionalData), var44_3 += '<div class="verticalSection ' + var44_6 + '"></div>';
-                                if (elem.innerHTML = var44_3, elem.classList.add("homeSectionsContainer"), var44_.TotalRecordCount > 0)
-                                    for (var44_7 = 0; var44_7 < var44_.Items.length; var44_7++) sectionInfo = var44_.Items[var44_7], var44_4.push(loadHomeSection(elem, apiClient, 0, userSettings, sectionInfo, options))
-                            }
-                            return var44_.TotalRecordCount > 0 ? [2, Promise.all(var44_4).then((function() {
-                                var var134_2, var134_3, var134_4;
-                                return var134_2 = {
-                                    refresh: !0
-                                }, var134_3 = elem.querySelectorAll(".itemsContainer"), var134_4 = [], Array.prototype.forEach.call(var134_3, (function(param139_) {
-                                    param139_.resume && var134_4.push(param139_.resume(var134_2))
-                                })), Promise.all(var134_4)
-                            }))] : (var44_9 = (null === (var44_11 = user.Policy) || void 0 === var44_11 ? void 0 : var44_11.IsAdministrator) ? s.Ay.translate("NoCreatedLibraries", '<br><a id="button-createLibrary" class="button-link">', "</a>") : s.Ay.translate("AskAdminToCreateLibrary"), var44_3 += '<div class="centerMessage padded-left padded-right">', var44_3 += "<h2>" + s.Ay.translate("MessageNothingHere") + "</h2>", var44_3 += "<p>" + var44_9 + "</p>", var44_3 += "</div>", elem.innerHTML = var44_3, (var44_10 = elem.querySelector("#button-createLibrary")) && var44_10.addEventListener("click", (function() {
-                                l.default.navigate("dashboard/libraries")
-                            })), [2])
+
+                    function fn168_(param168_) {
+                        try {
+                            fn175_(var39_4.throw(param168_))
+                        } catch (let171_) {
+                            param160_2(let171_)
+                        }
                     }
+
+                    function fn175_(param175_) {
+                        var var176_;
+                        param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function (param181_) {
+                            param181_(var176_)
+                        }))).then(fn161_, fn168_)
+                    }
+                    fn175_((var39_4 = var39_4.apply(var39_, [])).next())
                 }))
-            }, new(var39_3 = void 0, var39_3 = Promise)((function(param160_, param160_2) {
-                function fn161_(param161_) {
-                    try {
-                        fn175_(var39_4.next(param161_))
-                    } catch (let164_) {
-                        param160_2(let164_)
-                    }
-                }
-
-                function fn168_(param168_) {
-                    try {
-                        fn175_(var39_4.throw(param168_))
-                    } catch (let171_) {
-                        param160_2(let171_)
-                    }
-                }
-
-                function fn175_(param175_) {
-                    var var176_;
-                    param175_.done ? param160_(param175_.value) : ((var176_ = param175_.value) instanceof var39_3 ? var176_ : new var39_3((function(param181_) {
-                        param181_(var176_)
-                    }))).then(fn161_, fn168_)
-                }
-                fn175_((var39_4 = var39_4.apply(var39_, [])).next())
-            }))
-        }(elem, apiClient, user, userSettings);
-    } else {
-        return this.originalLoadSections(elem, apiClient, user, userSettings);
-    }
+            }(elem, apiClient, user, userSettings);
+        }, function (error) {
+            console.error("Error fetching sections with HSS, defaulting back to Jellyfin:", error);
+            return _this.originalLoadSections(elem, apiClient, user, userSettings);
+        });
+    }, function (err) {
+        return _this.originalLoadSections(elem, apiClient, user, userSettings);
+    });
 }

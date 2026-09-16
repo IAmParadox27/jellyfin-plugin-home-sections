@@ -1,4 +1,7 @@
-﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+﻿using System.Reflection;
+using System.Runtime.Loader;
+using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Library;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
@@ -21,56 +24,28 @@ namespace Jellyfin.Plugin.HomeScreenSections
         public static HomeScreenSectionsPlugin Instance { get; private set; } = null!;
         
         internal IServiceProvider ServiceProvider { get; set; }
-    
-        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider) : base(applicationPaths, xmlSerializer)
+        
+        internal Dictionary<string, bool> CollectionFolderMixedStatus { get; set; } = new Dictionary<string, bool>();
+        
+        private IApplicationPaths m_applicationPaths;
+        
+        public HomeScreenSectionsPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigurationManager, IServiceProvider serviceProvider, IHomeScreenManager homeScreenManager, ITranslationManager translationManager) : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
             
             ServerConfigurationManager = serverConfigurationManager;
             ServiceProvider = serviceProvider;
+            m_applicationPaths = applicationPaths;
+            
+            homeScreenManager.RegisterBuiltInResultsDelegates();
         
             string homeScreenSectionsConfigDir = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.HomeScreenSections");
             if (!Directory.Exists(homeScreenSectionsConfigDir))
             {
                 Directory.CreateDirectory(homeScreenSectionsConfigDir);
             }
-            
-            string pluginPagesConfig = Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellyfin.Plugin.PluginPages", "config.json");
         
-            JObject config = new JObject();
-            if (!File.Exists(pluginPagesConfig))
-            {
-                FileInfo info = new FileInfo(pluginPagesConfig);
-                info.Directory?.Create();
-            }
-            else
-            {
-                config = JObject.Parse(File.ReadAllText(pluginPagesConfig));
-            }
-
-            if (!config.ContainsKey("pages"))
-            {
-                config.Add("pages", new JArray());
-            }
-
-            if (!config.Value<JArray>("pages")!.Any(x => x.Value<string>("Id") == typeof(HomeScreenSectionsPlugin).Namespace))
-            {
-                string rootUrl = ServerConfigurationManager.GetNetworkConfiguration().BaseUrl.TrimStart('/').Trim();
-                if (!string.IsNullOrEmpty(rootUrl))
-                {
-                    rootUrl = $"/{rootUrl}";
-                }
-                
-                config.Value<JArray>("pages")!.Add(new JObject
-                {
-                    { "Id", typeof(HomeScreenSectionsPlugin).Namespace },
-                    { "Url", $"{rootUrl}/ModularHomeViews/settings" },
-                    { "DisplayText", "Modular Home" },
-                    { "Icon", "ballot" }
-                });
-        
-                File.WriteAllText(pluginPagesConfig, config.ToString(Formatting.Indented));
-            }
+            translationManager.Initialize();
         }
 
         public IEnumerable<PluginPageInfo> GetPages()
@@ -80,7 +55,8 @@ namespace Jellyfin.Plugin.HomeScreenSections
             yield return new PluginPageInfo
             {
                 Name = Name,
-                EmbeddedResourcePath = $"{prefix}.Configuration.config.html"
+                EmbeddedResourcePath = $"{prefix}.Configuration.config.html",
+                EnableInMainMenu = true
             };
         }
 
