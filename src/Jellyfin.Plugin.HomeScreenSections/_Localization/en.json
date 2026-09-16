@@ -140,6 +140,7 @@
   "AdminJellyseerrApiKeyDesc": "API Key for Jellyseerr instance.",
   "AdminDiscoverLanguageFilter": "Discover Sections Language Filter",
   "AdminDiscoverLanguageFilterDesc": "Preferred languages to filter for Discover section. (comma delimited)",
+  "DiscoverShowOverview": "Enable Discover Sections Hover Overview",
 
   "AdminDefaultLibraries": "Default Libraries",
   "AdminDefaultMoviesLibrary": "Default Movies Library",

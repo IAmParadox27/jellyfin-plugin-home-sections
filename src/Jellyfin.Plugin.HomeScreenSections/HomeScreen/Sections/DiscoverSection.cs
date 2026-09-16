@@ -32,10 +32,26 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             m_userManager = userManager;
             m_imageCacheService = imageCacheService;
         }
+
+        public IEnumerable<PluginConfigurationOption> GetPluginConfigurationOptions()
+        {
+            if (Section != "Discover")
+            {
+                yield break;
+            }
+
+            yield return PluginConfigurationHelper.CreateCheckbox(
+                "showOverview",
+                "Enable Discover Sections Hover Overview",
+                "Display an overview when hovering over Discover cards.",
+                "DiscoverShowOverview",
+                true);
+        }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
             List<BaseItemDto> returnItems = new List<BaseItemDto>();
+            bool showOverview = HomeScreenSectionPayload.GetEffectiveBoolConfig("Discover", "showOverview", true);
             
             // TODO: Get Jellyseerr Url
             string? jellyseerrUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrUrl;
@@ -106,6 +122,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                 {
                                     Name = item.Value<string>("title") ?? item.Value<string>("name"),
                                     OriginalTitle = item.Value<string>("originalTitle") ?? item.Value<string>("originalName"),
+                                    Overview = showOverview ? item.Value<string>("overview") : null,
                                     SourceType = item.Value<string>("mediaType"),
                                     CommunityRating = rating > 0 ? rating : null,
                                     ProviderIds = new Dictionary<string, string>()
