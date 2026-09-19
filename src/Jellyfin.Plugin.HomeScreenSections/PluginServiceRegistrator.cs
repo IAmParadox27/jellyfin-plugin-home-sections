@@ -29,6 +29,7 @@ namespace Jellyfin.Plugin.HomeScreenSections
                 return ActivatorUtilities.CreateInstance<ImageCacheService>(services, httpClientFactory.CreateClient());
             });
             serviceCollection.AddSingleton<UserSectionsDataCache>();
+            serviceCollection.AddSingleton<PerUserComputedStatsCache>();
             serviceCollection.AddSingleton<ITranslationManager, TranslationManager>();
             serviceCollection.AddSingleton<IHomeScreenManager, HomeScreenManager>(services =>
             {

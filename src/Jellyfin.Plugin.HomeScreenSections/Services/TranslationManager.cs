@@ -48,7 +48,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        public string Translate(string key, string desiredLanguage, string fallbackText, TranslationMetadata? metadata = null)
+        public string Translate(string key, string desiredLanguage, string fallbackText, TranslationMetadata? metadata = null, bool preferKey = false)
         {
             m_logger.LogTrace($"Translating key '{key}' to language '{desiredLanguage}'");
             
@@ -82,7 +82,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
             string translatedText = "";
             string fullTextKey = fallbackText.Replace(" ", "").Replace("-", "");
-            if (key != fullTextKey && translationPack.ContainsKey(fullTextKey))
+            if (!preferKey && key != fullTextKey && translationPack.ContainsKey(fullTextKey))
             {
                 m_logger.LogTrace($"Found translation for key '{fullTextKey}' in language '{languageKey}'");
                 translatedText = translationPack.Value<string>(fullTextKey)!;

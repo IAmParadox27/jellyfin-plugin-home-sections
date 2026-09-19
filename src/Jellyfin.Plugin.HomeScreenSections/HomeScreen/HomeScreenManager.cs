@@ -91,11 +91,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             
             RegisterResultsDelegate<GenreSection>();
             RegisterResultsDelegate<MyRequestsSection>();
-            
-            // Removed from public access while its still in dev.
-            //RegisterResultsDelegate<DirectedBySection>();
-            //RegisterResultsDelegate<StarringSection>();
-            
+
+            RegisterResultsDelegate<DirectedBySection>();
+            RegisterResultsDelegate<StarringSection>();
+
+            RegisterResultsDelegate<HiddenGemsSection>();
+            RegisterResultsDelegate<StudioSection>();
+            RegisterResultsDelegate<DecadeSection>();
+            RegisterResultsDelegate<FinishTheseCollectionsSection>();
+
             //RegisterResultsDelegate<TopTenSection>();
         }
 

@@ -179,6 +179,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 			return new HomeScreenSectionInfo
 			{
 				Section = Section,
+				AdminTranslationKey = "BecauseYouWatchedSectionName",
 				DisplayText = DisplayText,
 				AdditionalData = AdditionalData,
 				Route = Route,

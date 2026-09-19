@@ -5,6 +5,7 @@ using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -25,6 +26,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         public string? Section => "WatchAgain";
 
         public string? DisplayText { get; set; } = "Watch It Again";
+
+        public string? AdminDescription => "Movies and shows the user finished more than 28 days ago, suggested for a rewatch. Picks a random subset each time it loads, so the exact items shown may differ from this preview.";
 
         public int? Limit => 1;
 
@@ -50,6 +53,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         private IUserViewManager UserViewManager { get; set; }
 
+        private PerUserComputedStatsCache StatsCache { get; set; }
+
         public WatchAgainSection(
             ICollectionManager collectionManager,
             IUserManager userManager,
@@ -58,7 +63,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             ITVSeriesManager tvSeriesManager,
             ILibraryManager libraryManager,
             CollectionManagerProxy collectionManagerProxy,
-            IUserViewManager userViewManager)
+            IUserViewManager userViewManager,
+            PerUserComputedStatsCache statsCache)
         {
             CollectionManager = collectionManager;
             UserManager = userManager;
@@ -68,6 +74,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             LibraryManager = libraryManager;
             CollectionManagerProxy = collectionManagerProxy;
             UserViewManager = userViewManager;
+            StatsCache = statsCache;
         }
 
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -90,7 +97,43 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             };
 
             User user = UserManager.GetUserById(payload.UserId)!;
-            var cutoffDate = DateTime.Now.Subtract(TimeSpan.FromDays(28));
+
+            // Only the candidate pool is cached; the 16 shown are still
+            // shuffled fresh each request for variety.
+            if (!StatsCache.TryGetOrCompute(
+                user.Id,
+                "watch-again-candidates",
+                TimeSpan.FromHours(24),
+                () => ComputeCandidates(user, dtoOptions),
+                out List<(Guid ItemId, DateTime? LastPlayed)> candidates))
+            {
+                return new QueryResult<BaseItemDto>();
+            }
+
+            Random random = new Random();
+            List<(Guid ItemId, DateTime? LastPlayed)> shuffledResults = candidates
+                .OrderBy(x => random.Next())
+                .Take(16)
+                .ToList();
+
+            Guid[] itemIds = shuffledResults.Select(r => r.ItemId).ToArray();
+            IReadOnlyList<BaseItem> fullItems = LibraryManager.GetItemList(new InternalItemsQuery(user)
+            {
+                ItemIds = itemIds,
+                DtoOptions = dtoOptions
+            });
+
+            List<BaseItem?> orderedItems = itemIds
+                .Select(id => fullItems.FirstOrDefault(i => i.Id == id))
+                .Where(i => i != null)
+                .ToList();
+
+            return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(orderedItems!, dtoOptions, user));
+        }
+
+        private List<(Guid ItemId, DateTime? LastPlayed)> ComputeCandidates(User user, DtoOptions dtoOptions)
+        {
+            DateTime cutoffDate = DateTime.Now.Subtract(TimeSpan.FromDays(28));
 
             List<(BaseItem Item, DateTime? LastPlayed)> results = new List<(BaseItem, DateTime?)>();
 
@@ -102,7 +145,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 var playedMovies = movieFolders.SelectMany(x =>
                 {
-                    var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                    BaseItem? item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
                     if (item is not Folder folder)
                     {
@@ -138,7 +181,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
                 var candidateShows = tvFolders.SelectMany(x =>
                 {
-                    var item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                    BaseItem? item = LibraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
 
                     if (item is not Folder folder)
                     {
@@ -264,28 +307,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                 }
             }
 
-            // Shuffle results for variety, then take top 16
-            var random = new Random();
-            var shuffledResults = results
-                .OrderBy(x => random.Next())
-                .Take(16)
-                .ToList();
-
-            // Fetch full items with images
-            var itemIds = shuffledResults.Select(r => r.Item.Id).ToArray();
-            var fullItems = LibraryManager.GetItemList(new InternalItemsQuery(user)
-            {
-                ItemIds = itemIds,
-                DtoOptions = dtoOptions
-            });
-
-            // Maintain order
-            var orderedItems = itemIds
-                .Select(id => fullItems.FirstOrDefault(i => i.Id == id))
-                .Where(i => i != null)
-                .ToList();
-
-            return new QueryResult<BaseItemDto>(DtoService.GetBaseItemDtos(orderedItems!, dtoOptions, user));
+            return results.Select(r => (r.Item.Id, r.LastPlayed)).ToList();
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)

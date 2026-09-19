@@ -5,7 +5,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Library
     public interface ITranslationManager
     {
         void Initialize();
-        string Translate(string key, string desiredLanguage, string fallbackText, TranslationMetadata? metadata = null);
+        string Translate(string key, string desiredLanguage, string fallbackText, TranslationMetadata? metadata = null, bool preferKey = false);
         void UpdateTranslationPack(string language, JObject translationPack);
         IDictionary<string, string>? GetTranslationPack(string language);
     }
