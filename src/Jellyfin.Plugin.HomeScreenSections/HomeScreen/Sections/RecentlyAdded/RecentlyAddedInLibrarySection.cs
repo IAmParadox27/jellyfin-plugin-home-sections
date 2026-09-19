@@ -27,6 +27,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         /// <inheritdoc/>
         public override string? DisplayText { get; set; } = "Recently Added In Library";
 
+        protected override string? AdminTranslationKey => "RecentlyAddedInLibrarySectionName";
+
         /// <inheritdoc/>
         public override string? Route => "originalpayload";
 

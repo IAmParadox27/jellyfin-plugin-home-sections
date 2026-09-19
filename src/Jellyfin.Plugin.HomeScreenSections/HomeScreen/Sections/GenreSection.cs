@@ -4,6 +4,7 @@ using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.JellyfinVersionSpecific;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
+using Jellyfin.Plugin.HomeScreenSections.Services;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -19,6 +20,7 @@ public class GenreSection : IHomeScreenSection
 {
     public string? Section => "Genre";
     public string? DisplayText { get; set; } = "Genre";
+    public string? AdminDescription => "A row of movies from a genre the user watches a lot of (e.g. \"Action Movies\"). Each user sees a different genre, weighted by their watch history, and picked freshly each load.";
     public int? Limit => 5;
     public string? Route => "originalpayload";
     public string? AdditionalData { get; set; }
@@ -33,8 +35,10 @@ public class GenreSection : IHomeScreenSection
 
     private readonly IUserViewManager m_userViewManager;
 
+    private readonly PerUserComputedStatsCache m_statsCache;
+
     public GenreSection(IUserManager userManager, ILibraryManager libraryManager, CollectionManagerProxy collectionManagerProxy,
-        IUserDataManager userDataManager, IDtoService dtoService, IUserViewManager userViewManager)
+        IUserDataManager userDataManager, IDtoService dtoService, IUserViewManager userViewManager, PerUserComputedStatsCache statsCache)
     {
         m_userManager = userManager;
         m_libraryManager = libraryManager;
@@ -42,6 +46,7 @@ public class GenreSection : IHomeScreenSection
         m_userDataManager = userDataManager;
         m_dtoService = dtoService;
         m_userViewManager = userViewManager;
+        m_statsCache = statsCache;
     }
 
     public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -114,8 +119,16 @@ public class GenreSection : IHomeScreenSection
             throw new Exception();
         }
 
-        // Do the heavy lifting before we add into the cache
-        (string Genre, int Score)[] userGenreScores = GetGenresForUser(user);
+        // Expensive to redo every load - cache it per user instead.
+        if (!m_statsCache.TryGetOrCompute(
+            user.Id,
+            "genre-scores",
+            TimeSpan.FromHours(24),
+            () => GetGenresForUser(user),
+            out (string Genre, int Score)[] userGenreScores))
+        {
+            yield break;
+        }
 
         if (userGenreScores.Length == 0)
         {
@@ -174,7 +187,7 @@ public class GenreSection : IHomeScreenSection
             {
                 pickedGenres.Add(selectedGenre);
 
-                yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager)
+                yield return new GenreSection(m_userManager, m_libraryManager, m_collectionManagerProxy, m_userDataManager, m_dtoService, m_userViewManager, m_statsCache)
                 {
                     OriginalPayload = m_dtoService.GetBaseItemDto(m_libraryManager.GetGenre(selectedGenre), new DtoOptions(), user),
                     AdditionalData = selectedGenre,
