@@ -1,8 +1,8 @@
 {
   "BecauseYouWatched": "Επειδή παρακολουθήσατε: {0}",
   "CollectionsSection": "Συλλογές",
-  "ContinueWatching": "Συνεχίστε την παρακολούθηση",
-  "ContinueWatchingNextUp": "Συνεχίστε την παρακολούθηση / Επόμενα επεισόδια",
+  "ContinueWatching": "Συνεχίστε να παρακολουθείτε",
+  "ContinueWatchingNextUp": "Συνεχίστε να παρακολουθείτε / Επόμενα επεισόδια",
   "DirectedBy": "Σκηνοθεσία: {0}",
   "Discover": "Ανακαλύψτε",
   "DiscoverMovies": "Ανακαλύψτε ταινίες",
@@ -92,7 +92,7 @@
   "AdminMonths": "Μήνες",
   "AdminYears": "Έτη",
   "AdminDateFormat": "Μορφή ημερομηνίας",
-  "AdminDateFormatDesc": "Πώς να εμφανίζονται οι ημερομηνίες;",
+  "AdminDateFormatDesc": "Πώς θέλετε να εμφανίζονται οι ημερομηνίες;",
 
   "AdminAdvancedSettings": "Ρυθμίσεις για προχωρημένους",
   "AdminLazyLoadSettings": "Ρυθμίσεις σταδιακής φόρτωσης",
@@ -206,7 +206,7 @@
   "AdminClose": "Κλείσιμο",
   "AdminPreviewLoading": "Φόρτωση προεπισκόπησης...",
   "AdminPreviewEmpty": "Δεν υπάρχουν προς το παρόν στοιχεία για προεπισκόπηση σε αυτή την ενότητα.",
-  "AdminPreviewFailed": "Αποτυχία φόρτωσης της προεπισκόπησης.",
+  "AdminPreviewFailed": "Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης.",
   "AdminPreviewNeedsInstance": "Για την προεπισκόπηση αυτής της ενότητας απαιτείται μια συγκεκριμένη τιμή (π.χ. είδος, στούντιο ή πρόσωπο). Στην αρχική οθόνη, το περιεχόμενο της ενότητας επιλέγεται αυτόματα για κάθε χρήστη.",
   "AdminPreviewRandomized": "Αυτή η ενότητα ανανεώνεται με διαφορετική τυχαία επιλογή κάθε φορά που φορτώνεται, επομένως οι χρήστες μπορεί να βλέπουν διαφορετικά στοιχεία από αυτά που εμφανίζονται εδώ.",
   "AdminPortrait": "Κατακόρυφη",
@@ -217,9 +217,9 @@
   "AdminSave": "Αποθήκευση",
 
   "AdminModularHomeSettings": "Modular Home - Ρυθμίσεις:",
-  "AdminEnableModularHome": "Ενεργοποίηση του «Modular Home». Η αρχική σας οθόνη θα γίνει πιο δυναμική, επιτρέποντας σε άλλα πρόσθετα να συνεισφέρουν στο περιεχόμενο και στις προτάσεις που βλέπετε.",
+  "AdminEnableModularHome": "Ενεργοποιήστε το «Modular Home» για μια πιο δυναμική αρχική οθόνη, με περιεχόμενο και προτάσεις και από άλλα πρόσθετα.",
   "AdminEnabledSections": "Ενεργές ενότητες",
-  "AdminSettingsUpdated": "Οι ρυθμίσεις ενημερώθηκαν. Η σελίδα θα επαναφορτωθεί σε 2 δευτερόλεπτα.",
+  "AdminSettingsUpdated": "Οι ρυθμίσεις ενημερώθηκαν. Η σελίδα θα ανανεωθεί σε 2 δευτερόλεπτα.",
   "AdminReleaseTypeRequired": "Πρέπει να επιλεγεί τουλάχιστον ένας τύπος κυκλοφορίας για τις επερχόμενες ταινίες.",
 
   "AdminPerSectionSetting_Configuration": "Ρύθμιση",
@@ -229,7 +229,7 @@
   "AdminRecentlyAddedInLibraryGroupEpisodes_Desc": "Να ομαδοποιούνται τα επεισόδια που προστέθηκαν πρόσφατα ανά σεζόν/σειρά; (Σημείωση: Η ενότητα θα φορτώνεται πιο αργά.)",
 
   "AdminRecentlyAddedShowsItemTypeDropdown": "Τύπος στοιχείου",
-  "AdminRecentlyAddedShowsItemTypeDropdown_Desc": "Τι τύπο στοιχείου θέλετε να εμφανίζεται;",
+  "AdminRecentlyAddedShowsItemTypeDropdown_Desc": "Τι θέλετε να εμφανίζεται: σειρές ή επεισόδια;",
   "AdminRecentlyAddedShowsItemTypeDropdown_shows": "Σειρές",
   "AdminRecentlyAddedShowsItemTypeDropdown_episodes": "Επεισόδια",
 
