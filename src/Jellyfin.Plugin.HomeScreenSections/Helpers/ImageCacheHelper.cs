@@ -9,7 +9,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
         public static string GetCachedImageUrl(
             ImageCacheService imageCacheService, 
             string? sourceUrl, 
-            ILogger? logger = null)
+            ILogger? logger = null,
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(sourceUrl))
             {
@@ -22,6 +23,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Helpers
                 int cacheTimeout = config?.CacheTimeoutSeconds ?? 86400;
 
                 string? cacheKey = imageCacheService.GetOrCacheImage(sourceUrl, cacheTimeout)
+                    .WaitAsync(cancellationToken)
                     .GetAwaiter()
                     .GetResult();
 
