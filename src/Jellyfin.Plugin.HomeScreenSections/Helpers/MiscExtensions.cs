@@ -97,15 +97,7 @@ public static class MiscExtensions
         }
 
         return filtered
-            .Where(x =>
-            {
-                IEnumerable<BaseItem> items = libraryManager.GetItemList(new InternalItemsQuery(user)
-                {
-                    ItemIds = new[] { Guid.Parse(x.ItemId) }
-                });
-
-                return items.Any();
-            })
+            .Where(x => libraryManager.GetItemById<BaseItem>(Guid.Parse(x.ItemId), user) != null)
             .ToArray();
     }
 }
