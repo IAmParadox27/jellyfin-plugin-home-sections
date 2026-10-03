@@ -40,6 +40,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private readonly IApplicationPaths m_applicationPaths;
         private readonly HomeScreenSectionService m_homeScreenSectionService;
         private readonly ImageCacheService m_imageCacheService;
+        private readonly IUserManager m_userManager;
 
         public HomeScreenController(
             IHomeScreenManager homeScreenManager,
@@ -47,7 +48,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             IServerApplicationHost serverApplicationHost, 
             IApplicationPaths applicationPaths,
             HomeScreenSectionService homeScreenSectionService,
-            ImageCacheService imageCacheService)
+            ImageCacheService imageCacheService,
+            IUserManager userManager)
         {
             m_homeScreenManager = homeScreenManager;
             m_displayPreferencesManager = displayPreferencesManager;
@@ -55,6 +57,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             m_applicationPaths = applicationPaths;
             m_homeScreenSectionService = homeScreenSectionService;
             m_imageCacheService = imageCacheService;
+            m_userManager = userManager;
         }
 
         /// <summary>
@@ -267,7 +270,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
             [FromQuery] int? numResultsPerPage = null,
             [FromQuery] Guid? pageHash = null)
         {
-            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(userId ?? Guid.Empty, language, 
+            if (!UserAuthorizationHelper.TryGetUserId(User, m_userManager, userId, out Guid authenticatedUserId))
+            {
+                return Forbid();
+            }
+
+            List<HomeScreenSectionInfo> sections = m_homeScreenSectionService.MonitorLiveUpdatedSectionsForUser(authenticatedUserId, language,
                 page ?? 1, numResultsPerPage, pageHash) ?? new List<HomeScreenSectionInfo>();
 
             return new QueryResult<HomeScreenSectionInfo>(
@@ -278,15 +286,20 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
 
         [HttpGet("Section/{sectionType}")]
         [Authorize]
-        public QueryResult<BaseItemDto> GetSectionContent(
+        public ActionResult<QueryResult<BaseItemDto>> GetSectionContent(
             [FromRoute] string sectionType,
             [FromQuery, Required] Guid userId,
             [FromQuery] string? additionalData,
             [FromQuery] string? language)
         {
+            if (!UserAuthorizationHelper.TryGetUserId(User, m_userManager, userId, out Guid authenticatedUserId))
+            {
+                return Forbid();
+            }
+
             HomeScreenSectionPayload payload = new HomeScreenSectionPayload
             {
-                UserId = userId,
+                UserId = authenticatedUserId,
                 AdditionalData = additionalData
             };
 
