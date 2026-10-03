@@ -294,9 +294,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         }
 
         [HttpPost("RegisterSection")]
-        [Authorize]
+        [Authorize(Roles = "Administrator")]
         public ActionResult RegisterSection([FromBody] SectionRegisterPayload payload)
         {
+            if (string.IsNullOrWhiteSpace(payload.Id))
+            {
+                return BadRequest();
+            }
+
+            IHomeScreenSection? section = m_homeScreenManager.GetSection(payload.Id);
+
+            if (section != null && section is not PluginDefinedSection)
+            {
+                return Conflict();
+            }
+
             m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
             {
                 OnGetResults = sectionPayload =>
