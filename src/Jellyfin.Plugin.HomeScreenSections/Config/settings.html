@@ -26,6 +26,10 @@
 
         window.HomeScreenSectionsUserSettings = {
             setup: function () {
+                function escapeHtml(value) {
+                    return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                }
+
                 var uiLanguage = document.documentElement.lang || navigator.language || 'en';
                 var pageTranslations = {};
 
@@ -109,8 +113,8 @@
                                     }
 
                                     html += '<label class="checkboxContainer" style="' + (disabled ? 'opacity: 0.5;' : '') + '">';
-                                    html += '<input ' + (disabled ? 'disabled="true"' : '') + ' is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + section.Section + '" ' + (checked ? 'checked' : '') + ' />';
-                                    html += '<span>' + section.DisplayText + '</span>';
+                                    html += '<input ' + (disabled ? 'disabled="true"' : '') + ' is="emby-checkbox" type="checkbox" class="sectionEnabledCheckbox" data-section="' + escapeHtml(section.Section) + '" ' + (checked ? 'checked' : '') + ' />';
+                                    html += '<span>' + escapeHtml(section.DisplayText) + '</span>';
                                     html += '</label>';
                                 }
 
