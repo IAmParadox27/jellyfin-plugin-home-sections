@@ -309,6 +309,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                 return Conflict();
             }
 
+            if (string.IsNullOrWhiteSpace(payload.ResultsEndpoint) ||
+                !payload.ResultsEndpoint.StartsWith('/') ||
+                payload.ResultsEndpoint.StartsWith("//", StringComparison.Ordinal) ||
+                payload.ResultsEndpoint.StartsWith("/\\", StringComparison.Ordinal) ||
+                !Uri.TryCreate(payload.ResultsEndpoint, UriKind.Relative, out _))
+            {
+                return BadRequest();
+            }
+
             m_homeScreenManager.RegisterResultsDelegate(new PluginDefinedSection(payload.Id, payload.DisplayText!, payload.Route, payload.AdditionalData)
             {
                 OnGetResults = sectionPayload =>
@@ -318,7 +327,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
                     string? publishedServerUrl = m_serverApplicationHost.GetType()
                         .GetProperty("PublishedServerUrl", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(m_serverApplicationHost) as string;
                 
-                    HttpClient client = new HttpClient();
+                    HttpClient client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
                     client.BaseAddress = new Uri(publishedServerUrl ?? $"http://localhost:{m_serverApplicationHost.HttpPort}");
                     
                     HttpResponseMessage responseMessage = client.PostAsync(payload.ResultsEndpoint, 
