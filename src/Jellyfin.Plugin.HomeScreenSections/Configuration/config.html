@@ -520,6 +520,23 @@
             // Removed/never-enabled sections, keyed by SectionId, so their settings survive a save.
             var disabledSections = {};
 
+            function escapeHtml(value) {
+                return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
+
+            function safeUrl(value) {
+                var url = String(value == null ? '' : value).trim();
+                if (/[\u0000-\u001f\u007f]/.test(url) || (/^[^/?#]*:/.test(url) && !/^https?:/i.test(url))) {
+                    return '#';
+                }
+                return url || '#';
+            }
+
+            function getPosterUrl(value) {
+                var url = safeUrl(value);
+                return url === '#' || /^https?:/i.test(url) ? url : safeUrl(window.ApiClient.getUrl(url));
+            }
+
             // Applies stored translations to data-i18n and data-i18n-label attributes
             // within the given root element. Safe to call before translations are loaded
             // (no-op when pageTranslations is empty).
@@ -558,9 +575,9 @@
 
                     // Translate composite HTML elements (not handled by applyTranslations)
                     var htmlTranslations = {
-                        'AdminLibraryDescRestart': translations['AdminLibraryDesc'] + '<br><strong>' + translations['AdminRequiresRestart'] + '</strong>',
-                        'AdminStreamyfinDesc': translations['AdminOverrideStreamyfinHomeDesc'] + '<br /><br/><i>' + translations['AdminExperimental'] + '</i>',
-                        'AdminCacheDescriptions': '<strong>' + translations['AdminBustStaticCache'] + ':</strong> ' + translations['AdminStaticCacheDesc'] + '<br><strong>' + translations['AdminBustAllCaches'] + ':</strong> ' + translations['AdminAllCachesDesc']
+                        'AdminLibraryDescRestart': escapeHtml(translations['AdminLibraryDesc']) + '<br><strong>' + escapeHtml(translations['AdminRequiresRestart']) + '</strong>',
+                        'AdminStreamyfinDesc': escapeHtml(translations['AdminOverrideStreamyfinHomeDesc']) + '<br /><br/><i>' + escapeHtml(translations['AdminExperimental']) + '</i>',
+                        'AdminCacheDescriptions': '<strong>' + escapeHtml(translations['AdminBustStaticCache']) + ':</strong> ' + escapeHtml(translations['AdminStaticCacheDesc']) + '<br><strong>' + escapeHtml(translations['AdminBustAllCaches']) + ':</strong> ' + escapeHtml(translations['AdminAllCachesDesc'])
                     };
                     document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
                         const key = el.getAttribute('data-i18n-html');
@@ -646,7 +663,7 @@
                 const configOptions = template.querySelector('[data-id=pluginConfigurationOptionsContainer]');
 
                 template.querySelector('[data-id=hiddenSectionId]').value = sectionConfig.SectionId;
-                template.querySelector('[data-id=lblSectionName]').innerHTML = sectionInfo.DisplayText;
+                template.querySelector('[data-id=lblSectionName]').textContent = sectionInfo.DisplayText;
 
                 if (sectionInfo.AdminDescription) {
                     const infoIcon = template.querySelector('[data-id=sectionInfoIcon]');
@@ -894,7 +911,7 @@
                     return null;
                 }
 
-                return posterUrl.startsWith('http') ? posterUrl : window.ApiClient.getUrl(posterUrl);
+                return getPosterUrl(posterUrl);
             }
 
             function renderPreviewCard(item, viewMode) {
@@ -1073,11 +1090,11 @@
                     return;
                 }
 
-                popover.innerHTML = '<div class="hssPreviewLoading">' + (pageTranslations['AdminPreviewLoading'] || 'Loading preview...') + '</div>';
+                popover.innerHTML = '<div class="hssPreviewLoading">' + escapeHtml(pageTranslations['AdminPreviewLoading'] || 'Loading preview...') + '</div>';
 
                 if (!sectionInfo.AdditionalData && knownDynamicSections.indexOf(sectionInfo.Section) !== -1) {
                     popover.innerHTML = '<div class="hssPreviewMessage">' +
-                        (pageTranslations['AdminPreviewNeedsInstance'] || "This section needs a specific value (e.g. a genre, studio, or person) to preview - it's populated automatically for each user on the real home screen.") +
+                        escapeHtml(pageTranslations['AdminPreviewNeedsInstance'] || "This section needs a specific value (e.g. a genre, studio, or person) to preview - it's populated automatically for each user on the real home screen.") +
                         '</div>';
                     return;
                 }
@@ -1102,7 +1119,7 @@
 
                     if (items.length === 0) {
                         popover.innerHTML = '<div class="hssPreviewMessage">' +
-                            (pageTranslations['AdminPreviewEmpty'] || 'No items to preview for this section right now.') +
+                            escapeHtml(pageTranslations['AdminPreviewEmpty'] || 'No items to preview for this section right now.') +
                             '</div>';
                         return;
                     }
@@ -1137,7 +1154,7 @@
                     }
                     console.error('Failed to load section preview:', error);
                     popover.innerHTML = '<div class="hssPreviewMessage">' +
-                        (pageTranslations['AdminPreviewFailed'] || 'Failed to load preview.') +
+                        escapeHtml(pageTranslations['AdminPreviewFailed'] || 'Failed to load preview.') +
                         '</div>';
                 });
             }
@@ -1432,7 +1449,7 @@
                     const booksSelect = document.querySelector('#defaultBooksLibrary');
                     const musicVideosSelect = document.querySelector('#defaultMusicVideosLibrary');
 
-                    var defaultLabel = pageTranslations['AdminDefault'] || 'Default';
+                    var defaultLabel = escapeHtml(pageTranslations['AdminDefault'] || 'Default');
                     moviesSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
                     tvShowsSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
                     musicSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
