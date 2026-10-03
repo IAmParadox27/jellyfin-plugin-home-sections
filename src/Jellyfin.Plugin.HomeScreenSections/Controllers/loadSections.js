@@ -45,6 +45,30 @@
         return;
     }
 
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function safeUrl(value) {
+        var url = String(value == null ? '' : value).trim();
+        if (/[\u0000-\u001f\u007f]/.test(url) || (/^[^/?#]*:/.test(url) && !/^https?:/i.test(url))) {
+            return '#';
+        }
+        return url || '#';
+    }
+
+    function getPosterUrl(value) {
+        var url = safeUrl(value);
+        return url === '#' || /^https?:/i.test(url) ? url : safeUrl(window.ApiClient.getUrl(url));
+    }
+
+    function escapeCssUrl(value) {
+        // The URL is inside a single-quoted CSS string, itself inside an HTML attribute.
+        return escapeHtml(value.replace(/[\\'\n\r\f]/g, function (character) {
+            return '\\' + character.charCodeAt(0).toString(16) + ' ';
+        }));
+    }
+
     function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
         return function() {
             var __userSettings = _userSettings;
@@ -85,7 +109,7 @@
                 for (var i = 0; i < items.length; i++) {
                     var item = items[i];
                     var icon = imageHelper.getLibraryIcon(item.CollectionType);
-                    html += '<a is="emby-linkbutton" href="' + appRouter.getRouteUrl(item) + '" class="raised homeLibraryButton"><span class="material-icons homeLibraryIcon ' + icon + '" aria-hidden="true"></span><span class="homeLibraryText">' + item.Name + '</span></a>';
+                    html += '<a is="emby-linkbutton" href="' + escapeHtml(safeUrl(appRouter.getRouteUrl(item))) + '" class="raised homeLibraryButton"><span class="material-icons homeLibraryIcon ' + escapeHtml(icon) + '" aria-hidden="true"></span><span class="homeLibraryText">' + escapeHtml(item.Name) + '</span></a>';
                 }
                 return html;
             }
@@ -123,23 +147,20 @@
         
         var index = 0;
         items.forEach(function (item) {
-            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
+            html += '<div class="card overflowPortraitCard card-hoverable card-withuserdata discover-card" data-index="' + index + '" data-tmdb-id="' + escapeHtml(item.ProviderIds.Jellyseerr) + '" data-media-type="' + escapeHtml(item.SourceType) + '">';
             html += '   <div class="cardBox cardBox-bottompadded">';
-            html += '       <div class="cardScalable discoverCard-' + item.SourceType + '">';
+            html += '       <div class="cardScalable discoverCard-' + escapeHtml(item.SourceType) + '">';
             html += '           <div class="cardPadder cardPadder-overflowPortrait lazy-hidden-children"></div>';
             html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
             
-            var posterUrl = item.ProviderIds.JellyseerrPoster;
-
-            if (!posterUrl.startsWith('http')) {
-                posterUrl = window.ApiClient.getUrl(posterUrl);
-            }
+            var posterUrl = getPosterUrl(item.ProviderIds.JellyseerrPoster);
+            var itemUrl = safeUrl(item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr);
             
-            html += '           <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(\'' + posterUrl + '\');color: inherit; text-decoration: none;"></a>';
+            html += '           <a is="emby-linkbutton" target="_blank" href="' + escapeHtml(itemUrl) + '" class="cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast" aria-label="" style="background-image: url(\'' + escapeCssUrl(posterUrl) + '\');color: inherit; text-decoration: none;"></a>';
             html += '           <div class="cardOverlayContainer itemAction" data-action="link">';
-            html += '               <a is="emby-linkbutton" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="cardImageContainer"  style="color: inherit; text-decoration: none;"></a>';
+            html += '               <a is="emby-linkbutton" target="_blank" href="' + escapeHtml(itemUrl) + '" class="cardImageContainer"  style="color: inherit; text-decoration: none;"></a>';
             html += '               <div class="cardOverlayButton-br flex">';
-            html += '                   <button is="discover-requestbutton" type="button" data-action="none" class="discover-requestbutton cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button" data-id="' + item.ProviderIds.Jellyseerr + '" data-media-type="' + item.SourceType + '">';
+            html += '                   <button is="discover-requestbutton" type="button" data-action="none" class="discover-requestbutton cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button" data-id="' + escapeHtml(item.ProviderIds.Jellyseerr) + '" data-media-type="' + escapeHtml(item.SourceType) + '">';
             html += '                       <span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover add" aria-hidden="true"></span>';
             html += '                   </button>';
             html += '               </div>';
@@ -147,7 +168,7 @@
             html += '       </div>';
             html += '       <div class="cardText cardTextCentered cardText-first">';
             html += '           <bdi>';
-            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + item.Name + '" data-action="link">' + item.Name + '</a>';
+            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + escapeHtml(itemUrl) + '" class="itemAction textActionButton" title="' + escapeHtml(item.Name) + '" data-action="link">' + escapeHtml(item.Name) + '</a>';
             html += '           </bdi>';
             html += '       </div>';
             html += '       <div class="cardText cardTextCentered cardText-secondary">';
@@ -162,7 +183,7 @@
                 yearText += '<span class="material-icons" style="font-size: 14px; vertical-align: middle; color: #FFD700;">star</span> - • ';
             }
             yearText += date.getFullYear();
-            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + item.ProviderIds.JellyseerrRoot + '/' + item.SourceType + '/' + item.ProviderIds.Jellyseerr + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + yearText + '</a>';
+            html += '               <a is="emby-linkbutton" style="color: inherit; text-decoration: none;" target="_blank" href="' + escapeHtml(itemUrl) + '" class="itemAction textActionButton" title="' + date.getFullYear() + '" data-action="link">' + yearText + '</a>';
             html += '           </bdi>';
             html += '       </div>';
             html += '   </div>';
@@ -221,10 +242,8 @@
             html += '           <div class="cardPadder ' + cardPadderClass + ' lazy-hidden-children"></div>';
             
             if (posterUrl) {
-                if (!posterUrl.startsWith('http')) {
-                    posterUrl = window.ApiClient.getUrl(posterUrl);
-                }
-                html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + posterUrl + '\')"></div>';
+                posterUrl = getPosterUrl(posterUrl);
+                html += '           <div class="cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast" style="background-image: url(\'' + escapeCssUrl(posterUrl) + '\')"></div>';
             } else {
                 html += '           <canvas aria-hidden="true" width="20" height="20" class="blurhash-canvas lazy-hidden"></canvas>';
             }
@@ -232,14 +251,14 @@
             html += '       </div>';
             html += '       <div class="cardText cardTextCentered cardText-first">';
             html += '           <bdi>';
-            html += '               <div class="itemAction textActionButton" title="' + title + '">' + title + '</div>';
+            html += '               <div class="itemAction textActionButton" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</div>';
             html += '           </bdi>';
             html += '       </div>';
             
             if (secondaryInfo) {
                 html += '       <div class="cardText cardTextCentered cardText-secondary">';
                 html += '           <bdi>';
-                html += '               <div class="itemAction textActionButton" title="' + secondaryInfo + '">' + secondaryInfo + '</div>';
+                html += '               <div class="itemAction textActionButton" title="' + escapeHtml(secondaryInfo) + '">' + escapeHtml(secondaryInfo) + '</div>';
                 html += '           </bdi>';
                 html += '       </div>';
             }
@@ -247,7 +266,7 @@
             if (formattedDate) {
                 html += '       <div class="cardText cardTextCentered cardText-tertiary">';
                 html += '           <bdi>';
-                html += '               <div class="itemAction textActionButton" title="' + formattedDate + '">' + formattedDate + '</div>';
+                html += '               <div class="itemAction textActionButton" title="' + escapeHtml(formattedDate) + '">' + escapeHtml(formattedDate) + '</div>';
                 html += '           </bdi>';
                 html += '       </div>';
             }
@@ -291,15 +310,15 @@
                     })
                 }
 
-                html += '<a is="emby-linkbutton" href="' + route + '" class="button-flat button-flat-mini sectionTitleTextButton">';
+                html += '<a is="emby-linkbutton" href="' + escapeHtml(safeUrl(route)) + '" class="button-flat button-flat-mini sectionTitleTextButton">';
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
-                html += sectionInfo.DisplayText;
+                html += escapeHtml(sectionInfo.DisplayText);
                 html += "</h2>";
                 html += '<span class="material-icons chevron_right" aria-hidden="true"></span>';
                 html += "</a>";
             } else {
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
-                html += sectionInfo.DisplayText;
+                html += escapeHtml(sectionInfo.DisplayText);
                 html += "</h2>";
             }
             
@@ -584,7 +603,7 @@
                                     if (existingContainer !== null) {
                                         existingSections = existingContainer.children.length;
                                     }
-                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + var44_6 + ' section' + (existingSections + var44_5) + '"></div>';
+                                    for (var44_5 = 0; var44_5 < var44_.TotalRecordCount; var44_5++) var44_6 = getSectionClass(var44_.Items[var44_5]), var44_.Items[var44_5].Limit > 1, var44_3 += '<div data-page="' + window.HssPageMeta.Page + '" style="order:' + (var44_.Items[var44_5].OrderIndex + (1000 * (window.HssPageMeta.Page - 1))) + ';" class="verticalSection ' + escapeHtml(var44_6) + ' section' + (existingSections + var44_5) + '"></div>';
                                     
                                     if (window.HssPageMeta.Page !== 1) {
                                         var tempContainer = document.createElement("div");
