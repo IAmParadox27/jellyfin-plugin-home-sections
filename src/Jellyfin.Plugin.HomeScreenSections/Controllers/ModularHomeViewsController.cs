@@ -1,5 +1,7 @@
 ﻿using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Helpers;
 using Jellyfin.Plugin.HomeScreenSections.Library;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Querying;
@@ -20,6 +22,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         private readonly ILogger<ModularHomeViewsController> m_logger;
         private readonly IHomeScreenManager m_homeScreenManager;
         private readonly ITranslationManager m_translationManager;
+        private readonly IUserManager m_userManager;
 
         /// <summary>
         /// Constructor.
@@ -27,11 +30,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <param name="logger">Instance of <see cref="ILogger"/> interface.</param>
         /// <param name="homeScreenManager">Instance of <see cref="IHomeScreenManager"/> interface.</param>
         /// <param name="translationManager">Instance of <see cref="ITranslationManager"/> interface.</param>
-        public ModularHomeViewsController(ILogger<ModularHomeViewsController> logger, IHomeScreenManager homeScreenManager, ITranslationManager translationManager)
+        /// <param name="userManager">Instance of <see cref="IUserManager"/> interface.</param>
+        public ModularHomeViewsController(ILogger<ModularHomeViewsController> logger, IHomeScreenManager homeScreenManager, ITranslationManager translationManager, IUserManager userManager)
         {
             m_logger = logger;
             m_homeScreenManager = homeScreenManager;
             m_translationManager = translationManager;
+            m_userManager = userManager;
         }
 
         /// <summary>
@@ -87,16 +92,21 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         /// <returns><see cref="ModularHomeUserSettings"/>.</returns>
         [HttpGet("UserSettings")]
         [Authorize]
-        public ActionResult<ModularHomeUserSettings> GetUserSettings([FromQuery] Guid userId)
+        public ActionResult<ModularHomeUserSettings> GetUserSettings([FromQuery] Guid? userId = null)
         {
+            if (!UserAuthorizationHelper.TryGetUserId(User, m_userManager, userId, out Guid authenticatedUserId))
+            {
+                return Forbid();
+            }
+
             IEnumerable<SectionSettings> defaultEnabledSections =
                 HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => x.Enabled);
             IEnumerable<SectionSettings> adminLockedSections =
                 HomeScreenSectionsPlugin.Instance.Configuration.SectionSettings.Where(x => !x.AllowUserOverride);
             
-            return m_homeScreenManager.GetUserSettings(userId) ?? new ModularHomeUserSettings
+            return m_homeScreenManager.GetUserSettings(authenticatedUserId) ?? new ModularHomeUserSettings
             {
-                UserId = userId,
+                UserId = authenticatedUserId,
                 EnabledSections = defaultEnabledSections.Select(x => x.SectionId).ToList(),
                 LockedSections = adminLockedSections.Select(x => x.SectionId).ToList(),
                 DefaultEnabledSections = defaultEnabledSections.Select(x => x.SectionId).ToList()
@@ -125,7 +135,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.Controllers
         [Authorize]
         public ActionResult UpdateSettings([FromBody] ModularHomeUserSettings obj)
         {
-            m_homeScreenManager.UpdateUserSettings(obj.UserId, obj);
+            if (!UserAuthorizationHelper.TryGetUserId(User, m_userManager, obj.UserId, out Guid authenticatedUserId))
+            {
+                return Forbid();
+            }
+
+            obj.UserId = authenticatedUserId;
+            m_homeScreenManager.UpdateUserSettings(authenticatedUserId, obj);
 
             return Ok();
         }

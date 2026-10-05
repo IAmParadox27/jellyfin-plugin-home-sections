@@ -207,4 +207,6 @@ When your section results method is invoked you will receive an object represent
 }
 ```
 
+The `/HomeScreen/Sections`, `/HomeScreen/Section/{sectionType}` and `/ModularHomeViews/UserSettings` endpoints require authentication as an existing user. Clients can continue sending `userId`, but it must match the authenticated user, including for administrators; a different ID returns HTTP 403. Omitting `userId` from `/HomeScreen/Sections` or `GET /ModularHomeViews/UserSettings` uses the authenticated user. Section results handlers receive that user in `UserId`.
+
 You must make sure that your section results method returns a `QueryResult<BaseItemDto>`.
