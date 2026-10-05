@@ -57,6 +57,24 @@ The sections that are new for this plugin (and most likely the reason you would 
 - Genre
 	- Selects a weighted random set of genres based on the users viewing history and displays movies within that genre.
 
+- Studio/Network
+	- More content from a studio or network the user watches a lot of (e.g. "More from Studio - Warner Bros. Pictures" or "More from Network - HBO"), based on their primary studio/network. Each user sees a different studio, chosen by their own watch history.
+
+- Decade
+	- A "Best of the 1990s" style row, weighted towards the decades the user actually watches. Each user sees a different decade.
+
+- Starring
+	- Other movies/shows featuring an actor who appears in the user's library (e.g. "Starring Pedro Pascal"). Each user sees a different actor, picked randomly each load.
+
+- Directed By
+	- Other movies/shows from a director who appears in the user's library (e.g. "Directed by Denis Villeneuve"). Each user sees a different director, picked randomly each load.
+
+- Hidden Gems
+	- Highly rated movies and shows (7.5+) that the user hasn't watched yet. A random subset is picked each time it loads.
+
+- Finish These Collections
+	- Box sets/collections the user has started but not finished, ordered by how close they are to completion (closest first).
+
 - Discover
 	- The discover sections are integrated with Jellyseerr to bring the Discover Movies, Discover Shows and Trending sections of Jellyseerr into Jellyfin. They will only show media that isn't available in your library and have a direct request button right on the card for convenient requesting.
 

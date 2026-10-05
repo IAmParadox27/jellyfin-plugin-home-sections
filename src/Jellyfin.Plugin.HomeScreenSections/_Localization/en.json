@@ -7,7 +7,9 @@
   "Discover": "Discover",
   "DiscoverMovies": "Discover Movies",
   "DiscoverTV": "Discover TV Shows",
+  "FinishTheseCollections": "Finish These Collections",
   "Genre": "{0} Movies",
+  "HiddenGems": "Hidden Gems",
   "LatestAlbums": "Latest Albums",
   "LatestAudioBooks": "Latest Audiobooks",
   "LatestBooks": "Latest Books",
@@ -36,6 +38,12 @@
   "WatchAgain": "Watch Again",
   
   "GenreSectionName": "Genre",
+  "RecentlyAddedInLibrarySectionName": "Recently Added In Library",
+  "BecauseYouWatchedSectionName": "Because You Watched",
+  "StudioSectionName": "By Studio/Network",
+  "DecadeSectionName": "Decade",
+  "StarringSectionName": "Starring",
+  "DirectedBySectionName": "Directed by",
 
   "Action": "Action",
   "Adventure": "Adventure",

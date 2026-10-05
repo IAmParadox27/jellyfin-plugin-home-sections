@@ -152,11 +152,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             yield return instance;
         }
         
+        protected virtual string? AdminTranslationKey => null;
+
         public HomeScreenSectionInfo GetInfo()
         {
             return new HomeScreenSectionInfo
             {
                 Section = Section,
+                AdminTranslationKey = AdminTranslationKey,
                 DisplayText = DisplayText,
                 AdditionalData = AdditionalData,
                 Route = Route,
