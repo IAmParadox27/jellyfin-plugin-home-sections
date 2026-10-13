@@ -133,8 +133,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
             spinWait.Reset();
 
-            // If there's no data at all then we wait until its started.
-            while (!m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash.Value].OrderedSections.Any())
+            // Wait until the cache has been set up. Checking SectionsInProgress/OrderedSections here instead would spin
+            // forever when no sections are enabled, as both stay empty.
+            while (!m_dataCache.Cache[pageHash.Value].IsInitialised)
             {
                 spinWait.SpinOnce();
             }
@@ -219,6 +220,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                         });
                     }
                 }
+
+                userSectionsData.IsInitialised = true;
             }
             
             Parallel.ForEach(groupedOrderedSections, orderedSections =>
