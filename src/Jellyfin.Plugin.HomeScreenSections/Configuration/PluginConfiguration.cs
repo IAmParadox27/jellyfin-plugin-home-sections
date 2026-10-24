@@ -145,8 +145,33 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         }
     }
     
+    public class ArrInstanceConfig
+    {
+        public string Name { get; set; } = "";
+        public string? Url { get; set; } = "";
+        public string? ApiKey { get; set; } = "";
+    }
+
     public class ArrConfig
     {
+        public ArrInstanceConfig[]? Instances { get; set; }
+
+        public ArrInstanceConfig[] GetInstances()
+        {
+            // A missing collection uses the legacy connection; an empty one explicitly disables it.
+            if (Instances != null)
+            {
+                return Instances.Where(x => x != null).ToArray();
+            }
+
+            if (string.IsNullOrWhiteSpace(Url) && string.IsNullOrWhiteSpace(ApiKey))
+            {
+                return [];
+            }
+
+            return [new ArrInstanceConfig { Url = Url, ApiKey = ApiKey }];
+        }
+
         public string? ApiKey { get; set; } = "";
         public string? Url { get; set; } = "";
         public int UpcomingTimeframeValue { get; set; }

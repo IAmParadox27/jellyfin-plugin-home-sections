@@ -25,6 +25,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 
     public class SonarrSeriesDto
     {
+        [JsonPropertyName("tvdbId")]
+        public int TvdbId { get; set; }
+
         [JsonPropertyName("title")]
         public string? Title { get; set; }
 

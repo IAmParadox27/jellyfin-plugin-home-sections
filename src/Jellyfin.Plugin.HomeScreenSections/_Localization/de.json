@@ -1,4 +1,11 @@
 ﻿{
+  "AdminAddSonarrInstance": "Sonarr-Instanz hinzufügen",
+  "AdminAddRadarrInstance": "Radarr-Instanz hinzufügen",
+  "AdminArrInstance": "Instanz",
+  "AdminArrInstanceName": "Name (optional)",
+  "AdminArrInstanceUrl": "URL",
+  "AdminArrInstanceApiKey": "API-Schlüssel",
+  "AdminArrInstanceUrlInvalid": "Gib eine vollständige HTTP- oder HTTPS-URL ein.",
   "BecauseYouWatched": "Weil du {0} gesehen hast",
   "ContinueWatching": "Weiter ansehen",
   "ContinueWatchingNextUp": "Weiter ansehen / Als Nächstes",
