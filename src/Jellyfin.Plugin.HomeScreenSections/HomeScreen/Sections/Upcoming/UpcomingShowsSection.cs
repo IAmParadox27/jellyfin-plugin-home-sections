@@ -22,7 +22,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override (string? url, string? apiKey) GetServiceConfiguration(PluginConfiguration config)
         {
-            return (config.Sonarr.Url, config.Sonarr.ApiKey);
+            ArrInstanceConfig? instance = config.Sonarr.GetInstances().FirstOrDefault(x =>
+                !string.IsNullOrWhiteSpace(x.Url) && !string.IsNullOrWhiteSpace(x.ApiKey));
+            return (instance?.Url, instance?.ApiKey);
         }
 
         protected override (int value, TimeframeUnit unit) GetTimeframeConfiguration(PluginConfiguration config)
@@ -40,6 +42,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
             return items
                 .Where(item => item.Monitored && !item.HasFile && item.AirDateUtc.HasValue)
                 .OrderBy(item => item.AirDateUtc);
+        }
+
+        protected override IEnumerable<SonarrCalendarDto> RemoveDuplicates(IEnumerable<SonarrCalendarDto> items)
+        {
+            return items.DistinctBy(item => item.Series?.TvdbId > 0
+                ? $"tvdb:{item.Series.TvdbId}:{item.SeasonNumber}:{item.EpisodeNumber}"
+                : $"sonarr:{item.SourceId}:{item.Id}");
         }
 
         protected override string? GetItemPath(SonarrCalendarDto item) => item.Series?.Path;
@@ -84,7 +93,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 ProviderIds = providerIds,
                 UserData = new UserItemDataDto
                 {
-                    Key = $"upcoming-{calendarItem.Id}",
+                    Key = $"upcoming-{calendarItem.SourceId}-{calendarItem.Id}",
                     PlaybackPositionTicks = 0,
                     IsFavorite = false
                 }

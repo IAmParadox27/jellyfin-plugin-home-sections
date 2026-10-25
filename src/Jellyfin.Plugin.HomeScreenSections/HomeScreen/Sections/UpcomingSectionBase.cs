@@ -72,12 +72,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                     return new QueryResult<BaseItemDto>();
                 }
 
-                T[] upcomingItems = [.. FilterAndSortItems(calendarItems).Take(16)];
+                T[] upcomingItems = [.. FilterAndSortItems(calendarItems)];
 
                 if (config.FilterUpcomingByLibraryAccess)
                 {
                     upcomingItems = FilterByLibraryAccess(upcomingItems, payload.UserId);
                 }
+
+                upcomingItems = [.. RemoveDuplicates(upcomingItems).Take(16)];
 
                 Logger.LogDebug("Found {Count} upcoming items after filtering", upcomingItems.Length);
 
@@ -183,6 +185,11 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
         protected string GetCachedImageUrl(string? sourceUrl)
         {
             return ImageCacheHelper.GetCachedImageUrl(ImageCacheService, sourceUrl, Logger);
+        }
+
+        protected virtual IEnumerable<T> RemoveDuplicates(IEnumerable<T> items)
+        {
+            return items;
         }
 
         // Abstract methods that subclasses must implement
