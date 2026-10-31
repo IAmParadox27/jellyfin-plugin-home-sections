@@ -85,9 +85,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             return null;
         }
 
-        private Guid GeneratePageHash(Guid userId)
+        private Guid GeneratePageHash(Guid userId, Guid? forceHash = null)
         {
-            Guid pageHash = Guid.NewGuid();
+            Guid pageHash = forceHash ?? Guid.NewGuid();
             m_dataCache.PageHashOwnerIds.TryAdd(pageHash, userId);
             m_dataCache.PageHashExpiry.TryAdd(pageHash, DateTime.UtcNow.AddHours(1)); // TODO: In a future update we should make this configurable.
             
@@ -329,7 +329,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         
         private bool DoesPageBelongToUser(Guid pageHash, Guid userId)
         {
-            return m_dataCache.PageHashOwnerIds.TryGetValue(pageHash, out Guid ownerId) && ownerId == userId;
+            bool doesExist = m_dataCache.PageHashOwnerIds.TryGetValue(pageHash, out Guid ownerId);
+
+            if (!doesExist)
+            {
+                GeneratePageHash(userId, pageHash); // There is no reason if the hash doesn't exist for us to not just add it.
+                return true;
+            }
+            
+            return doesExist && ownerId == userId;
         }
     }
 
