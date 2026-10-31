@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
-using System.Threading.Channels;
+using System.Runtime.CompilerServices;
+using System.Diagnostics;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
 using Jellyfin.Plugin.HomeScreenSections.Data;
@@ -18,6 +19,18 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         private readonly ILogger<HomeScreenSectionsPlugin> m_logger;
         private readonly ITranslationManager m_translationManager;
         private readonly UserSectionsDataCache m_dataCache;
+        private static readonly ConditionalWeakTable<UserSectionsData, ProgressivePageState> s_pageStates = new ConditionalWeakTable<UserSectionsData, ProgressivePageState>();
+        private static readonly ConcurrentDictionary<Guid, byte> s_generationsStarted = new ConcurrentDictionary<Guid, byte>();
+        private static readonly TimeSpan s_shortPageTimeout = TimeSpan.FromMilliseconds(250);
+
+        private sealed class ProgressivePageState
+        {
+            public readonly object Sync = new();
+            public readonly SortedDictionary<int, List<IHomeScreenSection>> Groups = new();
+            public readonly Dictionary<int, List<(IHomeScreenSection Section, int Order)>> Pages = new();
+            public readonly Dictionary<int, int> PageEndOffsets = new();
+        }
+
     
         public HomeScreenSectionService(IHomeScreenManager homeScreenManager,
             ILogger<HomeScreenSectionsPlugin> logger, ITranslationManager translationManager,
@@ -32,57 +45,96 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public List<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
         {
-            if (!m_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? userSectionsData))
+            if (page < 1 || pageSize < 1 || !m_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? cache))
             {
                 return null;
             }
-            
-            // Make sure that it's flagged as being used, even if we don't return anything here the page is still active
-            // as we've received a request for it.
-            userSectionsData.LastAccessed = DateTime.UtcNow;
-            m_dataCache.PageHashExpiry.TryUpdate(pageHash, DateTime.UtcNow.AddHours(1), m_dataCache.PageHashExpiry[pageHash]); // TODO: In a future update we should make this configurable.
-            
-            // Check if the userSectionsData has the data we're after
-            int[] orderedKeys = userSectionsData.OrderedSections.Keys.OrderBy(x => x).ToArray();
 
-            List<(IHomeScreenSection Section, int ConfiguredOrder)> sectionsToReturn = new List<(IHomeScreenSection, int)>();
-            bool isComplete = true;
-            for (int i = 0; i < orderedKeys.Length; i++)
+            cache.LastAccessed = DateTime.UtcNow;
+            if (m_dataCache.PageHashExpiry.TryGetValue(pageHash, out DateTime expiry))
             {
-                int key = orderedKeys[i];
-                int prevKey = i > 0 ? orderedKeys[i - 1] : orderedKeys[i] - 1;
+                m_dataCache.PageHashExpiry.TryUpdate(pageHash, DateTime.UtcNow.AddHours(1), expiry);
+            }
 
-                bool cohesive = (key - prevKey) == 1;
-                if (prevKey > 0 && key - prevKey > 1)
+            ProgressivePageState state = s_pageStates.GetValue(cache, _ => new ProgressivePageState());
+            lock (state.Sync)
+            {
+                if (state.Pages.TryGetValue(page, out List<(IHomeScreenSection Section, int Order)>? existingPage))
                 {
-                    // If any of the ranges contain both the "key before" and "key after" then we can safely know this is cohesive.
-                    if (userSectionsData.OrderIndicesWithoutSections.Any(x => x.Contains(key - 1) && x.Contains(prevKey + 1)))
+                    return existingPage.Select(x => SectionToInfo(x.Section, x.Order, language)).ToList();
+                }
+
+                // A later page cannot be allocated until the previous boundary is fixed.
+                if (page > 1 && !state.PageEndOffsets.TryGetValue(page - 1, out _))
+                {
+                    return null;
+                }
+
+                int skip = page == 1 ? 0 : state.PageEndOffsets[page - 1];
+                List<(IHomeScreenSection Section, int Order)> available = new List<(IHomeScreenSection Section, int Order)>();
+                // Never pass an unfinished earlier group; completed groups and their
+                // stable prefixes may be consumed, in configured group order.
+                foreach (KeyValuePair<int, List<IHomeScreenSection>> group in state.Groups)
+                {
+                    available.AddRange(group.Value.Select(x => (x, group.Key)));
+                    if (cache.SectionsInProgress.ContainsKey(group.Key))
                     {
-                        cohesive = true;
+                        break;
                     }
                 }
 
-                if (cohesive)
+                List<(IHomeScreenSection Section, int Order)> slice = available.Skip(skip).Take(pageSize).ToList();
+                bool complete = cache.SectionsInProgress.IsEmpty;
+                if (slice.Count < pageSize && !complete)
                 {
-                    sectionsToReturn.AddRange(userSectionsData.OrderedSections[key].Select(x => (x, key)));
+                    return null;
                 }
-                else
-                {
-                    isComplete = false;
-                    break;
-                }
+
+                return CommitPage(state, page, skip, slice, language);
             }
-            
-            sectionsToReturn = sectionsToReturn.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            if ((isComplete && !userSectionsData.SectionsInProgress.Any()) || sectionsToReturn.Count == pageSize)
+        }
+
+        private List<HomeScreenSectionInfo> CommitPage(ProgressivePageState state, int page, int skip,
+            List<(IHomeScreenSection Section, int Order)> sections, string? language)
+        {
+            state.Pages[page] = sections;
+            state.PageEndOffsets[page] = skip + sections.Count;
+            return sections.Select(x => SectionToInfo(x.Section, x.Order, language)).ToList();
+        }
+
+        private List<HomeScreenSectionInfo>? TryCommitShortPage(Guid pageHash, string? language,
+            int page, int pageSize)
+        {
+            if (!m_dataCache.Cache.TryGetValue(pageHash, out UserSectionsData? cache))
             {
-                return sectionsToReturn
-                    .Select(x => SectionToInfo(x.Section, x.ConfiguredOrder, language))
-                    .ToList();
+                return null;
             }
 
-            // Return nothing if we don't have the complete picture.
-            return null;
+            ProgressivePageState state = s_pageStates.GetValue(cache, _ => new ProgressivePageState());
+            lock (state.Sync)
+            {
+                if (state.Pages.TryGetValue(page, out List<(IHomeScreenSection Section, int Order)>? existing))
+                {
+                    return existing.Select(x => SectionToInfo(x.Section, x.Order, language)).ToList();
+                }
+                if (page > 1 && !state.PageEndOffsets.ContainsKey(page - 1))
+                {
+                    return null;
+                }
+
+                int skip = page == 1 ? 0 : state.PageEndOffsets[page - 1];
+                List<(IHomeScreenSection Section, int Order)> available = new List<(IHomeScreenSection Section, int Order)>();
+                foreach (KeyValuePair<int, List<IHomeScreenSection>> group in state.Groups)
+                {
+                    available.AddRange(group.Value.Select(x => (x, group.Key)));
+                    if (cache.SectionsInProgress.ContainsKey(group.Key))
+                    {
+                        break;
+                    }
+                }
+                List<(IHomeScreenSection Section, int Order)> slice = available.Skip(skip).Take(pageSize).ToList();
+                return slice.Count > 0 ? CommitPage(state, page, skip, slice, language) : null;
+            }
         }
 
         private Guid GeneratePageHash(Guid userId, Guid? forceHash = null)
@@ -96,82 +148,59 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
         public List<HomeScreenSectionInfo>? MonitorLiveUpdatedSectionsForUser(Guid userId, string? language, int page, int? pageSize = null, Guid? pageHash = null)
         {
-            // Kick off the task to remove the expired "temp" user caches to avoid a memory leak.
-            Task.Run(() => ClearExpiredUserCaches(userId));
+            _ = Task.Run(() => ClearExpiredUserCaches(userId));
 
-            // If the sections have been requested with a page hash that wasn't generated for this user, generate a new one.
             if (pageHash.HasValue && !DoesPageBelongToUser(pageHash.Value, userId))
             {
                 pageHash = GeneratePageHash(userId);
             }
-            
-            if (pageHash == null)
-            {
-                pageHash = GetActiveTempPageCacheForUser(userId);
+            pageHash ??= GetActiveTempPageCacheForUser(userId) ?? GeneratePageHash(userId);
+            Guid hash = pageHash.Value;
 
-                if (pageHash == null)
+            // Starting the same generation twice could overwrite a completed cache.
+            if (!m_dataCache.Cache.ContainsKey(hash) && s_generationsStarted.TryAdd(hash, 0))
+            {
+                _ = Task.Run(() =>
                 {
-                    pageHash = GeneratePageHash(userId);
-                    
-                    CacheSectionsForUser(userId, pageHash.Value);
-
-                    int totalSectionCount = m_dataCache.Cache[pageHash.Value].OrderedSections.SelectMany(x => x.Value).Count();
-                    return GetCachedSectionsForUser(userId, language, 1, totalSectionCount, pageHash.Value);
-                }
+                    try
+                    {
+                        CacheSectionsForUser(userId, hash);
+                    }
+                    catch (Exception ex)
+                    {
+                        m_logger.LogError(ex, "Failed to generate home sections for user {UserId}", userId);
+                    }
+                    finally
+                    {
+                        s_generationsStarted.TryRemove(hash, out _);
+                    }
+                });
             }
-            
-            if (!m_dataCache.Cache.ContainsKey(pageHash.Value))
-            {
-                Thread cacheThread = new Thread(() => CacheSectionsForUser(userId, pageHash.Value));
-                cacheThread.Start();
-            }
 
-            SpinWait spinWait = new SpinWait();
-            while (!m_dataCache.Cache.ContainsKey(pageHash.Value))
+            Stopwatch timer = Stopwatch.StartNew();
+            int requestedSize = pageSize.GetValueOrDefault(int.MaxValue);
+            while (true)
             {
-                spinWait.SpinOnce();
-            }
-            spinWait.Reset();
-
-            // If there's no data at all then we wait until its started.
-            while (!m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() && !m_dataCache.Cache[pageHash.Value].OrderedSections.Any())
-            {
-                spinWait.SpinOnce();
-            }
-            
-            // We always wait from the start, if we hit a page that's already cached then we'll just return immediately.
-            // If its still in progress then we'll wait for it to finish.
-            UserSectionsData cache = m_dataCache.Cache[pageHash.Value];
-            int lowestSectionIndex = Math.Min(
-                m_dataCache.Cache[pageHash.Value].OrderedSections.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].OrderedSections.Min(x => x.Key) 
-                    : int.MaxValue,
-                m_dataCache.Cache[pageHash.Value].SectionsInProgress.Any() 
-                    ? m_dataCache.Cache[pageHash.Value].SectionsInProgress.Min(x => x.Key) 
-                    : int.MaxValue);
-
-            for (int i = lowestSectionIndex; i <= cache.MaxOrderIndex; i++)
-            {
-                if (cache.OrderIndicesWithoutSections.Any(x => x.Contains(i)))
-                {
-                    continue;
-                }
-                
-                while (cache.SectionsInProgress.ContainsKey(i))
-                {
-                    spinWait.SpinOnce();
-                }
-                
-                List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, pageSize ?? cache.OrderedSections.SelectMany(x => x.Value).Count(), pageHash.Value);
+                List<HomeScreenSectionInfo>? sections = GetCachedSectionsForUser(userId, language, page, requestedSize, hash);
                 if (sections != null)
                 {
                     return sections;
                 }
+                if (timer.Elapsed >= s_shortPageTimeout)
+                {
+                    sections = TryCommitShortPage(hash, language, page, requestedSize);
+                    if (sections != null)
+                    {
+                        return sections;
+                    }
+                }
+
+                // No usable sections yet: do not return an empty page that the
+                // client might mistake for end-of-pagination.
+                Thread.Sleep(20);
             }
-            
-            return null;
         }
-    
+
         public void CacheSectionsForUser(Guid userId, Guid? pageHash = null)
         {
             if (m_dataCache.Cache.ContainsKey(pageHash ?? Guid.Empty))
@@ -221,49 +250,53 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 }
             }
             
+            if (userSectionsData == null)
+            {
+                return;
+            }
+
+            ProgressivePageState state = s_pageStates.GetValue(userSectionsData, _ => new ProgressivePageState());
+            lock (state.Sync)
+            {
+                foreach (IGrouping<int, SectionSettings> group in groupedOrderedSections)
+                {
+                    state.Groups.TryAdd(group.Key, new List<IHomeScreenSection>());
+                }
+            }
+
             Parallel.ForEach(groupedOrderedSections, orderedSections =>
             {
-                ConcurrentBag<IHomeScreenSection?> tmpPluginSections = new ConcurrentBag<IHomeScreenSection?>(); // we want these randomly distributed among each other.
-
                 Parallel.ForEach(orderedSections, sectionSettings =>
                 {
-                    IHomeScreenSection? sectionType =
-                        sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
-
-                    if (sectionType != null)
+                    IHomeScreenSection? sectionType = sectionTypes.FirstOrDefault(x => x.Section == sectionSettings.SectionId);
+                    if (sectionType == null)
                     {
-                        int instanceCount = 1;
-                        if (sectionType.Limit > 1)
-                        {
-                            Random rnd = new Random();
-                            instanceCount = rnd.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit);
-                        }
+                        return;
+                    }
 
-                        try
+                    try
+                    {
+                        int count = sectionType.Limit > 1
+                            ? Random.Shared.Next(sectionSettings.LowerLimit, sectionSettings.UpperLimit)
+                            : 1;
+                        List<IHomeScreenSection> batch = sectionType.CreateInstances(userId, count).ToList();
+                        batch.Shuffle();
+                        lock (state.Sync)
                         {
-                            IEnumerable<IHomeScreenSection> instances = sectionType.CreateInstances(userId, instanceCount);
-
-                            foreach (IHomeScreenSection sectionInstance in instances)
-                            {
-                                tmpPluginSections.Add(sectionInstance);
-                            }
+                            // Append only: sections already served never move.
+                            state.Groups[orderedSections.Key].AddRange(batch);
                         }
-                        catch (Exception e)
-                        {
-                            // Adding an error log here to stop issues like #128 from completely breaking the home screen.
-                            // Whatever this section is won't work, but the rest of the home screen will still work.
-                            m_logger.LogError(e, $"An error occurred while creating section instances for user '{userId}' and section '{sectionType.Section}'.");
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        m_logger.LogError(ex, "An error occurred while creating section instances for user '{UserId}' and section '{Section}'.", userId, sectionType.Section);
                     }
                 });
 
-                List<IHomeScreenSection> sectionList = tmpPluginSections.Where(x => x != null).Select(x => x!).ToList();
-                sectionList.Shuffle();
-
-                if (userSectionsData != null)
+                lock (state.Sync)
                 {
-                    userSectionsData.OrderedSections.TryAdd(orderedSections.Key, sectionList);
-                    userSectionsData.SectionsInProgress.Remove(orderedSections.Key, out _);
+                    userSectionsData.OrderedSections.TryAdd(orderedSections.Key, state.Groups[orderedSections.Key].ToArray());
+                    userSectionsData.SectionsInProgress.TryRemove(orderedSections.Key, out _);
                 }
             });
         }

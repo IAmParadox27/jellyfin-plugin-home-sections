@@ -20,6 +20,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
         public required Guid UserId { get; set; }
         
         public required int MaxOrderIndex { get; set; }
+
+        public ConcurrentDictionary<int, int> PageEndOffsets { get; } = new ConcurrentDictionary<int, int>();
+        
+        public object PaginationLock { get; } = new object();
         
         // The int here represents the order index group
         public ConcurrentDictionary<int, IEnumerable<IHomeScreenSection>> OrderedSections { get; set; } = new ConcurrentDictionary<int, IEnumerable<IHomeScreenSection>>();
