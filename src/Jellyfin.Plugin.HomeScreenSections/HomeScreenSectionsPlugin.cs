@@ -98,6 +98,9 @@ namespace Jellyfin.Plugin.HomeScreenSections
             }
 
             base.UpdateConfiguration(configuration);
+
+            // Section settings (hide watched, item type, ...) change what a section returns, so cached results are no longer valid.
+            Services.SectionResultCache.InvalidateAll();
         }
 
         /// <summary>

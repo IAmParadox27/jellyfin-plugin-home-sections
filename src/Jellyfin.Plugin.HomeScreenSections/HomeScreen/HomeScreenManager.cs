@@ -7,6 +7,8 @@ using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming;
 using Jellyfin.Plugin.HomeScreenSections.Library;
 using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
+using Jellyfin.Plugin.HomeScreenSections.Services;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
@@ -29,6 +31,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         private readonly IServiceProvider m_serviceProvider;
         private readonly IApplicationPaths m_applicationPaths;
         private readonly ILogger m_logger;
+        private readonly SectionResultCache m_resultCache;
 
         private const string c_settingsFile = "ModularHomeSettings.json";
 
@@ -37,9 +40,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// </summary>
         /// <param name="serviceProvider">Instance of the <see cref="IServiceProvider"/> interface.</param>
         /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
-        public HomeScreenManager(IServiceProvider serviceProvider, IApplicationPaths applicationPaths, ILogger<HomeScreenManager> logger)
+        public HomeScreenManager(IServiceProvider serviceProvider, IApplicationPaths applicationPaths, ILogger<HomeScreenManager> logger, ILibraryManager libraryManager, IUserDataManager userDataManager, ILogger<SectionResultCache> cacheLogger)
         {
             m_logger = logger;
+            m_resultCache = new SectionResultCache(libraryManager, userDataManager, cacheLogger);
             m_serviceProvider = serviceProvider;
             m_applicationPaths = applicationPaths;
 
@@ -117,9 +121,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
         /// <inheritdoc/>
         public QueryResult<BaseItemDto> InvokeResultsDelegate(string key, HomeScreenSectionPayload payload, IQueryCollection queryCollection)
         {
-            if (m_delegates.ContainsKey(key))
+            if (m_delegates.TryGetValue(key, out IHomeScreenSection? section))
             {
-                return m_delegates[key].GetResults(payload, queryCollection);
+                int cacheSeconds = Math.Clamp(HomeScreenSectionsPlugin.Instance?.Configuration?.SectionCacheSeconds ?? 0, 0, 3600);
+
+                if (cacheSeconds <= 0)
+                {
+                    return section.GetResults(payload, queryCollection);
+                }
+
+                return m_resultCache.GetOrCompute(key, payload.UserId, queryCollection, cacheSeconds, section is PluginDefinedSection, () => section.GetResults(payload, queryCollection));
             }
 
             return new QueryResult<BaseItemDto>(Array.Empty<BaseItemDto>());
