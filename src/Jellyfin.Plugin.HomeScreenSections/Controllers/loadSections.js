@@ -69,7 +69,7 @@
         }));
     }
 
-    function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings) {
+    function getHomeScreenSectionFetchFn(serverId, sectionInfo, serverConnections, _userSettings, sectionElem) {
         return function() {
             var __userSettings = _userSettings;
             
@@ -89,7 +89,9 @@
             }
             
             var getUrl = apiClient.getUrl("HomeScreen/Section/" + sectionInfo.Section, queryParams);
-            return apiClient.getJSON(getUrl);
+            // Tell the reveal gate (Inject/HomeScreenSections.js) that this section has finished, whether or not it had items.
+            var markFetched = function () { if (sectionElem && sectionElem.setAttribute) { sectionElem.setAttribute('data-hss-fetched', '1'); } };
+            return apiClient.getJSON(getUrl).then(function (result) { markFetched(); return result; }, function (error) { markFetched(); throw error; });
         }
     }
     
@@ -354,7 +356,7 @@
                     ShowDetailsMenu: sectionInfo.ShowDetailsMenu
                 }
                 
-                itemsContainer.fetchData = getHomeScreenSectionFetchFn(apiClient.serverId(), sectionInfo, u.A, userSettings);
+                itemsContainer.fetchData = getHomeScreenSectionFetchFn(apiClient.serverId(), sectionInfo, u.A, userSettings, elem);
                 
                 var shapeBuilder = {{shapebuilder_hook}};
                 
@@ -413,6 +415,9 @@
 
     return getHomeScreenSectionsMeta(apiClient).then(function (hssMeta) {
         var useHss = isUserUsingHomeScreenSections(hssMeta, userSettings);
+        try { localStorage.setItem('hss.bootSkeleton', hssMeta.ShowBootSkeleton === true && useHss ? '1' : '0'); } catch (e) { }
+        if (!useHss && window.HssBootSkeletonOff) { window.HssBootSkeletonOff(); }
+        window.HssGateConfig = { enabled: hssMeta.RevealSectionsTogether === true, timeoutMs: hssMeta.RevealTimeoutMs > 0 ? hssMeta.RevealTimeoutMs : 1200, preloadImages: hssMeta.PreloadSectionImages === true };
         
         if (!useHss) {
             return _this.originalLoadSections(elem, apiClient, user, userSettings);
