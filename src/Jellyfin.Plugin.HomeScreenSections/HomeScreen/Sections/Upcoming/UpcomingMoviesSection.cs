@@ -22,7 +22,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
 
         protected override (string? url, string? apiKey) GetServiceConfiguration(PluginConfiguration config)
         {
-            return (config.Radarr.Url, config.Radarr.ApiKey);
+            ArrInstanceConfig? instance = config.Radarr.GetInstances().FirstOrDefault(x =>
+                !string.IsNullOrWhiteSpace(x.Url) && !string.IsNullOrWhiteSpace(x.ApiKey));
+            return (instance?.Url, instance?.ApiKey);
         }
 
         protected override (int value, TimeframeUnit unit) GetTimeframeConfiguration(PluginConfiguration config)
@@ -65,6 +67,15 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 .OrderBy(item => GetEarliestReleaseDate(item, config));
         }
 
+        protected override IEnumerable<RadarrCalendarDto> RemoveDuplicates(IEnumerable<RadarrCalendarDto> items)
+        {
+            return items.DistinctBy(item => item.TmdbId > 0
+                ? $"tmdb:{item.TmdbId}"
+                : !string.IsNullOrWhiteSpace(item.ImdbId)
+                    ? $"imdb:{item.ImdbId.ToLowerInvariant()}"
+                    : $"radarr:{item.SourceId}:{item.Id}");
+        }
+
         protected override string? GetItemPath(RadarrCalendarDto item) => item.Path;
 
         protected override string GetFallbackCoverUrl(RadarrCalendarDto missingItem)
@@ -104,7 +115,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Upcoming
                 ProviderIds = providerIds,
                 UserData = new UserItemDataDto
                 {
-                    Key = $"upcoming-movie-{calendarItem.Id}",
+                    Key = $"upcoming-movie-{calendarItem.SourceId}-{calendarItem.Id}",
                     PlaybackPositionTicks = 0,
                     IsFavorite = false
                 }

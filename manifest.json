@@ -1,0 +1,24 @@
+[
+  {
+    "guid": "b8298e01-2697-407a-b44d-aa8dc795e850",
+    "name": "Home Screen Sections",
+    "overview": "Multiple Sonarr and Radarr instances",
+    "description": "Unofficial fork by agzina0sicim with multiple named Sonarr and Radarr instances, calendar aggregation and duplicate filtering. Built for Jellyfin 10.11.11. Requires File Transformation and Plugin Pages. Based on Home Screen Sections by IAmParadox27.",
+    "owner": "agzina0sicim",
+    "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/agzina0sicim/jellyfin-plugin-home-sections/codex/plugin-repository/src/logo.png",
+    "versions": [
+      {
+        "version": "3.0.3.1",
+        "changelog": "Add multiple named Sonarr and Radarr instances. Migrate existing connections, aggregate upcoming items, filter duplicates and isolate instance failures. AI assistance: Codex. Contributor experience without AI: Beginner.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/agzina0sicim/jellyfin-plugin-home-sections/releases/download/fork-3.0.3.1-jf10.11.11/HomeScreenSections-3.0.3.1-Jellyfin-10.11.11.zip",
+        "checksum": "062D0D0EC343AE3747FC2C592FE323C0",
+        "timestamp": "2026-10-25T00:12:25Z",
+        "dependencies": [
+          "5e87cc92-571a-4d8d-8d98-d2d4147f9f90"
+        ]
+      }
+    ]
+  }
+]

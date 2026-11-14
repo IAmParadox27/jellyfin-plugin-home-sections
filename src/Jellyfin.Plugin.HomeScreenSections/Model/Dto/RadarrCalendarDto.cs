@@ -4,6 +4,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 {
     public class RadarrCalendarDto : ArrDtoBase
     {
+        [JsonPropertyName("tmdbId")]
+        public int TmdbId { get; set; }
+
+        [JsonPropertyName("imdbId")]
+        public string? ImdbId { get; set; }
+
         [JsonPropertyName("year")]
         public int Year { get; set; }
 

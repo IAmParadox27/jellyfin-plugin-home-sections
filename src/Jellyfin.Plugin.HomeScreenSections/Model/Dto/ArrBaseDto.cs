@@ -4,6 +4,9 @@ namespace Jellyfin.Plugin.HomeScreenSections.Model.Dto
 {
     public abstract class ArrDtoBase
     {
+        [JsonIgnore]
+        public string SourceId { get; set; } = "";
+
         [JsonPropertyName("id")]
         public int Id { get; set; }
         
