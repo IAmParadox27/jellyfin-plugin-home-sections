@@ -10,6 +10,28 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public bool LazyLoadEnabled { get; set; } = false;
 
         public int NumSectionsPerPage { get; set; } = 10;
+        /// <summary>
+        /// Keep every section of a page hidden behind a placeholder until they have all loaded (or <see cref="RevealTimeoutMs"/>
+        /// has passed), then show them together, instead of each section appearing and pushing the ones below it down.
+        /// </summary>
+        public bool RevealSectionsTogether { get; set; } = false;
+
+        /// <summary>How long to wait for a page of sections before showing whatever has loaded.</summary>
+        public int RevealTimeoutMs { get; set; } = 1200;
+
+        /// <summary>
+        /// Load the card images of every row ahead of time instead of when a card is scrolled near. Cards in the first screen are
+        /// ready before the sections are revealed; the rest are fetched in the background and shown finished, with no blurhash
+        /// and no fade-in, when they are scrolled into view.
+        /// </summary>
+        public bool PreloadSectionImages { get; set; } = false;
+
+        /// <summary>
+        /// Paint an outline of the home page (rows of placeholder cards) the moment the page starts loading, instead of a blank
+        /// page until the web app has started and the first section is created. Takes effect from a user's second visit, because
+        /// the browser has to know about the option before the app has started.
+        /// </summary>
+        public bool ShowBootSkeleton { get; set; } = false;
         
         public bool AllowUserOverride { get; set; } = true;
 

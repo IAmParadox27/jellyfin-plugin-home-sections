@@ -128,6 +128,24 @@
                                 <div class="inputContainer">
                                     <input is="emby-input" type="number" data-id="numLazyLoadSections" data-i18n-label="AdminLazyLoadSectionsLabel" label="Number of sections to load per page" />
                                     <div class="fieldDescription" data-i18n="AdminLazyLoadSectionsDesc">The number of sections that should be loaded per page.</div>
+                                <label class="emby-checkbox-label">
+                                    <input id="chkRevealSectionsTogether" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                    <span>Reveal sections together</span>
+                                </label>
+                                <div class="fieldDescription">Show placeholders while a page of sections loads, then show all of them at the same moment, instead of each section appearing (and moving the ones below it) as it arrives.</div>
+                                <label class="emby-checkbox-label">
+                                    <input id="chkShowBootSkeleton" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                    <span>Show an outline while the home page starts</span>
+                                </label>
+                                <div class="fieldDescription">Paint an outline of the home page rows immediately when the page starts loading, instead of a blank page until the first section is created. Applies from each user's second visit.</div>
+                                <label class="emby-checkbox-label">
+                                    <input id="chkPreloadSectionImages" type="checkbox" is="emby-checkbox" class="emby-checkbox">
+                                    <span>Preload row images</span>
+                                </label>
+                                <div class="fieldDescription">Load the images of every row ahead of time so scrolling a row never shows blurred or empty cards. Cards in the first screen are ready before the sections are revealed; the rest load quietly in the background (more data is downloaded up front).</div>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="numRevealTimeoutMs" label="Reveal timeout (milliseconds)" min="200" max="10000" />
+                                    <div class="fieldDescription">How long to wait for every section of a page before showing the ones that have loaded.</div>
                                 </div>
                             </div>
                         </details>
@@ -1497,6 +1515,10 @@
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
                     LazyLoadEnabled: document.querySelector('#chkLazyLoadEnabled').checked,
                     NumSectionsPerPage: parseInt(document.querySelector('[data-id=numLazyLoadSections]').value),
+                    RevealSectionsTogether: document.querySelector('#chkRevealSectionsTogether').checked,
+                    RevealTimeoutMs: parseInt(document.querySelector('[data-id=numRevealTimeoutMs]').value) || 1200,
+                    PreloadSectionImages: document.querySelector('#chkPreloadSectionImages').checked,
+                    ShowBootSkeleton: document.querySelector('#chkShowBootSkeleton').checked,
                     AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
                     LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                     LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
@@ -1554,6 +1576,10 @@
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
                         document.querySelector('#chkLazyLoadEnabled').checked = config.LazyLoadEnabled;
                         document.querySelector('[data-id=numLazyLoadSections]').value = config.NumSectionsPerPage;
+                        document.querySelector('#chkRevealSectionsTogether').checked = config.RevealSectionsTogether;
+                        document.querySelector('[data-id=numRevealTimeoutMs]').value = config.RevealTimeoutMs;
+                        document.querySelector('#chkPreloadSectionImages').checked = config.PreloadSectionImages;
+                        document.querySelector('#chkShowBootSkeleton').checked = config.ShowBootSkeleton;
 
                         arrServiceConfigs.forEach(serviceConfig => {
                             loadArrConfig(serviceConfig, config);

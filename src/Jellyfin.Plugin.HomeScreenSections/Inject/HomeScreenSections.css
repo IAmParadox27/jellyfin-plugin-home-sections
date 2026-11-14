@@ -115,3 +115,74 @@
     display: flex;
     flex-direction: column;
 }
+
+/* Reveal-together gate: placeholders for sections that are still loading. They are the height of a loaded row, so nothing
+   below them moves when the real content arrives. display:block beats Jellyfin's .hide (display:none !important). */
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"] {
+    display: block !important;
+    position: relative;
+    min-height: 370px;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"] > * {
+    visibility: hidden;
+}
+
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(rgba(255, 255, 255, .07), rgba(255, 255, 255, .07)) 3.3% 16px / 170px 22px no-repeat,
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0, rgba(255, 255, 255, .05) 180px, transparent 180px, transparent 192px) 3.3% 60px / 96.7% 270px no-repeat;
+    animation: hss-gate-pulse 1.4s ease-in-out infinite;
+}
+
+/* landscape rows are shorter */
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"].ContinueWatchingNextUp,
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"].LiveTV,
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"].MyMedia {
+    min-height: 290px;
+}
+
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"].ContinueWatchingNextUp::before,
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"].LiveTV::before,
+.homeSectionsContainer > .verticalSection[data-hss-gate="pending"].MyMedia::before {
+    background:
+        linear-gradient(rgba(255, 255, 255, .07), rgba(255, 255, 255, .07)) 3.3% 16px / 170px 22px no-repeat,
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0, rgba(255, 255, 255, .05) 320px, transparent 320px, transparent 332px) 3.3% 60px / 96.7% 180px no-repeat;
+}
+
+@keyframes hss-gate-pulse {
+    0%, 100% { opacity: .55; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .homeSectionsContainer > .verticalSection[data-hss-gate="pending"]::before { animation: none; }
+}
+
+/* Boot outline (ShowBootSkeleton): rows of placeholder cards painted before the web app has started. Sits under the app's header. */
+html.hss-boot body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(255, 255, 255, .07), rgba(255, 255, 255, .07)) 3.3% 96px / 170px 22px no-repeat,
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0, rgba(255, 255, 255, .05) 320px, transparent 320px, transparent 332px) 3.3% 140px / 96.7% 180px no-repeat,
+        linear-gradient(rgba(255, 255, 255, .07), rgba(255, 255, 255, .07)) 3.3% 386px / 170px 22px no-repeat,
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0, rgba(255, 255, 255, .05) 320px, transparent 320px, transparent 332px) 3.3% 430px / 96.7% 180px no-repeat,
+        linear-gradient(rgba(255, 255, 255, .07), rgba(255, 255, 255, .07)) 3.3% 676px / 170px 22px no-repeat,
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0, rgba(255, 255, 255, .05) 180px, transparent 180px, transparent 192px) 3.3% 720px / 96.7% 270px no-repeat,
+        linear-gradient(rgba(255, 255, 255, .07), rgba(255, 255, 255, .07)) 3.3% 1046px / 170px 22px no-repeat,
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0, rgba(255, 255, 255, .05) 180px, transparent 180px, transparent 192px) 3.3% 1090px / 96.7% 270px no-repeat;
+    animation: hss-gate-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.hss-boot body::before { animation: none; }
+}
