@@ -29,6 +29,16 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
         
         // This list represents a collection of index numbers that are currently being processed
         public ConcurrentDictionary<int, bool> SectionsInProgress { get; set; } = new ConcurrentDictionary<int, bool>();
+
+        private int m_isInitialised;
+
+        // Set once SectionsInProgress and OrderIndicesWithoutSections have been populated. Lets readers tell
+        // "not started yet" apart from "started, but there's nothing to load" (e.g. no sections enabled).
+        public bool IsInitialised
+        {
+            get => Volatile.Read(ref m_isInitialised) == 1;
+            set => Volatile.Write(ref m_isInitialised, value ? 1 : 0);
+        }
     }
     
     public class IntRange : IEquatable<IntRange>
