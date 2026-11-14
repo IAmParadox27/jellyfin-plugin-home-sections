@@ -9,11 +9,19 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 {
     public class DiscoverSection : IHomeScreenSection
     {
+        private const int c_resultLimit = 20;
+        private const int c_maxPages = 10;
+        private const int c_timeoutSeconds = 12;
+        private readonly IHttpClientFactory m_httpClientFactory;
+        private readonly IHttpContextAccessor m_httpContextAccessor;
+        private readonly ILogger<DiscoverSection> m_logger;
         private readonly IUserManager m_userManager;
         private readonly ImageCacheService m_imageCacheService;
         
@@ -27,10 +35,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
 
         protected virtual string JellyseerEndpoint => "/api/v1/discover/trending";
         
-        public DiscoverSection(IUserManager userManager, ImageCacheService imageCacheService)
+        public DiscoverSection(IUserManager userManager, ImageCacheService imageCacheService, IHttpClientFactory httpClientFactory, IHttpContextAccessor httpContextAccessor, ILogger<DiscoverSection> logger)
         {
             m_userManager = userManager;
             m_imageCacheService = imageCacheService;
+            m_httpClientFactory = httpClientFactory;
+            m_httpContextAccessor = httpContextAccessor;
+            m_logger = logger;
         }
         
         public QueryResult<BaseItemDto> GetResults(HomeScreenSectionPayload payload, IQueryCollection queryCollection)
@@ -42,45 +53,62 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             string? jellyseerrExternalUrl = HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrExternalUrl;
             
             // Use external URL for frontend links if configured, otherwise fall back to internal URL
-            string? jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl) ? jellyseerrExternalUrl : jellyseerrUrl;
+            string jellyseerrDisplayUrl = !string.IsNullOrEmpty(jellyseerrExternalUrl) ? jellyseerrExternalUrl : jellyseerrUrl ?? string.Empty;
 
             if (string.IsNullOrEmpty(jellyseerrUrl))
             {
                 return new QueryResult<BaseItemDto>();
             }
             
+            if (!Uri.TryCreate(jellyseerrUrl, UriKind.Absolute, out Uri? baseUri) ||
+                (baseUri.Scheme != Uri.UriSchemeHttp && baseUri.Scheme != Uri.UriSchemeHttps))
+            {
+                m_logger.LogWarning("Seerr discovery URL must be an absolute HTTP or HTTPS URL.");
+                return new QueryResult<BaseItemDto>();
+            }
+
             User? user = m_userManager.GetUserById(payload.UserId);
             
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(jellyseerrUrl);
-            client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
-            
-            HttpResponseMessage usersResponse = client.GetAsync($"/api/v1/user?q={user.Username}").GetAwaiter().GetResult();
-            string userResponseRaw = usersResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            int? jellyseerrUserId = JObject.Parse(userResponseRaw).Value<JArray>("results")!.OfType<JObject>().FirstOrDefault(x => x.Value<string>("jellyfinUsername") == user.Username)?.Value<int>("id");
-
-            if (jellyseerrUserId == null)
+            if (user == null)
             {
                 return new QueryResult<BaseItemDto>();
             }
-            
-            client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
 
-            // Make the API call to discover and get the 20 results
-            int page = 1;
-            do 
+            using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(
+                m_httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
+            deadline.CancelAfter(TimeSpan.FromSeconds(c_timeoutSeconds));
+            CancellationToken cancellationToken = deadline.Token;
+
+            try
             {
-                HttpResponseMessage discoverResponse = client.GetAsync($"{JellyseerEndpoint}?page={page}").GetAwaiter().GetResult();
+                using HttpClient client = m_httpClientFactory.CreateClient();
+                client.BaseAddress = baseUri;
+                client.DefaultRequestHeaders.Add("X-Api-Key", HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrApiKey);
 
-                if (discoverResponse.IsSuccessStatusCode)
+                JObject? users = GetResponse(client, $"/api/v1/user?q={Uri.EscapeDataString(user.Username)}", cancellationToken);
+                if (users?["results"] is not JArray usersResults)
                 {
-                    string jsonRaw = discoverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    JObject? jsonResponse = JObject.Parse(jsonRaw);
+                    return new QueryResult<BaseItemDto>();
+                }
 
-                    if (jsonResponse != null)
+                JObject? seerrUser = usersResults.OfType<JObject>()
+                    .FirstOrDefault(x => x["jellyfinUsername"]?.Type == JTokenType.String && x.Value<string>("jellyfinUsername") == user.Username);
+                if (!int.TryParse(seerrUser?["id"]?.ToString(), out int jellyseerrUserId) || jellyseerrUserId <= 0)
+                {
+                    return new QueryResult<BaseItemDto>();
+                }
+
+                client.DefaultRequestHeaders.Add("X-Api-User", jellyseerrUserId.ToString());
+
+                for (int page = 1; page <= c_maxPages && returnItems.Count < c_resultLimit; page++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    JObject? jsonResponse = GetResponse(client, $"{JellyseerEndpoint}?page={page}", cancellationToken);
+                    if (jsonResponse?["results"] is JArray results && results.Count > 0)
                     {
-                        foreach (JObject item in jsonResponse.Value<JArray>("results")!.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
+                        foreach (JObject item in results.OfType<JObject>().Where(x => !x.Value<bool>("adult")))
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             if (!string.IsNullOrEmpty(HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages) && 
                                 !HomeScreenSectionsPlugin.Instance.Configuration.JellyseerrPreferredLanguages.Split(',')
                                     .Select(x => x.Trim()).Contains(item.Value<string>("originalLanguage")))
@@ -99,7 +127,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                 }
                                 
                                 string posterPath = item.Value<string>("posterPath") ?? "404";
-                                string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}");
+                                string cachedImageUrl = GetCachedImageUrl($"https://image.tmdb.org/t/p/w600_and_h900_bestv2{posterPath}", cancellationToken);
                                 float rating = item.Value<float?>("vote_average") ?? item.Value<float?>("voteAverage") ?? 0f;
 
                                 returnItems.Add(new BaseItemDto()
@@ -117,12 +145,36 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
                                     PremiereDate = DateTime.Parse(dateTimeString)
                                 });
                             }
+                            if (returnItems.Count == c_resultLimit)
+                            {
+                                break;
+                            }
                         }
                     }
-                }
+                    else
+                    {
+                        break;
+                    }
 
-                page++;
-            } while (returnItems.Count < 20);
+                    if (int.TryParse(jsonResponse["totalPages"]?.ToString(), out int totalPages) && page >= totalPages)
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (HttpRequestException)
+            {
+                m_logger.LogWarning("Seerr discovery request failed; returning the items collected so far.");
+            }
+            catch (OperationCanceledException)
+            {
+                m_logger.LogWarning("Seerr discovery was cancelled or timed out; returning the items collected so far.");
+            }
+            catch (JsonReaderException)
+            {
+                m_logger.LogWarning("Seerr returned invalid discovery JSON; returning the items collected so far.");
+            }
+
             return new QueryResult<BaseItemDto>()
             {
                 Items = returnItems,
@@ -131,9 +183,33 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             };
         }
 
+        private JObject? GetResponse(HttpClient client, string endpoint, CancellationToken cancellationToken)
+        {
+            using HttpResponseMessage response = client.GetAsync(endpoint, cancellationToken).GetAwaiter().GetResult();
+            if (!response.IsSuccessStatusCode)
+            {
+                m_logger.LogWarning("Seerr discovery returned HTTP {StatusCode}.", (int)response.StatusCode);
+                return null;
+            }
+
+            string content = response.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
+            if (JToken.Parse(content) is not JObject result || result["results"] is not JArray)
+            {
+                m_logger.LogWarning("Seerr discovery returned an invalid results object.");
+                return null;
+            }
+
+            return result;
+        }
+
         protected string GetCachedImageUrl(string sourceUrl)
         {
             return ImageCacheHelper.GetCachedImageUrl(m_imageCacheService, sourceUrl);
+        }
+
+        protected string GetCachedImageUrl(string sourceUrl, CancellationToken cancellationToken)
+        {
+            return ImageCacheHelper.GetCachedImageUrl(m_imageCacheService, sourceUrl, cancellationToken: cancellationToken);
         }
 
         public IEnumerable<IHomeScreenSection> CreateInstances(Guid? userId, int instanceCount)
