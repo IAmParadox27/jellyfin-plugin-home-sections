@@ -128,6 +128,10 @@
                                 <div class="inputContainer">
                                     <input is="emby-input" type="number" data-id="numLazyLoadSections" data-i18n-label="AdminLazyLoadSectionsLabel" label="Number of sections to load per page" />
                                     <div class="fieldDescription" data-i18n="AdminLazyLoadSectionsDesc">The number of sections that should be loaded per page.</div>
+                                <div class="inputContainer">
+                                    <input is="emby-input" type="number" data-id="numSectionCacheSeconds" label="Cache section results (seconds, 0 = off)" min="0" max="3600" />
+                                    <div class="fieldDescription">Reuse a user's section results when they open the home page again within this time. Results are dropped as soon as the user's watch data or the library changes. Seerr, upcoming and Live TV sections are cached for at most 30 seconds. A change to a user's library access can take up to this long to show. Sections that choose items at random (Because You Watched, Genre, Studio, Decade, Hidden Gems, Watch Again) keep the same items until the cached result expires.</div>
+                                </div>
                                 </div>
                             </div>
                         </details>
@@ -1497,6 +1501,7 @@
                     Enabled: document.querySelector('#globalEnabledDefault').checked,
                     LazyLoadEnabled: document.querySelector('#chkLazyLoadEnabled').checked,
                     NumSectionsPerPage: parseInt(document.querySelector('[data-id=numLazyLoadSections]').value),
+                    SectionCacheSeconds: parseInt(document.querySelector('[data-id=numSectionCacheSeconds]').value) || 0,
                     AllowUserOverride: document.querySelector('#globalAllowUserOverride').checked,
                     LibreTranslateUrl: document.querySelector('[data-id=txtLibreTranslateUrl]').value,
                     LibreTranslateApiKey: document.querySelector('[data-id=txtLibreTranslateApiKey]').value,
@@ -1554,6 +1559,7 @@
                         document.querySelector('[data-id=txtJellyseerrPreferredLanguages]').value = config.JellyseerrPreferredLanguages;
                         document.querySelector('#chkLazyLoadEnabled').checked = config.LazyLoadEnabled;
                         document.querySelector('[data-id=numLazyLoadSections]').value = config.NumSectionsPerPage;
+                        document.querySelector('[data-id=numSectionCacheSeconds]').value = config.SectionCacheSeconds;
 
                         arrServiceConfigs.forEach(serviceConfig => {
                             loadArrConfig(serviceConfig, config);

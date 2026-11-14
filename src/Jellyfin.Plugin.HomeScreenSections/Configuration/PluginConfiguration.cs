@@ -10,6 +10,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Configuration
         public bool LazyLoadEnabled { get; set; } = false;
 
         public int NumSectionsPerPage { get; set; } = 10;
+        /// <summary>
+        /// How long, in seconds, a user's section results may be reused when they open the home page again. 0 turns the cache
+        /// off. Results are also dropped as soon as the user's watch data or the library changes.
+        /// </summary>
+        public int SectionCacheSeconds { get; set; } = 0;
+
         
         public bool AllowUserOverride { get; set; } = true;
 
