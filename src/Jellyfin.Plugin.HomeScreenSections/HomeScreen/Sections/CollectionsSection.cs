@@ -98,6 +98,13 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections
             .Take(16)
                 .ToList();
 
+            // Nothing to show. Return before the ItemIds query below: an empty ItemIds array is treated by Jellyfin as
+            // "no filter", so without this guard the query loads every item in the library only to discard it.
+            if (boxsets.Count == 0)
+            {
+                return new QueryResult<BaseItemDto>(Array.Empty<BaseItemDto>());
+            }
+
             // TODO: Add nice logic to score collections that are either higher or lower watched, or have more movies etc
             
             // Fetch full items with images

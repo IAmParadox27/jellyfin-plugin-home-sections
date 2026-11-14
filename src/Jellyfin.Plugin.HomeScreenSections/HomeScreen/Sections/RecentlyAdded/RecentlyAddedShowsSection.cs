@@ -73,38 +73,92 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.RecentlyAdded
         private IEnumerable<BaseItem> GetShowItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders,
             bool? isPlayed)
         {
-            IEnumerable<BaseItem> candidateShows = folders.SelectMany(x =>
+            // A show is ordered by the date its newest episode was added. Rather than loading every show and then asking
+            // the database for each show's newest episode (one query per show), read the newest episodes of each library
+            // in pages, newest first. The first time a show appears in that stream is its newest episode, so as soon as
+            // we have collected the wanted number of shows, no later page can change the result.
+            const int c_resultLimit = 16;
+            const int c_pageSize = 250;
+            const int c_maxPages = 20; // 5,000 episodes: a bound for libraries where most shows are hidden by the filters
+
+            DtoOptions pagingOptions = new DtoOptions(false)
             {
-                var item = m_libraryManager.GetParentItem(Guid.Parse(x.ItemId), user?.Id);
+                EnableImages = false
+            };
+
+            Dictionary<Guid, (BaseItem Show, DateTime Added)> shows = new();
+
+            foreach (VirtualFolderInfo virtualFolder in folders)
+            {
+                BaseItem? item = m_libraryManager.GetParentItem(Guid.Parse(virtualFolder.ItemId), user?.Id);
 
                 if (item is not Folder folder)
                 {
-                    folder = m_libraryManager.GetUserRootFolder();
+                    continue; // the previous code listed shows directly under the user's root folder, which has none
                 }
 
-                return folder.GetItems(new InternalItemsQuery(user)
-                {
-                    IncludeItemTypes = new[]
-                    {
-                        SectionItemKind
-                    },
-                    DtoOptions = dtoOptions,
-                    EnableTotalRecordCount = false
-                }).Items;
-            })
-            .DistinctBy(x => x.Id);
+                HashSet<Guid> seenInFolder = new();
+                int foundInFolder = 0;
 
-            // Filter watch status in memory to avoid expensive database query
-            if (isPlayed.HasValue && user != null)
-            {
-                candidateShows = candidateShows.Where(x => x.IsPlayedVersionSpecific(user) == isPlayed.Value);
+                for (int page = 0; page < c_maxPages && foundInFolder < c_resultLimit; page++)
+                {
+                    IReadOnlyList<BaseItem> episodes = folder.GetItems(new InternalItemsQuery(user)
+                    {
+                        IncludeItemTypes = new[]
+                        {
+                            BaseItemKind.Episode
+                        },
+                        OrderBy = new[] { (ItemSortBy.DateCreated, SortOrder.Descending) },
+                        Recursive = true,
+                        ParentId = folder.Id,
+                        IsMissing = false,
+                        IsVirtualItem = false,
+                        StartIndex = page * c_pageSize,
+                        Limit = c_pageSize,
+                        EnableTotalRecordCount = false,
+                        DtoOptions = pagingOptions
+                    }).Items;
+
+                    foreach (BaseItem episode in episodes)
+                    {
+                        if (episode is not Episode { SeriesId: var seriesId } || seriesId == Guid.Empty || !seenInFolder.Add(seriesId))
+                        {
+                            continue;
+                        }
+
+                        if (m_libraryManager.GetItemById(seriesId) is not Series series)
+                        {
+                            continue;
+                        }
+
+                        if (isPlayed.HasValue && user != null && series.IsPlayedVersionSpecific(user) != isPlayed.Value)
+                        {
+                            continue;
+                        }
+
+                        foundInFolder++;
+                        shows[seriesId] = shows.TryGetValue(seriesId, out var existing) && existing.Added >= episode.DateCreated
+                            ? existing
+                            : (series, episode.DateCreated);
+
+                        if (foundInFolder >= c_resultLimit)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (episodes.Count < c_pageSize)
+                    {
+                        break; // no more episodes in this library
+                    }
+                }
             }
 
-            // Materialize to prevent re-execution, then sort by latest episode date
-            return candidateShows
-                .ToArray()
-                .OrderByDescending(x => GetSortDateForItem(x, user, dtoOptions))
-                .Take(16);
+            return shows.Values
+                .OrderByDescending(x => x.Added)
+                .Select(x => x.Show)
+                .Take(c_resultLimit)
+                .ToArray();
         }
 
         private IEnumerable<BaseItem> GetEpisodeItems(User? user, DtoOptions dtoOptions, VirtualFolderInfo[] folders,
