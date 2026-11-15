@@ -135,20 +135,18 @@
                             <summary data-i18n="AdminArrApiSettings" style="cursor: pointer; font-weight: bold;">*arr API Settings</summary>
                             <div style="padding-top: 1em;">
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtSonarrUrl" data-i18n-label="AdminSonarrUrl" label="Sonarr URL" />
-                                    <div class="fieldDescription" data-i18n="AdminSonarrUrlDesc">Complete URL for Sonarr to use for upcoming shows sections.</div>
+                                    <h3>Sonarr</h3>
+                                    <div id="sonarrInstances"></div>
+                                    <button is="emby-button" type="button" class="raised button-submit block" data-arr-service="Sonarr">
+                                        <span data-i18n="AdminAddSonarrInstance">Add Sonarr Instance</span>
+                                    </button>
                                 </div>
                                 <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtSonarrApiKey" data-i18n-label="AdminSonarrApiKey" label="Sonarr API Key" />
-                                    <div class="fieldDescription" data-i18n="AdminSonarrApiKeyDesc">API Key for Sonarr instance.</div>
-                                </div>
-                                <div class="inputContainer">
-                                    <input is="emby-input" type="text" data-id="txtRadarrUrl" data-i18n-label="AdminRadarrUrl" label="Radarr URL" />
-                                    <div class="fieldDescription" data-i18n="AdminRadarrUrlDesc">Complete URL for Radarr to use for upcoming movies sections.</div>
-                                </div>
-                                <div class="inputContainer">
-                                    <input is="emby-input" type="password" data-id="txtRadarrApiKey" data-i18n-label="AdminRadarrApiKey" label="Radarr API Key" />
-                                    <div class="fieldDescription" data-i18n="AdminRadarrApiKeyDesc">API Key for Radarr instance.</div>
+                                    <h3>Radarr</h3>
+                                    <div id="radarrInstances"></div>
+                                    <button is="emby-button" type="button" class="raised button-submit block" data-arr-service="Radarr">
+                                        <span data-i18n="AdminAddRadarrInstance">Add Radarr Instance</span>
+                                    </button>
                                 </div>
                                 <div class="inputContainer" style="padding-left: 1em;">
                                     <label class="inputLabel inputLabelUnfocused" data-i18n="AdminRadarrReleaseTypes">Radarr Release Types</label>
@@ -490,6 +488,24 @@
         </tr>
     </template>
     
+    <template id="arrInstanceTemplate">
+        <fieldset class="arrInstance" style="margin-bottom: 1em;">
+            <legend data-i18n="AdminArrInstance">Instance</legend>
+            <div class="inputContainer">
+                <input is="emby-input" type="text" data-field="Name" data-i18n-label="AdminArrInstanceName" label="Name (optional)" />
+            </div>
+            <div class="inputContainer">
+                <input is="emby-input" type="url" data-field="Url" data-i18n-label="AdminArrInstanceUrl" label="URL" required />
+            </div>
+            <div class="inputContainer">
+                <input is="emby-input" type="password" data-field="ApiKey" data-i18n-label="AdminArrInstanceApiKey" label="API Key" autocomplete="off" required />
+            </div>
+            <button is="emby-button" type="button" class="raised" data-action="remove">
+                <span data-i18n="AdminRemove">Remove</span>
+            </button>
+        </fieldset>
+    </template>
+
     <script type="text/javascript">
         (() => {
             // Plugin GUID for configuration API
@@ -499,8 +515,8 @@
 
             // Centralized Arr service configuration
             const arrServiceConfigs = [
-                { name: 'Sonarr', timeframePrefix: 'upcomingShows', defaultValue: 1, defaultUnit: 'Weeks' },
-                { name: 'Radarr', timeframePrefix: 'upcomingMovies', defaultValue: 3, defaultUnit: 'Months' },
+                { name: 'Sonarr', instancesSelector: '#sonarrInstances', timeframePrefix: 'upcomingShows', defaultValue: 1, defaultUnit: 'Weeks' },
+                { name: 'Radarr', instancesSelector: '#radarrInstances', timeframePrefix: 'upcomingMovies', defaultValue: 3, defaultUnit: 'Months' },
                 { name: 'Lidarr', timeframePrefix: 'upcomingMusic', defaultValue: 6, defaultUnit: 'Months' },
                 { name: 'Readarr', timeframePrefix: 'upcomingBooks', defaultValue: 1, defaultUnit: 'Years' }
             ];
@@ -596,14 +612,89 @@
                 });
             }
 
+            function addArrInstance(serviceConfig, instance = {})
+            {
+                const row = document.querySelector('#arrInstanceTemplate').content.firstElementChild.cloneNode(true);
+                row.querySelector('[data-field=Name]').value = instance.Name || '';
+                row.querySelector('[data-field=Url]').value = instance.Url || '';
+                row.querySelector('[data-field=ApiKey]').value = instance.ApiKey || '';
+                row.querySelector('[data-action=remove]').addEventListener('click', function ()
+                {
+                    row.remove();
+                });
+                document.querySelector(serviceConfig.instancesSelector).appendChild(row);
+                applyTranslations(row);
+                return row;
+            }
+
+            function readArrInstances(serviceConfig)
+            {
+                return Array.from(document.querySelectorAll(serviceConfig.instancesSelector + ' .arrInstance'), row => ({
+                    Name: row.querySelector('[data-field=Name]').value.trim(),
+                    Url: row.querySelector('[data-field=Url]').value.trim(),
+                    ApiKey: row.querySelector('[data-field=ApiKey]').value.trim()
+                }));
+            }
+
+            function validateArrInstances()
+            {
+                for (const serviceConfig of arrServiceConfigs.filter(config => config.instancesSelector))
+                {
+                    for (const row of document.querySelectorAll(serviceConfig.instancesSelector + ' .arrInstance'))
+                    {
+                        const urlInput = row.querySelector('[data-field=Url]');
+                        const apiKeyInput = row.querySelector('[data-field=ApiKey]');
+                        urlInput.value = urlInput.value.trim();
+                        apiKeyInput.value = apiKeyInput.value.trim();
+                        urlInput.setCustomValidity('');
+                        apiKeyInput.setCustomValidity('');
+                        if (urlInput.value)
+                        {
+                            try
+                            {
+                                const url = new URL(urlInput.value);
+                                if (url.protocol !== 'http:' && url.protocol !== 'https:')
+                                {
+                                    throw new Error('Unsupported protocol');
+                                }
+                            }
+                            catch
+                            {
+                                urlInput.setCustomValidity(pageTranslations['AdminArrInstanceUrlInvalid'] || 'Enter a complete HTTP or HTTPS URL.');
+                            }
+                        }
+                        for (const input of [urlInput, apiKeyInput])
+                        {
+                            if (!input.checkValidity())
+                            {
+                                const details = input.closest('details');
+                                if (details)
+                                {
+                                    details.open = true;
+                                }
+                                document.querySelector('[data-tab=global]').click();
+                                input.reportValidity();
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+
             function createArrConfig(serviceConfig) {
                 const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
                 const config = {
-                    Url: document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value,
-                    ApiKey: document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value,
+                    Url: serviceConfig.instancesSelector ? '' : document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value,
+                    ApiKey: serviceConfig.instancesSelector ? '' : document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value,
                     UpcomingTimeframeValue: parseInt(document.querySelector(timeframeValueSelector).value) || serviceConfig.defaultValue,
                     UpcomingTimeframeUnit: document.querySelector('#' + serviceConfig.timeframePrefix + 'TimeframeUnit').value
                 };
+
+                if (serviceConfig.instancesSelector)
+                {
+                    config.Instances = readArrInstances(serviceConfig);
+                }
 
                 if (serviceConfig.name === 'Radarr') {
                     config.ConsiderCinemaRelease = document.querySelector('#radarrConsiderCinemaRelease').checked;
@@ -619,8 +710,19 @@
                 const timeframeValueSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeValue';
                 const timeframeUnitSelector = '#' + serviceConfig.timeframePrefix + 'TimeframeUnit';
 
-                document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value = arrConfig?.Url || '';
-                document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value = arrConfig?.ApiKey || '';
+                if (serviceConfig.instancesSelector)
+                {
+                    const container = document.querySelector(serviceConfig.instancesSelector);
+                    container.replaceChildren();
+                    const instances = arrConfig?.Instances ??
+                        (arrConfig?.Url || arrConfig?.ApiKey ? [{ Url: arrConfig.Url, ApiKey: arrConfig.ApiKey }] : []);
+                    instances.filter(instance => instance != null).forEach(instance => addArrInstance(serviceConfig, instance));
+                }
+                else
+                {
+                    document.querySelector('[data-id=txt' + serviceConfig.name + 'Url]').value = arrConfig?.Url || '';
+                    document.querySelector('[data-id=txt' + serviceConfig.name + 'ApiKey]').value = arrConfig?.ApiKey || '';
+                }
                 document.querySelector(timeframeValueSelector).value = arrConfig?.UpcomingTimeframeValue || serviceConfig.defaultValue;
                 document.querySelector(timeframeUnitSelector).value = arrConfig?.UpcomingTimeframeUnit || serviceConfig.defaultUnit;
 
@@ -1482,6 +1584,11 @@
             function saveConfig(e) {
                 e.preventDefault();
 
+                if (!validateArrInstances())
+                {
+                    return;
+                }
+
                 const hasReleaseCheck =
                     document.querySelector('#radarrConsiderCinemaRelease').checked ||
                     document.querySelector('#radarrConsiderPhysicalRelease').checked ||
@@ -1640,6 +1747,15 @@
                 loadLibraries();
                 loadConfig();
                 translatePage();
+                document.querySelectorAll('[data-arr-service]').forEach(button =>
+                {
+                    button.onclick = function ()
+                    {
+                        const serviceConfig = arrServiceConfigs.find(config => config.name === button.dataset.arrService);
+                        const row = addArrInstance(serviceConfig);
+                        row.querySelector('[data-field=Name]').focus();
+                    };
+                });
                 document.querySelector('#btnSaveConfigGlobal').addEventListener("click", saveConfig);
                 document.querySelector('#btnSaveConfigSections').addEventListener("click", saveConfig);
                 document.querySelector('#btnAddSection').addEventListener("click", addSectionFromDropdown);

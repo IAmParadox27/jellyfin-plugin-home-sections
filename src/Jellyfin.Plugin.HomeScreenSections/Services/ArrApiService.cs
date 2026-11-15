@@ -1,6 +1,10 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Model.Dto;
 
 namespace Jellyfin.Plugin.HomeScreenSections.Services
 {
@@ -25,20 +29,47 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
         
         private static PluginConfiguration Config => HomeScreenSectionsPlugin.Instance?.Configuration ?? new PluginConfiguration();
 
-        public async Task<T[]?> GetArrCalendarAsync<T>(ArrServiceType serviceType, DateTime startDate, DateTime endDate)
+        public async Task<T[]?> GetArrCalendarAsync<T>(ArrServiceType serviceType, DateTime startDate, DateTime endDate) where T : ArrDtoBase
         {
-            (string? url, string? apiKey, string? serviceName) = GetServiceConfig(serviceType);
-            
-            if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(apiKey))
+            List<T> calendarItems = new List<T>();
+            bool hasSuccessfulResponse = false;
+
+            foreach (ArrInstanceConfig instance in GetServiceConfig(serviceType).GetInstances())
+            {
+                T[]? instanceItems = await GetArrInstanceCalendarAsync<T>(serviceType, instance, startDate, endDate);
+                if (instanceItems != null)
+                {
+                    calendarItems.AddRange(instanceItems);
+                    hasSuccessfulResponse = true;
+                }
+            }
+
+            return hasSuccessfulResponse ? calendarItems.ToArray() : null;
+        }
+
+        private async Task<T[]?> GetArrInstanceCalendarAsync<T>(ArrServiceType serviceType, ArrInstanceConfig instance, DateTime startDate, DateTime endDate) where T : ArrDtoBase
+        {
+            string? url = instance.Url;
+            string? apiKey = instance.ApiKey;
+            string serviceName = string.IsNullOrWhiteSpace(instance.Name) ? serviceType.ToString() : $"{serviceType} ({instance.Name})";
+
+            if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(apiKey))
             {
                 m_logger.LogWarning("{ServiceName} URL or API key not configured", serviceName);
                 return null;
             }
 
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? serviceUri) ||
+                (serviceUri.Scheme != Uri.UriSchemeHttp && serviceUri.Scheme != Uri.UriSchemeHttps))
+            {
+                m_logger.LogWarning("{ServiceName} URL must use HTTP or HTTPS", serviceName);
+                return null;
+            }
+
             try
             {
-                string startParam = startDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                string endParam = endDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                string startParam = startDate.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+                string endParam = endDate.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
                 (string? queryParams, string? apiVersion) = serviceType switch
                 {
                     ArrServiceType.Sonarr => ($"includeSeries=true&start={startParam}&end={endParam}", "v3"),
@@ -54,7 +85,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
 
                 m_logger.LogDebug("Fetching {ServiceName} calendar from {Url}", serviceName, requestUrl);
 
-                HttpResponseMessage response = await m_httpClient.SendAsync(request);
+                using HttpResponseMessage response = await m_httpClient.SendAsync(request);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -76,6 +107,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                     PropertyNameCaseInsensitive = true
                 });
 
+                string sourceId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(serviceUri.AbsoluteUri.TrimEnd('/'))));
+                foreach (T calendarItem in calendarItems ?? [])
+                {
+                    calendarItem.SourceId = sourceId;
+                }
+
                 m_logger.LogDebug("Successfully fetched {Count} calendar items from {ServiceName}", calendarItems?.Length ?? 0, serviceName);
                 return calendarItems ?? [];
             }
@@ -96,14 +133,14 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             }
         }
 
-        private static (string? url, string? apiKey, string serviceName) GetServiceConfig(ArrServiceType serviceType)
+        private static ArrConfig GetServiceConfig(ArrServiceType serviceType)
         {
             return serviceType switch
             {
-                ArrServiceType.Sonarr => (Config.Sonarr.Url, Config.Sonarr.ApiKey, "Sonarr"),
-                ArrServiceType.Radarr => (Config.Radarr.Url, Config.Radarr.ApiKey, "Radarr"),
-                ArrServiceType.Lidarr => (Config.Lidarr.Url, Config.Lidarr.ApiKey, "Lidarr"),
-                ArrServiceType.Readarr => (Config.Readarr.Url, Config.Readarr.ApiKey, "Readarr"),
+                ArrServiceType.Sonarr => Config.Sonarr,
+                ArrServiceType.Radarr => Config.Radarr,
+                ArrServiceType.Lidarr => Config.Lidarr,
+                ArrServiceType.Readarr => Config.Readarr,
                 _ => throw new ArgumentOutOfRangeException(nameof(serviceType), serviceType, "Unsupported service type")
             };
         }
