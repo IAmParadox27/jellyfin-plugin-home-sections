@@ -296,6 +296,7 @@
         if (null !== elem) {
             var html = "";
             var layoutManager = {{layoutmanager_hook}}.A;
+
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
             
             if (!layoutManager.tv && sectionInfo.Route !== undefined) {
@@ -323,6 +324,30 @@
             }
             
             html += "</div>";
+
+            if (sectionInfo.Section === 'LiveTV') {
+                // Mirror vanilla Jellyfin's Live TV quick-access buttons (identical in jellyfin-web 10.11.x and 12.x)
+                var liveTvServerId = apiClient.serverId();
+                var liveTvButtons = [
+                    { route: 'livetv', section: 'programs', label: 'Programs' },
+                    { route: 'livetv', section: 'guide', label: 'Guide' },
+                    { route: 'livetv', section: 'channels', label: 'Channels' },
+                    { route: 'recordedtv', label: 'Recordings' },
+                    { route: 'livetv', section: 'dvrschedule', label: 'Schedule' },
+                    { route: 'livetv', section: 'seriesrecording', label: 'Series' }
+                ];
+                html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true" data-scrollbuttons="false">';
+                html += '<div class="padded-top padded-bottom scrollSlider focuscontainer-x">';
+                liveTvButtons.forEach(function (button) {
+                    var routeOptions = { serverId: liveTvServerId };
+                    if (button.section) {
+                        routeOptions.section = button.section;
+                    }
+                    var buttonRoute = appRouterParent.appRouter.getRouteUrl(button.route, routeOptions);
+                    html += '<a is="emby-linkbutton" href="' + escapeHtml(safeUrl(buttonRoute)) + '" class="raised"><span>' + escapeHtml(s.Ay.translate(button.label)) + '</span></a>';
+                });
+                html += '</div></div>';
+            }
             
             if (sectionInfo.ViewMode !== 'Small') {
                 html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
