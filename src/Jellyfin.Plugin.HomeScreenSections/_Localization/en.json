@@ -10,6 +10,8 @@
   "FinishTheseCollections": "Finish These Collections",
   "Genre": "{0} Movies",
   "HiddenGems": "Hidden Gems",
+  "MostPlayed": "Most Played",
+  "RecentlyPlayed": "Recently Played",
   "LatestAlbums": "Latest Albums",
   "LatestAudioBooks": "Latest Audiobooks",
   "LatestBooks": "Latest Books",
@@ -239,5 +241,15 @@
   "AdminRecentlyAddedShowsItemTypeDropdown": "Item Type",
   "AdminRecentlyAddedShowsItemTypeDropdown_Desc": "What type of item do you want to display?",
   "AdminRecentlyAddedShowsItemTypeDropdown_shows": "Shows",
-  "AdminRecentlyAddedShowsItemTypeDropdown_episodes": "Episodes"
+  "AdminRecentlyAddedShowsItemTypeDropdown_episodes": "Episodes",
+
+  "AdminMostPlayedScopeDropdown": "Scope",
+  "AdminMostPlayedScopeDropdown_Desc": "Rank across just this user's own watch history, or aggregate play counts from every user account on the server.",
+  "AdminMostPlayedScopeDropdown_peruser": "Per-User",
+  "AdminMostPlayedScopeDropdown_serverwide": "Server-Wide",
+
+  "AdminRecentlyPlayedScopeDropdown": "Scope",
+  "AdminRecentlyPlayedScopeDropdown_Desc": "Show what just this user has watched recently, or whatever was most recently played by anyone on the server.",
+  "AdminRecentlyPlayedScopeDropdown_peruser": "Per-User",
+  "AdminRecentlyPlayedScopeDropdown_serverwide": "Server-Wide"
 }
