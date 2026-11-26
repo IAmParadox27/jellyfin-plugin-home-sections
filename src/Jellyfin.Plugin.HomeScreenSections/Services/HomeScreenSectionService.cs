@@ -59,7 +59,7 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
                 int prevKey = i > 0 ? orderedKeys[i - 1] : orderedKeys[i] - 1;
 
                 bool cohesive = (key - prevKey) == 1;
-                if (prevKey > 0 && key - prevKey > 1)
+                if (i > 0 && key - prevKey > 1)
                 {
                     // If any of the ranges contain both the "key before" and "key after" then we can safely know this is cohesive.
                     if (userSectionsData.OrderIndicesWithoutSections.Any(x => x.Contains(key - 1) && x.Contains(prevKey + 1)))
