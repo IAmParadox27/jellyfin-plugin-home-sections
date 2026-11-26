@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Jellyfin.Plugin.HomeScreenSections.Configuration;
+using Jellyfin.Plugin.HomeScreenSections.Data;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Latest;
 using Jellyfin.Plugin.HomeScreenSections.HomeScreen.Sections.Persons;
@@ -282,6 +283,10 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             File.WriteAllText(pluginSettings, settings.ToString(Formatting.Indented));
 
             m_logger.LogInformation($"Content of written settings json: {File.ReadAllText(pluginSettings)}");
+
+            // The home screen keeps a per-user snapshot of the enabled sections; without this the new settings only show
+            // once it expires (an hour) or Jellyfin restarts.
+            m_serviceProvider.GetService<UserSectionsDataCache>()?.ExpireUser(userId);
             
             m_logger.LogInformation($"User settings updated.");
             return true;

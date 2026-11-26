@@ -11,6 +11,30 @@ namespace Jellyfin.Plugin.HomeScreenSections.Data
         public ConcurrentDictionary<Guid, Guid> PageHashOwnerIds { get; set; } = new ConcurrentDictionary<Guid, Guid>();
         
         public ConcurrentDictionary<Guid, DateTime> PageHashExpiry { get; set; } = new ConcurrentDictionary<Guid, DateTime>();
+
+        /// <summary>
+        /// Marks every cached page of this user as expired, so the next home screen load builds it again from the
+        /// current settings. Entries are expired rather than removed: a request still reading one of them keeps working,
+        /// and the existing cleanup removes them on the user's next request.
+        /// </summary>
+        public void ExpireUser(Guid userId)
+        {
+            foreach (Guid pageHash in PageHashOwnerIds.Where(x => x.Value == userId).Select(x => x.Key).ToArray())
+            {
+                PageHashExpiry[pageHash] = DateTime.MinValue;
+            }
+        }
+
+        /// <summary>
+        /// Marks every cached page of every user as expired (the admin section settings changed).
+        /// </summary>
+        public void ExpireAll()
+        {
+            foreach (Guid pageHash in PageHashExpiry.Keys.ToArray())
+            {
+                PageHashExpiry[pageHash] = DateTime.MinValue;
+            }
+        }
     }
 
     public class UserSectionsData
