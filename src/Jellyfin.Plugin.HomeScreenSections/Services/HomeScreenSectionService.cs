@@ -28,6 +28,12 @@ namespace Jellyfin.Plugin.HomeScreenSections.Services
             m_translationManager = translationManager;
             m_dataCache = dataCache;
             m_configurationManager = _configurationManager;
+
+            // Section order, enabled sections or user overrides changed in the admin settings: every user's snapshot is stale.
+            if (HomeScreenSectionsPlugin.Instance != null)
+            {
+                HomeScreenSectionsPlugin.Instance.ConfigurationChanged += (_, _) => m_dataCache.ExpireAll();
+            }
         }
 
         public List<HomeScreenSectionInfo>? GetCachedSectionsForUser(Guid userId, string? language, int page, int pageSize, Guid pageHash)
