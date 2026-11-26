@@ -99,6 +99,8 @@ namespace Jellyfin.Plugin.HomeScreenSections.HomeScreen
             RegisterResultsDelegate<HiddenGemsSection>();
             RegisterResultsDelegate<StudioSection>();
             RegisterResultsDelegate<DecadeSection>();
+            RegisterResultsDelegate<MostPlayedSection>();
+            RegisterResultsDelegate<RecentlyPlayedSection>();
             RegisterResultsDelegate<FinishTheseCollectionsSection>();
 
             //RegisterResultsDelegate<TopTenSection>();
